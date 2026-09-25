@@ -338,7 +338,7 @@
 - 已知问题：秘境进行中单场遭遇入口整体锁定（含「重新挑战」），玩家不能在秘境里用单场重开洗掉损耗——这是设计使然，单场遭遇模式本身的「战斗中可重开」语义未变。秘境面板与遭遇面板共处左下 Dock，空间紧张但未溢出（本 Increment 不改布局）。`main.gd` 已达 524 行，后续秘境功能应优先拆独立节点，不要在 `main.gd` 继续堆逻辑。
 - 用户验收：已验收（依据用户 2026-09-25 指令「分批incre单独推送后继续开发」：本批按 Increment 单独提交并推送）
 - 验收时间：2026-09-25T19:15:13+08:00
-- Git：
+- Git：`main` / `b16efb2`
 - 计划修订（2026-09-25T19:01:58+08:00）：明确「重新开始秘境」由 `DungeonPanel.RestartButton` 承担，并要求秘境进行中锁住单场遭遇入口，避免绕过 `DungeonRun` 直接重开当前房间而重置损耗。
 - 计划修订（实施期，见「最后修改」）：范围扩大三项，都是接线必需的最小修正——(1) `game/world/dungeon_run.gd` 增加 `resolve_encounter_session()` 惰性解析：`.tscn` 中以 `NodePath` 声明的脚本类型导出在实例化时不会自动解析（实测 `encounter_session == null`，会让主场景静默回落到单场遭遇），因此按 `EncounterSession.resolve_pawns_container()` 的同构写法补齐；(2) `game/ui/encounter_panel.gd` 增加只增不改的 `set_restart_locked()` 外部锁与 `_on_restart_pressed()` 兜底，使「秘境进行中锁住重新挑战」在 UI 上也可见，而不是点得动却无反应；(3) 既有 `test/gameplay/main_scene_encounter_test.gd` 的两个换敌用例改为「先见好就收结束本局再换敌」，因为锁定是本次刻意引入的语义，旧断言不再成立。
 - 备注：父 Increment 为 `INC-CROSS-016`；本 Increment 是父级唯一允许修改 `main.gd` / `main.tscn` 的接线项。
