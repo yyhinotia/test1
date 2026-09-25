@@ -335,9 +335,7 @@ func can_cast_skill(skill: ActiveSkillDefinition, target: Pawn) -> bool:
 		return false
 	if not is_alive():
 		return false
-	if target == null or not is_instance_valid(target) or target == self or not target.is_alive():
-		return false
-	if target.data == null or target.data.faction == data.faction:
+	if not is_valid_skill_target(skill, target):
 		return false
 	if global_position.distance_to(target.global_position) > skill.get_effective_cast_range(data.attack_range):
 		return false
@@ -347,6 +345,22 @@ func can_cast_skill(skill: ActiveSkillDefinition, target: Pawn) -> bool:
 	if cost > 0.0 and (spirit_pool == null or spirit_pool.current_value < cost):
 		return false
 	return true
+
+## 技能目标合法性：目标类型由技能定义唯一决定，控制器与 Pawn 最终裁决共用这一规则。
+func is_valid_skill_target(skill: ActiveSkillDefinition, target: Pawn) -> bool:
+	if skill == null or not skill.is_configured() or target == null or not is_instance_valid(target):
+		return false
+	if not target.is_alive():
+		return false
+	match skill.target_type:
+		ActiveSkillDefinition.SkillTargetType.SELF:
+			return target == self
+		ActiveSkillDefinition.SkillTargetType.ALLY:
+			return target != self and target.data != null and data != null and target.data.faction == data.faction
+		ActiveSkillDefinition.SkillTargetType.ENEMY:
+			return target.data != null and data != null and target.data.faction != data.faction
+		_:
+			return false
 
 ## 执行一次主动技能。成功时依次扣除灵力、造成伤害、记录冷却并发出信号。
 func cast_skill(skill: ActiveSkillDefinition, target: Pawn) -> bool:

@@ -33,15 +33,16 @@ func order_skill(target: Pawn = null) -> bool:
 func order_skill_instance(skill: ActiveSkillDefinition, target: Pawn = null) -> bool:
 	if not _is_known_skill(skill):
 		return false
-	var resolved_target: Pawn = target if target != null else _attack_target
-	if not _is_valid_enemy_target(resolved_target):
+	var resolved_target: Pawn = _resolve_skill_target(skill, target)
+	if resolved_target == null or pawn == null or not pawn.is_valid_skill_target(skill, resolved_target):
 		return false
 
 	_ordered_skill = skill
 	_skill_target = resolved_target
 	_has_skill_order = true
-	# 技能命令与普通攻击共用目标：施法结束后无需重新下达攻击命令。
-	_attack_target = resolved_target
+	# 敌方技能结束后继续追击同一敌人；友方/自身技能不覆盖既有普通攻击目标。
+	if skill.target_type == ActiveSkillDefinition.SkillTargetType.ENEMY:
+		_attack_target = resolved_target
 	_has_move_order = false
 	return true
 
@@ -51,9 +52,11 @@ func clear_orders() -> void:
 	_clear_skill_order()
 
 func get_order_description() -> String:
-	if _has_skill_order and _is_valid_enemy_target(_skill_target):
+	if _has_skill_order and pawn != null and _is_valid_skill_target(_skill_target, _get_ordered_skill()):
 		var skill: ActiveSkillDefinition = _get_ordered_skill()
 		if skill != null:
+			if skill.target_type == ActiveSkillDefinition.SkillTargetType.SELF:
+				return "施放技能 %s → 自身" % skill.display_name
 			return "施放技能 %s → %s" % [skill.display_name, _skill_target.data.display_name]
 	if _attack_target != null and is_instance_valid(_attack_target) and _attack_target.is_alive():
 		return "攻击 %s" % _attack_target.data.display_name
@@ -65,7 +68,7 @@ func update_controller(_delta: float) -> void:
 	if _attack_target != null and (not is_instance_valid(_attack_target) or not _attack_target.is_alive()):
 		_attack_target = null
 	# 技能目标死亡、失效或切阵营时必须在产生任何副作用前失效，并回退到普通攻击。
-	if _has_skill_order and not _is_valid_enemy_target(_skill_target):
+	if _has_skill_order and not _is_valid_skill_target(_skill_target, _get_ordered_skill()):
 		_clear_skill_order()
 
 	if _has_skill_order:
@@ -139,15 +142,25 @@ func _is_known_skill(skill: ActiveSkillDefinition) -> bool:
 			return true
 	return false
 
-## 技能目标必须是存活的敌方单位；空目标、自身、友军和已失效实例一律拒绝。
-func _is_valid_enemy_target(target: Pawn) -> bool:
-	if target == null or not is_instance_valid(target):
-		return false
-	if pawn == null or pawn.data == null or target == pawn:
-		return false
-	if target.data == null or not target.is_alive():
-		return false
-	return target.data.faction != pawn.data.faction
+## 目标解析只处理“未显式传入目标”的默认值；最终合法性仍由 Pawn 按技能目标类型裁决。
+func _resolve_skill_target(skill: ActiveSkillDefinition, target: Pawn) -> Pawn:
+	if skill == null or pawn == null:
+		return null
+	match skill.target_type:
+		ActiveSkillDefinition.SkillTargetType.SELF:
+			if target == null or target == pawn:
+				return pawn
+			return null
+		ActiveSkillDefinition.SkillTargetType.ALLY:
+			return target if target != null else null
+		ActiveSkillDefinition.SkillTargetType.ENEMY:
+			return target if target != null else _attack_target
+		_:
+			return null
+
+## 兼容旧入口的只读目标判断；新技能应优先使用 Pawn.is_valid_skill_target()。
+func _is_valid_skill_target(target: Pawn, skill: ActiveSkillDefinition) -> bool:
+	return pawn != null and pawn.is_valid_skill_target(skill, target)
 
 func _clear_skill_order() -> void:
 	_skill_target = null

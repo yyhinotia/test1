@@ -33,6 +33,7 @@ func update_controller(delta: float) -> void:
 
 
 ## 目标进入任一主动技能距离且该技能可施放时优先使用；按列表顺序尝试，失败则继续普通移动/攻击流程。
+## SELF 技能自动指向施法者；ALLY 尚无目标提供方时安全跳过，ENEMY 使用当前敌人目标。
 func _try_cast_active_skill(distance_to_target: float) -> bool:
 	if pawn == null or pawn.data == null:
 		return false
@@ -40,9 +41,16 @@ func _try_cast_active_skill(distance_to_target: float) -> bool:
 		return false
 
 	for skill: ActiveSkillDefinition in pawn.data.get_active_skills():
-		if distance_to_target > skill.get_effective_cast_range(pawn.data.attack_range):
+		var skill_target: Pawn = _target
+		if skill.target_type == ActiveSkillDefinition.SkillTargetType.SELF:
+			skill_target = pawn
+		elif skill.target_type == ActiveSkillDefinition.SkillTargetType.ALLY:
 			continue
-		if not pawn.cast_skill(skill, _target):
+
+		var cast_range: float = skill.get_effective_cast_range(pawn.data.attack_range)
+		if skill_target != pawn and distance_to_target > cast_range:
+			continue
+		if not pawn.cast_skill(skill, skill_target):
 			continue
 		pawn.stop_moving()
 		return true
