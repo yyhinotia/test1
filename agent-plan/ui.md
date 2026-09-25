@@ -1,6 +1,6 @@
 # UI 主题计划
 
-> 最后修改：2026-09-25T18:53:57+08:00
+> 最后修改：2026-09-25T19:38:19+08:00
 > 主题：ui  
 > 规则来源：`../AGENTS.md`
 
@@ -584,3 +584,35 @@
 - Git：`main` / `9fefcaa`
 - 计划修订（2026-09-25T19:01:58+08:00）：在原有 `StatusLabel` 之外增加 `RestartButton` 与 `restart_requested()`，原因：结算后需要明确的「重新开始一次秘境」入口，而 `EncounterPanel` 的「重新挑战」语义属于单场遭遇，不能复用为秘境续局。
 - 备注：父 Increment 为 `INC-CROSS-016`；本 Increment 只提供「贪不贪」的两个入口，流程编排在 `INC-CORE-009`。
+
+## INC-UI-016：宗门面板（设施列表 / 升级 / 修炼 / 收获 / 转化）
+
+- 状态：accepted
+- 创建时间：2026-09-25T19:22:00+08:00
+- 最后修改：2026-09-25T19:38:19+08:00
+- 主题：ui
+- 目标：给玩家一个能看见宗门状态、并且能点得动的入口：显示灵石 / 灵草 / 丹药库存与六座设施的等级和下次花费，并把「升级设施」「打坐修炼」「收获灵田」「参悟功法」「强化武器」「炼丹」「服用丹药」变成明确的玩家动作。
+- 验收标准：
+  - 新增 `game/ui/sect_panel.tscn` + `game/ui/sect_panel.gd`（`class_name SectPanel extends VBoxContainer`）：标题与三种库存文本、六座设施行（名称 / 等级 / 下次花费 / 不可升级原因）、以及动作按钮组；面板不持有 `SectState`，只通过 `bind_state(state)` 订阅信号并转发玩家意图。
+  - 面板只读呈现：不可升级时按钮禁用并显示原因（满级 / 灵石不足 / 境界不足），不允许「点得动但无反应」。
+  - 玩家动作以信号形式广播：`upgrade_requested(facility_id)`、`cultivate_requested()`、`harvest_requested()`、`learn_requested(technique_id)`、`strengthen_requested()`、`refine_pill_requested()`、`use_pill_requested()`；面板自身不结算数值、不扣灵石。
+  - `set_status(text)` 与秘境 / 遭遇面板保持同一约定：文本来源唯一，面板不重新解释失败原因。
+  - 绑定后库存 / 等级 / 丹药变化能刷新文本；未绑定状态时显示占位文案而不是空串。
+  - 真实窗口取证（`test/tools/capture_sect_panel_evidence.gd`）在 16:9（1152x648）、16:10（1152x720）、窄屏（800x720）三档下断言面板在视口内、不与左下 Dock 既有面板重叠、文本不溢出；截图与报告落 `.mcp/godot-runtime/screenshots/`。
+- 范围：`game/ui/sect_panel.tscn`（新增）、`game/ui/sect_panel.gd`（新增）、`test/integration/sect_panel_test.gd`（新增）、`test/tools/capture_sect_panel_evidence.gd`（新增）。
+- 非范围：正式视觉主题与图标、宗门建筑美术、设施建造动画、快捷键绑定、存档、宗门贡献 / 声望 / 人口、多面板切换与关闭管理、手机 / 手柄导航细节。
+- 依赖：`INC-SECT-002`（库存与升级读模型）、`INC-SECT-003`（转化入口）；由 `INC-CORE-010` 完成主场景挂载与信号路由。
+- 检索证据：Git Diff 优先检索结论同 `INC-SECT-001`；`git grep -n -E "SectPanel|sect_panel" -- game/ test/` 无匹配；`game/ui/` 现有面板（`encounter_panel` / `dungeon_panel` / `pawn_info_panel` / `skill_bar`）中 `DungeonPanel` 确立了「面板只发信号 + `set_status` 文本唯一来源」的既有约定，本 Increment 沿用该约定而不新造模式。
+- 风险：六个设施 + 七个动作会让面板膨胀成第二个 HUD；因此面板只做「一行一设施 + 一组按钮」的最小布局，动作按钮按可用性禁用，不做标签页 / 滚动交互设计。另一风险是面板直接读 `SectState` 内部字典导致耦合，因此只允许通过 `get_snapshot()` 与信号刷新。
+- 实现说明：`SectPanel` 只读 `SectState.get_snapshot()`，订阅库存 / 等级 / 丹药 / 功法 / 强化等信号刷新文本；七个玩家动作只通过 `upgrade_requested` / `cultivate_requested` / `harvest_requested` / `learn_requested` / `strengthen_requested` / `refine_pill_requested` / `use_pill_requested` 广播，面板自身不结算任何数值。`bind_state()` / `unbind_state()` 保证重复绑定与解绑后旧信号不再影响面板；设施行重建使用 `child.free()` 立即释放旧行，避免测试孤儿节点。
+- 变更文件：`game/ui/sect_panel.gd`（新增，含 `.uid`）、`game/ui/sect_panel.tscn`（新增）、`test/integration/sect_panel_test.gd`（新增，含 `.uid`）、`test/tools/capture_sect_panel_evidence.gd`（新增，含 `.uid`）。
+- 测试证据：
+  - `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer integration` → `RESULT: PASS`，退出码 0；`GdUnit4 integration 137 cases / 0 failures / 0 orphans`（本 Increment 前为 130 cases），新增 7 个用例覆盖绑定 / 未绑定占位、库存与等级刷新、六座设施行渲染、七个动作信号与禁用原因、`set_status` 文本透传、解绑后不再刷新。
+  - 真实窗口取证 `test/tools/capture_sect_panel_evidence.gd`：三档分辨率 `1152x648` / `1152x720` / `800x720`（窄屏逻辑视口 1152x1036）全部 `PANEL_INSIDE=true`、`DOCK_INSIDE=true`、`TEXT_OVERFLOW=[]`；与 `PawnInfoPanel` / `SkillBar` / `EncounterPanel` / `DungeonPanel` 全部 `OVERLAP=false`；报告落 `.mcp/godot-runtime/screenshots/sect_panel_evidence_report.txt`。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T19:32:01+08:00
+- 已知问题：面板尚未由 `INC-CORE-010` 挂载到主场景；功法选择使用当前可领悟列表，未做滚动 / 标签页；视觉主题与图标仍是 MVP 占位；宗门状态未落盘。
+- 用户验收：已验收（依据用户 2026-09-25 指令「验收通过，分increment提交」与「推送」）
+- 验收时间：2026-09-25T19:38:32+08:00
+- Git：
+- 备注：父 Increment 为 `INC-CROSS-017`；本 Increment 是玩家可见层，数值权威仍在 `SectState`。

@@ -1,0 +1,85 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/ui/sect_panel.gd" id="1_sect_panel"]
+
+[node name="SectPanel" type="VBoxContainer"]
+custom_minimum_size = Vector2(290, 0)
+offset_right = 290.0
+offset_bottom = 500.0
+size_flags_vertical = 8
+theme_override_constants/separation = 5
+script = ExtResource("1_sect_panel")
+
+[node name="TitleLabel" type="Label" parent="."]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "宗门"
+
+[node name="SpiritStonesLabel" type="Label" parent="."]
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "灵石：-"
+
+[node name="SpiritHerbsLabel" type="Label" parent="."]
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "灵草：-"
+
+[node name="PillsLabel" type="Label" parent="."]
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "丹药：-"
+
+[node name="FacilitiesTitle" type="Label" parent="."]
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "设施"
+
+[node name="Facilities" type="VBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="CultivateButton" type="Button" parent="."]
+layout_mode = 2
+disabled = true
+text = "打坐修炼"
+
+[node name="HarvestButton" type="Button" parent="."]
+layout_mode = 2
+disabled = true
+text = "收获灵田"
+
+[node name="LearnRow" type="HBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="LearnOption" type="OptionButton" parent="LearnRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+disabled = true
+
+[node name="LearnButton" type="Button" parent="LearnRow"]
+layout_mode = 2
+disabled = true
+text = "参悟"
+
+[node name="StrengthenButton" type="Button" parent="."]
+layout_mode = 2
+disabled = true
+text = "强化武器"
+
+[node name="RefinePillButton" type="Button" parent="."]
+layout_mode = 2
+disabled = true
+text = "炼丹"
+
+[node name="UsePillButton" type="Button" parent="."]
+layout_mode = 2
+disabled = true
+text = "服用丹药"
+
+[node name="StatusLabel" type="Label" parent="."]
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "宗门未接入"
+autowrap_mode = 2
