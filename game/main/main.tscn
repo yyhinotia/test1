@@ -32,6 +32,11 @@
 [ext_resource type="Resource" path="res://game/world/data/encounters/build_test_1v1.tres" id="28_build_1v1"]
 [ext_resource type="Resource" path="res://game/world/data/encounters/build_test_1v2.tres" id="29_build_1v2"]
 [ext_resource type="Resource" path="res://game/world/data/encounters/build_test_1v3.tres" id="30_build_1v3"]
+[ext_resource type="PackedScene" path="res://game/ui/build/build_loadout_panel.tscn" id="31_build_loadout_panel"]
+[ext_resource type="Script" uid="uid://d4crksxfpy623" path="res://game/shared/resources/active_skill_definition.gd" id="32_active_skill"]
+[ext_resource type="Resource" path="res://game/pawns/data/player_sword_skill.tres" id="33_sword_skill"]
+[ext_resource type="Resource" path="res://game/pawns/data/player_guard_skill.tres" id="34_guard_skill"]
+[ext_resource type="Resource" path="res://game/pawns/data/skills/player_binding_skill.tres" id="35_binding_skill"]
 
 [node name="Main" type="Node2D" unique_id=539579646]
 process_mode = 3
@@ -159,6 +164,21 @@ layout_mode = 2
 
 [node name="SectPanel" parent="HUD/BottomLeftDock" instance=ExtResource("16_sect_panel")]
 layout_mode = 2
+
+[node name="BuildLoadoutPanel" parent="HUD" instance=ExtResource("31_build_loadout_panel")]
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -296.0
+offset_top = -200.0
+offset_right = -16.0
+offset_bottom = -16.0
+grow_horizontal = 0
+grow_vertical = 0
+preset_a = Array[ExtResource("32_active_skill")]([ExtResource("33_sword_skill"), ExtResource("34_guard_skill")])
+preset_b = Array[ExtResource("32_active_skill")]([ExtResource("33_sword_skill"), ExtResource("35_binding_skill")])
 
 [node name="PauseOverlay" type="Control" parent="HUD" unique_id=535022588]
 visible = false

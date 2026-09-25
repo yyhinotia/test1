@@ -1,0 +1,29 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/ui/build/build_loadout_panel.gd" id="1_build_loadout_panel"]
+
+[node name="BuildLoadoutPanel" type="VBoxContainer"]
+custom_minimum_size = Vector2(280, 0)
+offset_right = 280.0
+offset_bottom = 184.0
+mouse_filter = 2
+theme_override_constants/separation = 6
+script = ExtResource("1_build_loadout_panel")
+
+[node name="TitleLabel" type="Label" parent="."]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Build 切换"
+mouse_filter = 2
+
+[node name="Rows" type="VBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 4
+mouse_filter = 2
+
+[node name="StatusLabel" type="Label" parent="."]
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "未绑定单位"
+autowrap_mode = 2
+mouse_filter = 2

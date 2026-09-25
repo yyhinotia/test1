@@ -27,6 +27,7 @@ var ai_controller: AIController
 @onready var pause_overlay: Control = $HUD/PauseOverlay
 @onready var info_panel: PawnInfoPanel = $HUD/BottomLeftDock/PawnInfoPanel
 @onready var skill_bar: SkillBar = $HUD/BottomLeftDock/SkillBar
+@onready var build_loadout_panel: BuildLoadoutPanel = $HUD/BuildLoadoutPanel
 
 var _selected_pawn: Pawn
 ## 目标高亮由主场景统一持有，确保切换技能、取消、确认和单位死亡时都能清理旧引用。
@@ -86,6 +87,8 @@ func _on_encounter_started(encounter: EncounterDefinition, _player: Pawn, _enemy
 	encounter_panel.set_running(true)
 	# 秘境进行中额外锁住「重新挑战」：单场重开会白送一次满状态，破坏损耗累积。
 	encounter_panel.set_restart_locked(dungeon_run.is_active())
+	# INC-UI-018：Build 切换只允许发生在两轮战斗之间，战斗中锁定（面板保留读数但不接受点击）。
+	build_loadout_panel.set_switch_locked(true)
 	encounter_panel.set_status(
 		"%s：%s" % [EncounterSession.get_outcome_label(EncounterSession.State.RUNNING), encounter.display_name]
 	)
@@ -95,6 +98,8 @@ func _on_encounter_started(encounter: EncounterDefinition, _player: Pawn, _enemy
 func _on_encounter_finished(encounter: EncounterDefinition, outcome: int) -> void:
 	# 秘境进行中时单场入口保持锁定：清空一间房不等于本局结束。
 	encounter_panel.set_running(dungeon_run.is_active())
+	# INC-UI-018：战斗结束后解锁 Build 切换，让玩家先看到问题再自己决定要不要重构。
+	build_loadout_panel.set_switch_locked(false)
 	encounter_panel.set_status("%s：%s" % [EncounterSession.get_outcome_label(outcome), encounter.display_name])
 	_update_hud()
 
@@ -460,10 +465,12 @@ func _set_selected_pawn(new_selection: Pawn) -> void:
 		_selected_pawn.set_selected(true)
 		info_panel.bind_pawn(_selected_pawn)
 		skill_bar.bind_pawn(_selected_pawn)
+		build_loadout_panel.bind_pawn(_selected_pawn)
 	else:
 		_selected_pawn = null
 		info_panel.unbind()
 		skill_bar.unbind()
+		build_loadout_panel.unbind()
 	_update_hud()
 
 ## 暂停是唯一接入点：暂停时信息卡给完整信息，战斗中给精简信息。

@@ -663,9 +663,9 @@
 
 ## INC-UI-018：最小 Build A/B 切换面板
 
-- 状态：planned
+- 状态：awaiting_acceptance
 - 创建时间：2026-09-25T20:47:54+08:00
-- 最后修改：2026-09-25T21:45:00+08:00
+- 最后修改：2026-09-25T22:30:00+08:00
 - 主题：ui
 - 重定义说明：本 Increment 原定义「四人队伍 HUD 与 Build 重配面板」于 2026-09-25T21:45:00+08:00 按用户 objective 收缩为「最小 Build A/B 切换面板」；队伍 HUD（`SquadPanel`）部分退役并冻结（objective §28 明确禁止队伍 HUD）。原定义原文保留在 Git 历史 `b36e9c0`（`develop`）。
 - 目标：在首通获得定身术之后，让玩家用一个最小面板自主查看并切换两套固定 Build（A：御剑斩 + 护体真气；B：御剑斩 + 定身术）；UI 只发意图，不复制容量或技能规则，也不做任何自动切换。
@@ -683,13 +683,14 @@
 - 依赖：`INC-PAWNS-021`（运行时装配 API）、`INC-WORLD-007`（首通解锁事实）；父 Increment `INC-CROSS-019`。
 - 检索证据：2026-09-25T21:45:00+08:00 执行 `git status --short`、`git diff --unified=0 -- agent-plan/`（读取本批重定义）、`git log --oneline -5 -- agent-plan/`（最新 `1dbdba5`）与 `git grep -n "INC-UI-018"`；`INC-UI-018` 仍为 `planned`、未实现，可安全重定义。现有 HUD 只有单选中 Pawn 信息卡与技能栏，`BottomLeftDock` 已有宽度压力，因此新面板必须独立布局并做三档量测。
 - 风险：最大风险是 UI 顺手替玩家做了选择（例如解锁后自动切到 B），这会直接破坏 Gate C（主动 Build 重构），因此「解锁」与「装配」必须分成两步。第二个风险是 UI 复制容量规则导致显示与施法裁决不一致，必须一律经 Pawn API 裁决。
-- 实现说明：待实现。
-- 变更文件：待实现。
-- 测试证据：待实现。
-- 验证状态：待验证
-- 验证时间：待验证
-- 已知问题：待实现。
+- 实现说明：新增 `game/ui/build/build_loadout_panel.gd`（`BuildLoadoutPanel extends VBoxContainer`）与配套 `.tscn`：两行固定预设（A：御剑斩 + 护体真气；B：御剑斩 + 定身术）按 `preset_a` / `preset_b` 数据驱动生成，标题与「当前 Build / 可切换 / 未解锁：定身术 / 战斗中不可切换」标记全部由 `Pawn` 的只读 API（`get_known_active_skills()` / `get_equipped_active_skills()` / `is_active_skill_known()`）推导，可用性不硬编码技能 id。点击是唯一状态变更出口，只调用 `Pawn.set_active_skill_loadout()`：成功写入「已切换到 Build B」，失败（未解锁 / 战斗中锁定 / 被 Pawn 拒绝）写入可复核原因并广播 `build_switch_attempted(pawn, preset_id, success, reason)`，失败后重新以 Pawn 为事实源刷新读数。首通奖励只把 Build B 变成「可切换」，面板不做任何自动装配。主场景接线（`main.gd`）：`_set_selected_pawn()` 同步 `bind_pawn()` / `unbind()`，`_on_encounter_started()` 锁定切换、`_on_encounter_finished()` 解锁（沿用 `EncounterPanel.set_restart_locked` 的既有「外部锁」模式），两套 production 预设接在 `main.tscn` 的 `HUD/BuildLoadoutPanel`（右下角独立锚点，不放进已超宽的 `BottomLeftDock`）；面板根节点与全部标签 / 容器为 `MOUSE_FILTER_IGNORE`，只有按钮拦截鼠标，保证非交互背景不挡战场点击。
+- 变更文件：`game/ui/build/build_loadout_panel.gd`（新增，含 `.uid`）、`game/ui/build/build_loadout_panel.tscn`（新增）、`game/main/main.gd`（选中绑定与遭遇锁定接线）、`game/main/main.tscn`（`HUD/BuildLoadoutPanel` 实例 + 5 条 `ext_resource`）、`test/integration/build_loadout_panel_test.gd`（新增 9 cases，含 `.uid`）、`test/tools/capture_build_loadout_panel_evidence.gd`（新增三档分辨率与真实点击取证脚本，含 `.uid`）。
+- 测试证据：单套件 `test/integration/build_loadout_panel_test.gd` 9 cases / 0 errors / 0 failures（预设内容与顺序、初始「Build A 当前 / Build B 未解锁」、未解锁时程序化触发也不得切换且原因 `preset_locked`、解锁后必须玩家点击才装配且 `PawnData.active_skills` 不被改写、超出境界容量被拒绝时零副作用且原因 `loadout_rejected`、战斗中锁定与解锁、`SkillBar` 同帧跟随（不 await）、`unbind()` 回到只读空态、非交互背景 `MOUSE_FILTER_IGNORE` 透传、`main.tscn` production 预设接线与开局锁定）；统一门禁 `RESULT: PASS`（GdUnit4 395 cases / 0 failures、headless 10 suites / 549 assertions / 0 failing suites、exit 0）。
+- 验证证据（真实窗口，`.mcp/godot-runtime/screenshots/build_loadout_panel_evidence_report.txt`，`FAILURES=0`）：三档分辨率（1152x648 / 1152x720 / 800x720 → 逻辑视口 1152x1036）矩形量测全部 `PANEL_INSIDE=true BUTTONS_INSIDE=true`，与 `BottomLeftDock` / 顶部 HUD / 暂停状态标签均 `OVERLAP=false`，并各留一张截图（`build_loadout_panel_locked_*.png`）；开局战斗 `COMBAT_LOCKED_AT_START=true` → 敌方全灭结算后 `SWITCH_LOCKED=false`；真实 `InputEventMouseButton` 点击 Build B 后 `EQUIPPED=["sword_strike","binding_spell"]`、`SLOT_IDS` 同帧一致、标记变「当前 Build」并截图 `build_loadout_panel_switched_1152x648.png`；面板空白处悬停 `HOVERED=null`（非交互背景不拦截鼠标），按钮悬停命中 `UseButton`。
+- 验证状态：验证通过（机制层 + 真实窗口布局与交互证据；「定身术是否真的让玩家产生重构欲望」属于 `INC-TESTING-011` 的人工 Gate，不在本 Increment 判定）
+- 验证时间：2026-09-25T22:30:00+08:00
+- 已知问题：① 面板只有两套写死的预设 + 一个切换按钮，没有拖拽 / 排序 / 多套保存 / 命名，这是本阶段的非范围而不是缺陷；② `BottomLeftDock` 在 1152 逻辑宽度下仍会被遭遇 / 秘境 / 宗门面板撑到约 1248（既有 HUD 布局债务），因此本面板独立锚定右下角，取证沿用既有口径隔离那三块面板量测；③ 战斗中锁定由主场景按遭遇状态设置，秘境多房间流程沿用同一规则（清空一间房即解锁），人工实验若认为有问题另立 Increment；④ 奖励发放与技能解锁不在面板职责内，解锁事实只能来自 `EncounterSession` 首通结算。
 - 用户验收：待验收
 - 验收时间：待验收
-- Git：待提交
+- Git：待提交（提交后回写）
 - 备注：本 Increment 是 Gate C（主动 Build 重构）的最小可见操作面，只做两套固定预设与切换按钮，不扩成 Build 编辑器；4v4 冻结期不实现任何队伍 HUD。
