@@ -91,9 +91,15 @@ func resolve_pawns_container() -> Node2D:
 	return pawns_container
 
 
-## 按遭遇定义起局：旧单位退场 → 新建玩家 / 敌人 → 绑定控制器 → 状态置 RUNNING。
-## 任何一步不满足都返回 false，且不留下半场对局。
+## 按遭遇定义起局（INC-WORLD-002 语义保持不变）：等价于 begin_with_state(encounter, null)。
 func begin(encounter: EncounterDefinition) -> bool:
+	return begin_with_state(encounter, null)
+
+
+## 按遭遇定义起局：旧单位退场 → 新建玩家 / 敌人 → 绑定控制器 → 写回跨房间资源 → 状态置 RUNNING。
+## state 为 null 时与 begin() 完全等价；非 null 时在新单位 _ready() 初始化资源池之后写回，
+## 使「继续深入」携带上一间的损耗。任何一步不满足都返回 false，且不留下半场对局。
+func begin_with_state(encounter: EncounterDefinition, state: PawnResourceSnapshot) -> bool:
 	if encounter == null or not encounter.is_configured():
 		return false
 	var container: Node2D = resolve_pawns_container()
@@ -121,9 +127,23 @@ func begin(encounter: EncounterDefinition) -> bool:
 	_encounter = encounter
 	_bind_controllers()
 	_connect_death_signals()
+	if state != null:
+		# 必须在入树且 _ready() 初始化资源池之后写回，否则会被档案初始值覆盖。
+		state.apply_to(player)
+		if not player.is_alive():
+			# 快照本身已是死亡状态：拒绝开出一场无法正常结算的对局。
+			_retire_units()
+			_state = State.IDLE
+			_encounter = null
+			return false
 	_state = State.RUNNING
 	encounter_started.emit(_encounter, _player, _enemy)
 	return true
+
+
+## 采集当前玩家单位的全部资源池，供 DungeonRun 跨房间延续（INC-WORLD-004）。
+func capture_player_state() -> PawnResourceSnapshot:
+	return PawnResourceSnapshot.capture(_player)
 
 
 ## 重新挑战当前遭遇；没有当前遭遇时返回 false，不隐式开局。

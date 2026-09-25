@@ -106,3 +106,35 @@
 - 验收时间：2026-09-25T19:07:54+08:00
 - Git：
 - 备注：父 Increment 为 `INC-CROSS-016`；本 Increment 是「秘境 = 5～10 个房间 + 1 个 Boss」的数据表达。
+
+## INC-WORLD-004：秘境运行时（DungeonRun：房间推进 / 资源延续 / 继续或撤退）
+
+- 状态：accepted
+- 创建时间：2026-09-25T18:53:44+08:00
+- 最后修改：2026-09-25T19:07:54+08:00
+- 主题：world
+- 目标：新增 `DungeonRun` 运行时节点，把「一场秘境」的收益与风险显式化：清空一间房按定义结算灵石收益，玩家在「继续深入」与「见好就收」之间选择；继续则带着上一间剩下的生命 / 护盾 / 灵力进入下一间，战败则本局收益全部落空。这是「越深入，收益越高，风险越大」的代码落点。
+- 验收标准：
+  - 新增 `game/world/dungeon_run.gd`（`class_name DungeonRun extends Node`），对外 API 至少为：`start(dungeon: DungeonDefinition) -> bool`、`advance() -> bool`、`retreat() -> bool`、`get_state() -> int`、`get_active_dungeon()`、`get_room_index() -> int`、`get_depth() -> int`（1 起的当前层数）、`get_room_count() -> int`、`get_earned_spirit_stones() -> int`、`is_awaiting_decision() -> bool`、`static get_outcome_label(outcome: int) -> String`。
+  - 状态机：`IDLE → RUNNING（当前房间对局中）→ AWAITING_DECISION（已清空非 Boss 房间，等待玩家决定）→ RUNNING → … → CLEARED（清空最后一间）/ DEFEATED（任一间战败）/ RETREATED（玩家主动撤退）`；非 `AWAITING_DECISION` 状态调用 `advance()` / `retreat()` 必须返回 false 且不改变任何状态。
+  - 信号：`run_started(dungeon, room_index)`、`room_cleared(dungeon, room_index, reward, total)`、`run_finished(dungeon, outcome, earned_spirit_stones)`。
+  - 收益语义：每清空一间房按该房间定义的 `reward_spirit_stones` 累加；`DEFEATED` 时 `get_earned_spirit_stones()` 归零（本局收益落空）；`RETREATED` 与 `CLEARED` 保留。
+  - 资源延续语义：`advance()` 在换房间前从 `EncounterSession` 的当前玩家单位采集生命 / 护盾 / 灵力（按 `Pawn.get_resource_ids()` 遍历，不硬编码资源 id），下一间开局后写回采集值；玩家档案（Build / 数据）沿用既有 `_resolve_player_data()` 优先级链。第一间房必须满状态起局。
+  - 新增 `game/shared/core/pawn_resource_snapshot.gd`：`static capture(pawn: Pawn) -> PawnResourceSnapshot` 与 `apply_to(pawn: Pawn) -> void`；空单位、无资源池必须安全返回，不抛错。
+  - `game/world/encounter_session.gd` 扩展：新增 `capture_player_state() -> PawnResourceSnapshot` 与 `begin_with_state(encounter: EncounterDefinition, state: PawnResourceSnapshot) -> bool`；`begin()` 语义完全不变（等价于 `begin_with_state(encounter, null)`），`INC-WORLD-002` 既有 12 个用例必须继续通过。
+  - 集成用例覆盖：合法秘境可开局且第一间满状态；清空非 Boss 房间进入 `AWAITING_DECISION` 且收益累加；`advance()` 后深度 +1 且带走上一间剩余的生命 / 灵力（断言小于满值）；Boss 房间清空后 `CLEARED` 且收益保留；战败进入 `DEFEATED` 且收益归零；`retreat()` 保留收益并结束；非法状态调用 `advance()` / `retreat()` 无效；重复结算不二次广播。
+- 范围：`game/world/dungeon_run.gd`（新增）、`game/shared/core/pawn_resource_snapshot.gd`（新增）、`game/world/encounter_session.gd`（只新增两个方法，不改既有语义）、`test/integration/dungeon_run_test.gd`（新增）。
+- 非范围：随机事件、分支路线、商店 / 存档、掉落物入库、疲劳或复活机制、多人、AI 行为改动、UI 文本。
+- 依赖：`INC-WORLD-003`、`INC-WORLD-002`（已验收，会话起局 / 换敌 / 结算 / 控制器绑定）。
+- 检索证据：同一轮检索（工作区干净、无 pending Increment）；`EncounterSession` 已提供 `begin()` / `restart()` / `get_state()` / `get_player_pawn()` 与两处信号，但 `begin()` 每次都按档案重建单位、资源池回到初始比例，因此「风险累积」必须在会话之上新增一层；`Pawn` 已暴露 `get_resource_ids()` 与 `get_resource_pool(id)`，`ResourcePoolComponent` 已提供 `set_value()`，可以在不新增数值系统的前提下完成状态延续。
+- 风险：本 Increment 会改动已验收的 `EncounterSession`，属于「已接受接口的扩展」，必须只新增方法、不改既有方法语义，并让 WORLD-002 既有用例继续通过；若必须改既有行为，应另立 Increment 并记录破坏性变更。另一风险是资源写回的时序——必须在新单位入树后再写入资源值，否则会被 `_ready()` 里的池初始化覆盖。
+- 实现说明：新增 `PawnResourceSnapshot`（按 `Pawn.get_resource_ids()` 采集 / 写回，不硬编码任何资源 id；空单位与缺失资源池安全降级）与 `DungeonRun`（状态机 IDLE → RUNNING → AWAITING_DECISION → … → CLEARED / DEFEATED / RETREATED；清空房间按定义累加灵石，`DEFEATED` 归零，`CLEARED` / `RETREATED` 保留；`advance()` 先采集当前玩家快照，下一间开局并完成资源池初始化后写回）。`EncounterSession` 只新增 `begin_with_state()` 与 `capture_player_state()`，`begin()` 等价改写为 `begin_with_state(encounter, null)`，既有语义不变。推进决策唯一在 `DungeonRun`：会话只判单间胜负，运行只判「还有没有下一间」，避免双重推进。
+- 变更文件：`game/world/dungeon_run.gd`（新增）、`game/shared/core/pawn_resource_snapshot.gd`（新增）、`game/world/encounter_session.gd`（只新增两个方法并等价改写 `begin()`）、`test/integration/dungeon_run_test.gd`（新增）。
+- 测试证据：`pwsh -File test/run_tests.ps1 -Godot <godot> -Layer integration` → PASS（GdUnit4 integration 102 cases / 0 failures，退出码 0），既有的 `INC-WORLD-002` 12 个会话用例继续通过。新增 9 个用例覆盖：未配置秘境拒绝开局且第一间满状态；清空非 Boss 房间进入 `AWAITING_DECISION` 并按定义累加；继续深入深度 +1、敌人换成下一间档案、玩家携带上一间剩余的生命 / 护盾 / 灵力（断言小于满值）；Boss 清空后 `CLEARED` 且收益保留；战败 `DEFEATED` 且收益归零；撤退 `RETREATED` 保留收益且不创建新对局；非法状态推进 / 撤退零副作用；重复结算不二次计数；资源快照对空单位 / 空目标安全降级。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T19:01:28+08:00
+- 已知问题：资源延续只覆盖玩家单位，敌人每间按档案满状态重建（设计如此）；技能冷却与眩晕不跨房间延续，属于非范围。
+- 用户验收：已验收（依据用户 2026-09-25 指令「验收通过，分increment提交」与「分批incre单独推送后继续开发」）
+- 验收时间：2026-09-25T19:07:54+08:00
+- Git：
+- 备注：父 Increment 为 `INC-CROSS-016`；本 Increment 是「贪不贪」决策的运行时主体，收益只在 `CLEARED` / `RETREATED` 时保留。
