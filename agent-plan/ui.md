@@ -1,6 +1,6 @@
 # UI 主题计划
 
-> 最后修改：2026-09-25T16:50:57+08:00
+> 最后修改：2026-09-25T18:52:41+08:00
 > 主题：ui  
 > 规则来源：`../AGENTS.md`
 
@@ -522,3 +522,35 @@
 - 验收时间：2026-09-25T18:10:00+08:00
 - Git：`main` / `4ca845a`
 - 备注：父 Increment 为 `INC-CROSS-013`；本 Increment 采用方案 B，不采用静默截断方案 C。
+
+## INC-UI-014：遭遇选择面板（EncounterPanel）
+
+- 状态：accepted
+- 创建时间：2026-09-25T18:33:02+08:00
+- 最后修改：2026-09-25T18:52:41+08:00
+- 主题：ui
+- 目标：新增最小遭遇面板，把「进入哪一个秘境遭遇」变成可视可选的操作：列出全部遭遇按钮、显示当前遭遇与对局状态、战斗进行中禁止再次进入，并提供「重新挑战」。
+- 验收标准：
+  - 新增 `game/ui/encounter_panel.gd` + `encounter_panel.tscn`，导出 `encounters: Array[EncounterDefinition]`，为每份遭遇生成一个按钮（文案取 `display_name`）。
+  - 信号：`encounter_selected(encounter: EncounterDefinition)` 与 `restart_requested()`；点击按钮只发信号，面板不实例化任何 Pawn、不调用会话、不写战斗状态。
+  - `set_running(value: bool)`：运行中遭遇按钮不可用、重新挑战按钮可用；空闲时相反。`set_status(text: String)` 与 `set_active_encounter(encounter)` 只更新文本，不触发任何游戏逻辑。
+  - 空列表 / 未配置资源必须安全降级：按钮区为空且不报错，`set_active_encounter(null)` 不崩溃。
+  - 新增集成用例覆盖：按钮数量与遭遇一一对应、点击发出正确信号且只有一次、运行态切换禁用状态、空列表降级。
+- 范围：`game/ui/encounter_panel.gd`（新增）、`game/ui/encounter_panel.tscn`（新增）、`test/integration/encounter_panel_test.gd`（新增）。
+- 非范围：秘境地图/房间列表/Boss 进度、奖励结算界面、动画美化、主题皮肤、存读档、手柄适配。
+- 依赖：`INC-WORLD-001`（遭遇定义）、既有 Dock 布局（`INC-UI-011`、`INC-CROSS-008`，均已验收）。
+- 检索证据：同 `INC-WORLD-001` 的检索结论（工作区干净、无 pending Increment）。既有 UI 结构为 `HUD/BottomLeftDock` 下挂 `PawnInfoPanel` 与 `SkillBar`（见 Godot MCP 读取的 `game/main/main.tscn`），`skill_bar.gd` 已确立「UI 只发信号、不执行战斗逻辑」的模式（见 `INC-UI-012` / `INC-UI-013` 的验收记录），本 Increment 沿用同一模式。
+- 风险：面板若自行读取敌人档案或直接调用会话，会把 UI 变成第二个流程入口，违背 `INC-UI-012` 已确立的边界；因此面板只持有 `EncounterDefinition` 列表并发信号。另一风险是按钮数量随遭遇增长撑破 Dock 布局，MVP 阶段限定 ≤6 个遭遇并以固定高度容器承载。
+- 实现说明：`EncounterPanel`（`VBoxContainer`，场景 `game/ui/encounter_panel.tscn` 含 `TitleLabel` / `Buttons` / `StatusLabel` / `RestartButton`）在 `_ready()` 按导出的 `encounters: Array[EncounterDefinition]` 生成按钮，文案取 `display_name`，只发 `encounter_selected(encounter)` 与 `restart_requested()` 两个信号，不实例化 Pawn、不调用会话、不写战斗状态，沿用 `INC-UI-012` / `INC-UI-013` 已确立的「UI 只发信号」边界。运行态语义在面板内部兜底：`set_running(true)` 时遭遇按钮全部禁用，且 `_on_button_pressed()` 会先判运行态再转发，因此**程序化触发 `pressed` 也不会泄漏成选择**；`set_active_encounter(null)` 时「重新挑战」禁用；未配置或空槽位的遭遇不生成按钮；空列表安全降级为 `EMPTY_STATUS`（`未选择遭遇`）文案。`MAX_ENCOUNTERS = 6` 限制按钮数量，避免增长后撑破左下 Dock 布局。
+- 变更文件：`game/ui/encounter_panel.gd`（新增）、`game/ui/encounter_panel.gd.uid`（新增）、`game/ui/encounter_panel.tscn`（新增）、`test/integration/encounter_panel_test.gd`（新增）、`test/integration/encounter_panel_test.gd.uid`（新增）。
+- 测试证据：
+  - 新增集成用例 `test/integration/encounter_panel_test.gd`：8 个用例，覆盖按钮数量与遭遇一一对应、点击发出正确信号且只发一次、运行态下按钮禁用且程序化触发不转发、`set_status()` / `set_active_encounter()` 只更新文本、空列表与未配置资源安全降级、`set_active_encounter(null)` 时重新挑战禁用、`get_encounter_count()` 遵守上限。
+  - 统一门禁 `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all`：GdUnit4 241 cases（unit 102 / integration 93 / gameplay 46）、0 failures；headless 10 suites / 549 assertions / 0 failing suites；退出码 0，无孤儿节点报告。
+  - `git diff --check` 无输出。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T18:52:41+08:00
+- 已知问题：按钮使用默认 `Button` 样式，未做主题皮肤；键盘 / 手柄导航与焦点顺序未覆盖（`AGENTS.md` §12.5 的导航要求尚未在本面板落地）；遭遇的 `description` 文案目前不在面板上显示，玩家看不到遭遇说明。
+- 用户验收：已验收
+- 验收时间：2026-09-25T18:52:41+08:00
+- Git：见 `INC-CROSS-015` 的 Git 字段（按 Increment 拆分提交）。
+- 备注：父 Increment 为 `INC-CROSS-015`；本 Increment 只提供「选择入口」，流程编排在 `INC-CORE-008`。验收依据：用户 2026-09-25 指令「推送，保持本地远端一致」，按 `AGENTS.md` §4.1 与本仓库 `INC-CROSS-011`~ `INC-CROSS-014` 的既有约定记录为明确验收。
