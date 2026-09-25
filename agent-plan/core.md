@@ -1,6 +1,6 @@
 # Core 主题计划
 
-> 最后修改：2026-09-25T16:50:57+08:00
+> 最后修改：2026-09-25T18:52:41+08:00
 > 主题：core  
 > 规则来源：`../AGENTS.md`
 
@@ -277,3 +277,36 @@
 - 验收时间：2026-09-25T18:10:00+08:00
 - Git：`main` / `fcd5c65`
 - 备注：父 Increment 为 `INC-CROSS-013`。
+
+## INC-CORE-008：主场景遭遇路由（选择 → 起局 → 结果 → 重开）
+
+- 状态：accepted
+- 创建时间：2026-09-25T18:33:02+08:00
+- 最后修改：2026-09-25T18:52:41+08:00
+- 主题：core
+- 目标：把遭遇面板与会话接到主场景，形成玩家可见的完整循环；`main.gd` 只做信号转发与引用刷新，不新增战斗/秘境业务逻辑，遏止主场景脚本继续膨胀（来自外部评审对 `main.gd` 压力的风险提示）。
+- 验收标准：
+  - `game/main/main.tscn` 挂载 `EncounterSession` 与 `EncounterPanel`；`main.gd` 新增代码只包含：连接面板与会话信号、在 `encounter_started` 时刷新 `player_pawn`/`enemy_pawn`/`player_controller`/`ai_controller` 引用并重新选中玩家、在 `encounter_finished` 时把结果文本交给面板、把面板的 `restart_requested` 转给会话。
+  - 换遭遇后：旧单位从 `Pawns` 容器移除，选中态 / 技能栏 / 信息卡 / 目标高亮全部指向新玩家单位，不出现指向已释放节点的悬空引用（`is_instance_valid` 检查 + 目标高亮清理）。
+  - 结果可读：面板状态文本区分「进行中」「胜利」「失败」，且失败后仍可重新挑战或改选其他遭遇。
+  - 输入路由保持既有语义：目标选择中点空白/非法目标仍不产生副作用；暂停、Q、1~6、右键命令行为不变。
+  - Godot MCP `validate` 对改动场景返回无错误；统一门禁 `test/run_tests.ps1 -Layer all` 全绿。
+- 范围：`game/main/main.gd`（接线）、`game/main/main.tscn`（挂载节点）、`test/gameplay/main_scene_encounter_test.gd`（新增）。
+- 非范围：秘境地图/房间推进、事件与奖励、Boss、存档、4v4 编队、技能与数值改动、UI 美化。
+- 依赖：`INC-WORLD-001`、`INC-WORLD-002`、`INC-UI-014`。
+- 检索证据：同 `INC-WORLD-001` 的检索结论；`INC-WORLD-002` 的检索证据已确认 `main.gd` 目前直接持有两个写死 Pawn 并在 `_ready()` 中绑定控制器，因此本 Increment 必须把「单位引用」从常量改为可刷新引用，否则换遭遇后必现悬空引用。
+- 风险：`main.gd` 已是 292 行的高冲突文件，本 Increment 会继续改它，必须把新增逻辑限制在「信号转发 + 引用刷新」；若接线过程中发现需要新的判断分支（例如按遭遇类型分派），应改为在会话内部完成而不是写进主场景。另一风险是换单位时正在瞄准，必须在起局时强制取消瞄准与高亮。
+- 实现说明：`main.tscn` 新增 `EncounterSession` 节点（`pawns_container = NodePath("../Pawns")`、`initial_encounter` = 试炼傀儡、`player_data` = 玩家正式档案）与挂在 `HUD/BottomLeftDock` 下的 `EncounterPanel`（`encounters` 按 试炼傀儡 → 铁壁傀儡 → 血刃刺客 顺序配置 3 份）；`Pawns` 下原有写死的 `PlayerPawn` / `EnemyPawn` 与 8 条静态 `[connection]` 接线全部移除——单位改由会话运行时创建，信号改由 `main.gd` 动态连接，因此新增了成对的 `_connect_pawn_signals()` / `_disconnect_pawn_signals()`。`main.gd` 的 `player_pawn` / `enemy_pawn` / `player_controller` / `ai_controller` 从 `@onready` 常量改为可刷新引用；新增代码严格限定在「信号转发 + 引用刷新 + 断线」：`_connect_encounter_signals()` / `_on_encounter_selected()` / `_on_encounter_restart_requested()` / `_on_encounter_started()` / `_on_encounter_finished()` / `_refresh_pawn_references()` / `_connect_pawn_signals()` / `_disconnect_pawn_signals()` / `_disconnect_if_connected()`，没有引入任何新的战斗或秘境判断分支（按遭遇分派的逻辑留在会话内）。选中态采用「跟随身份」语义：`_refresh_pawn_references()` 记录 `keep_player_selection = _selected_pawn != null and _selected_pawn == player_pawn`，换局后仅在原来选中的是玩家时才把选中态迁移到新玩家单位——因此开机不会凭空选中单位，`INC-CROSS-008` 之前建立的「初始未选中」用例语义不变，而换遭遇后选中态不会悬空。既有全部输入入口（`_handle_select` / `_handle_command` / `_handle_cast_skill` / `_handle_cast_skill_slot` / `_request_selected_skill` / `_order_selected_skill` / `_handle_targeting_click` / `_update_target_highlight` / `_update_hud`）补入空场守卫，避免单位尚未建立时解引用。
+- 变更文件：`game/main/main.gd`（修改，+116 / -17，336 行 → 约 430 行）、`game/main/main.tscn`（修改，+16 / -8）、`game/ui/encounter_panel.tscn` 与 `game/world/encounter_session.gd`（被挂载，由前序 Increment 引入）、`test/gameplay/main_scene_encounter_test.gd`（与 `INC-TESTING-007` 共用同一文件）。
+- 测试证据：
+  - 真实主场景 gameplay 用例 `test/gameplay/main_scene_encounter_test.gd` 5 个用例全通过：默认进入试炼傀儡遭遇、每个面板按钮都映射到正式遭遇资源、按下不同按钮后敌人单位与其 `PawnData` 真的被替换且全部引用指向新单位、结算文本与 `EncounterSession.get_state()` 一致且只广播一次、战败后仍可改选其他遭遇。gameplay 层合计 46 cases / 0 failures / 0 orphans。
+  - 统一门禁 `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all`：GdUnit4 241 cases（unit 102 / integration 93 / gameplay 46）、0 failures；headless 10 suites / 549 assertions / 0 failing suites；退出码 0。
+  - Godot MCP `validate`：改动脚本与场景无解析 / 加载错误。`signals` 结构检查对脚本内动态建立的接线会报 `orphaned_handler`，属已知误报（本项目接线在运行时完成），以脚本校验加真实主场景用例为准。
+  - `git diff --check` 无输出；编辑器在 `project.godot` 留下的一处空行噪声（`cast_skill` 与 `cast_skill_1` 之间、`cast_skill_6` 与 `[layer_names]` 之间）已还原，未混入本 Increment。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T18:52:41+08:00
+- 已知问题：`main.gd` 由 336 行增至约 430 行，仍是高冲突文件；本次新增全部为转发与引用刷新，但后续若继续往主场景加流程，应优先落在 `EncounterSession` 而不是 `main.gd`。`EncounterPanel` 在左下 Dock 内的真实窗口多分辨率取证（16:9 / 16:10 / 窄屏）未在本 Increment 重跑，沿用 `INC-UI-011` 的布局基线。`main.tscn` 的 8 条 `[connection]` 被移除后，接线完全依赖运行时，编辑器内静态查看不再显示连线。
+- 用户验收：已验收
+- 验收时间：2026-09-25T18:52:41+08:00
+- Git：见 `INC-CROSS-015` 的 Git 字段（按 Increment 拆分提交）。
+- 备注：父 Increment 为 `INC-CROSS-015`；本 Increment 是父级唯一允许修改 `main.gd` 的接线项。验收依据：用户 2026-09-25 指令「推送，保持本地远端一致」，按 `AGENTS.md` §4.1 与本仓库 `INC-CROSS-011`~ `INC-CROSS-014` 的既有约定记录为明确验收。

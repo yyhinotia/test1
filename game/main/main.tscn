@@ -6,6 +6,12 @@
 [ext_resource type="PackedScene" path="res://game/pawns/enemy_pawn.tscn" id="2_enemy_pawn"]
 [ext_resource type="PackedScene" path="res://game/ui/pawn_info_panel.tscn" id="3_info_panel"]
 [ext_resource type="PackedScene" path="res://game/ui/skill_bar.tscn" id="4_skill_bar"]
+[ext_resource type="Script" path="res://game/world/encounter_session.gd" id="5_encounter_session"]
+[ext_resource type="Resource" path="res://game/world/data/encounters/encounter_trial_puppet.tres" id="6_encounter_trial"]
+[ext_resource type="Resource" path="res://game/world/data/encounters/encounter_iron_guard.tres" id="7_encounter_iron_guard"]
+[ext_resource type="Resource" path="res://game/world/data/encounters/encounter_blood_blade.tres" id="8_encounter_blood_blade"]
+[ext_resource type="PackedScene" path="res://game/ui/encounter_panel.tscn" id="9_encounter_panel"]
+[ext_resource type="Resource" path="res://game/pawns/data/player_pawn.tres" id="10_player_data"]
 
 [node name="Main" type="Node2D" unique_id=539579646]
 process_mode = 3
@@ -23,6 +29,12 @@ position = Vector2(40, 40)
 script = ExtResource("2_8y833")
 
 [node name="Pawns" type="Node2D" parent="." unique_id=569280582]
+
+[node name="EncounterSession" type="Node" parent="."]
+script = ExtResource("5_encounter_session")
+pawns_container = NodePath("../Pawns")
+player_data = ExtResource("10_player_data")
+initial_encounter = ExtResource("6_encounter_trial")
 
 [node name="PlayerPawn" parent="Pawns" unique_id=1821916831 instance=ExtResource("1_player_pawn")]
 position = Vector2(870, 410)
@@ -108,6 +120,10 @@ layout_mode = 2
 [node name="SkillBar" parent="HUD/BottomLeftDock" unique_id=672815287 instance=ExtResource("4_skill_bar")]
 layout_mode = 2
 
+[node name="EncounterPanel" parent="HUD/BottomLeftDock" instance=ExtResource("9_encounter_panel")]
+layout_mode = 2
+encounters = Array[EncounterDefinition]([ExtResource("6_encounter_trial"), ExtResource("7_encounter_iron_guard"), ExtResource("8_encounter_blood_blade")])
+
 [node name="PauseOverlay" type="Control" parent="HUD" unique_id=535022588]
 visible = false
 layout_mode = 3
@@ -142,12 +158,3 @@ text = "游戏已暂停
 按 Space 恢复
 暂停时仍可下达移动/攻击指令"
 horizontal_alignment = 1
-
-[connection signal="died" from="Pawns/PlayerPawn" to="." method="_on_pawn_died"]
-[connection signal="health_changed" from="Pawns/PlayerPawn" to="." method="_on_health_changed"]
-[connection signal="shield_changed" from="Pawns/PlayerPawn" to="." method="_on_shield_changed"]
-[connection signal="skill_cast" from="Pawns/PlayerPawn" to="." method="_on_player_skill_cast"]
-[connection signal="skill_cooldown_changed" from="Pawns/PlayerPawn" to="." method="_on_player_skill_cooldown_changed"]
-[connection signal="spirit_changed" from="Pawns/PlayerPawn" to="." method="_on_spirit_changed"]
-[connection signal="state_changed" from="Pawns/PlayerPawn" to="." method="_on_player_state_changed"]
-[connection signal="died" from="Pawns/EnemyPawn" to="." method="_on_pawn_died"]
