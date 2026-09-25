@@ -614,3 +614,33 @@
 - 验收时间：2026-09-25T18:10:00+08:00
 - Git：`main` / `a8e1ea1`
 - 备注：父 Increment 为 `INC-CROSS-013`。
+
+
+## INC-PAWNS-016：敌人威胁档案预设（威胁轴数据基线）
+
+- 状态：accepted
+- 创建时间：2026-09-25T18:20:31+08:00
+- 最后修改：2026-09-25T18:28:15+08:00
+- 主题：pawns
+- 来源：`docs/build-mvp.md` MVP-5（Build → Skill → Combat 闭环），以及用户 2026-09-25 下一阶段建议的优先级 5「Gameplay 调参：验证输出/生存/控制三类技能是否真正产生决策」。
+- 目标：在既有 `PawnData` 数据契约内新增两类「敌人威胁档案」预设，用**有效生命 / 单次伤害 / 每秒伤害**三条轴区分「长线高血量低威胁」与「短时低血量高爆发」两类遭遇，使输出技能与控制/生存技能的价值随遭遇改变，而不是所有敌人共用同一个模板。
+- 验收标准：
+  - 新增 `game/pawns/data/enemies/` 目录，其中至少两个档案资源（长线型、爆发型）与既有 `enemy_pawn.tres` 基线并存。
+  - 档案只使用 `PawnData` 现有字段，不新增字段、不新增类、不新增系统；不得改动 `enemy_pawn.tres` 数值（避免主场景与既有测试基线回归）。
+  - 字段完整且互不冲突：`id` 全局唯一、`faction = &"enemy"`、`max_health > 0`、`attack > 0`、`attack_interval > 0`、`attack_range > 0`、`move_speed > 0`。
+  - 威胁轴可区分：长线型具备更高有效生命（生命 + 护盾）与更低每秒伤害；爆发型具备更高单次伤害与更高每秒伤害、更低有效生命。判定阈值由数据直接推导，不写进被测系统。
+- 范围：`game/pawns/data/enemies/*.tres`（新增）、对应数据契约测试。
+- 非范围：遭遇选择 UI、秘境入口流程、敌人 AI 行为差异、新技能、AOE、Buff/Debuff、掉落、正式美术、存档。
+- 依赖：`INC-CROSS-013`（已验收）、`INC-PAWNS-014`（技能数据契约）、`INC-COMBAT-006`（Effect System）。
+- 检索证据：已执行 `git status --short --branch`（`main...origin/main`，无未跟踪与未提交文件）、`git diff --unified=0 -- agent-plan/`（空）、`git diff --cached --unified=0 -- agent-plan/`（空）、`git log --oneline -6 -- agent-plan/`（计划基线 `c442822`）与 `git grep -n -E "INC-(CROSS|PAWNS|COMBAT|UI|CORE|TESTING)-[0-9]{3}" -- agent-plan/`；确认当前最高编号为 PAWNS-015 / COMBAT-007 / UI-013 / CORE-007 / TESTING-005 / CROSS-013，均已验收，无未完成 planned Increment。工作区现状：`game/pawns/data/` 只有唯一敌人预设 `enemy_pawn.tres`（180 生命 / 20 护盾 / 攻击 12 / 间隔 1.1s），全项目无遭遇档案概念，故「最优技能随遭遇变化」当前无法被表达或验证。`graphify-out/` 产物不存在，本 Increment 以 Godot MCP 场景树与定向源码读取补足结构基线。
+- 风险：新增档案若与既有 180 生命基线差异过大，可能掩盖既有 gameplay 用例的假设；档案之间必须真正分离威胁轴，否则后续决策证据会退化为「同质敌人」。数值调参属于 `INC-COMBAT-008`，本 Increment 只负责档案数据与数据契约。
+- 实现说明：新增 `game/pawns/data/enemies/` 目录，落地两份档案，均只使用 `PawnData` 既有字段、未新增字段或类：`enemy_iron_guard.tres`（铁壁傀儡：520 生命 + 80 护盾 = 600 有效生命，攻击 16 / 间隔 1.6s = 标称 10.0 DPS，防御 6，移速 70）与 `enemy_blood_blade.tres`（血刃刺客：140 有效生命，攻击 60 / 间隔 1.5s = 标称 40.0 DPS，防御 2，移速 140）。既有 `enemy_pawn.tres`（180 + 20 / 攻击 12 / 间隔 1.1s）保持原样作为基线档案，不参与威胁轴重标定。首次建档时铁壁傀儡攻击为 8，实测发现长线档案下「带不带输出」的余命差距只有 3.75 个百分点，决策代价过弱，因此按 `INC-COMBAT-008` 的标定要求把攻击调到 16；血刃刺客攻击从 45 调到 60，使无主动技能对照在该档案下真实战败，而不是「怎么打都能赢」。
+- 变更文件：`game/pawns/data/enemies/enemy_iron_guard.tres`（新增）、`game/pawns/data/enemies/enemy_blood_blade.tres`（新增）、`test/unit/enemy_threat_profile_test.gd`（新增）。
+- 测试证据：`test/unit/enemy_threat_profile_test.gd` 两个用例通过——字段完整性（id 唯一 / faction=enemy / 生命·攻击·间隔·射程·移速均 > 0 / 无境界且不携带主动技能）与威胁轴分离（铁壁傀儡有效生命最高且标称 DPS 最低；血刃刺客单次伤害与标称 DPS 最高且有效生命最低；基线档案数值未被改动）。统一门禁 `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all`：GdUnit4 210 cases / 0 failures（unit 96 / integration 73 / gameplay 41），headless 10 suites / 549 assertions / 0 failing suites。Godot MCP `validate` 对新增单元测试与 `INC-TESTING-006` 用例返回 valid；`git diff --check` 无输出。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T18:28:15+08:00
+- 已知问题：档案数据尚无游戏内入口（遭遇选择 UI / 秘境流程属于非范围，需另立 Increment）；标称 DPS 只用于区分威胁档位，不代表真实战斗结果，真实对照见 `INC-TESTING-006`。
+- 用户验收：已验收
+- 验收时间：2026-09-25T18:28:15+08:00
+- Git：`-`（提交后由计划回写提交补记 hash）
+- 备注：父 Increment 为 `INC-CROSS-014`；本 Increment 是父级「威胁轴差异化」的数据基线。验收依据：用户 2026-09-25 指令「推送，保持本地远端一致」（承接「验收通过，分increment提交」），按 AGENTS.md §4.1 记录为明确验收。

@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="PawnData" format=3]
+
+[ext_resource type="Script" uid="uid://ewp2akokimur" path="res://game/shared/resources/pawn_data.gd" id="1_pawn_data"]
+
+[resource]
+script = ExtResource("1_pawn_data")
+id = &"enemy_iron_guard"
+display_name = "铁壁傀儡"
+faction = &"enemy"
+max_health = 520.0
+max_shield = 80.0
+attack = 16.0
+defense = 6.0
+move_speed = 70.0
+attack_range = 66.0
+attack_interval = 1.6
+display_color = Color(0.55, 0.62, 0.74, 1)

@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="PawnData" format=3]
+
+[ext_resource type="Script" uid="uid://ewp2akokimur" path="res://game/shared/resources/pawn_data.gd" id="1_pawn_data"]
+
+[resource]
+script = ExtResource("1_pawn_data")
+id = &"enemy_blood_blade"
+display_name = "血刃刺客"
+faction = &"enemy"
+max_health = 140.0
+max_shield = 0.0
+attack = 60.0
+defense = 2.0
+move_speed = 140.0
+attack_range = 66.0
+attack_interval = 1.5
+display_color = Color(0.95, 0.3, 0.38, 1)
