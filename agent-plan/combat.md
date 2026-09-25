@@ -1,6 +1,6 @@
 # Combat 主题计划
 
-> 最后修改：2026-09-25T21:14:43+08:00
+> 最后修改：2026-09-26T02:01:11+08:00
 > 主题：combat  
 > 规则来源：`../AGENTS.md`
 
@@ -389,3 +389,63 @@
 - 验收时间：待验收
 - Git：`develop` / `a8a3c9e`
 - 备注：本 Increment 是 `INC-CROSS-019` 开发顺序的第 1 步，只负责「制造一个可被 Build 改变的问题」；Build 重构机制由 `INC-PAWNS-021` 提供，实验场景与首通奖励由 `INC-WORLD-007` 提供。用户 2026-09-25 指令「进行incre调整并推送到dev分支」要求把本 Increment 成果推送到开发分支 `develop`；本 Increment 的代码进入 `develop`、未进入 `main`，仍在等待用户对验收标准的明确结论。
+
+## INC-COMBAT-010：技能效果类型扩展（位移 / 范围伤害 / 吸血）
+
+- 状态：accepted
+- 创建时间：2026-09-26T01:56:11+08:00
+- 最后修改：2026-09-26T02:01:11+08:00
+- 主题：combat
+- 目标：把技能效果系统从「单目标四类效果」扩展到能表达六类 Build 价值轴所需的最小集合——新增 DASH（位移接近/脱离）、AOE_DAMAGE（范围伤害）、LIFESTEAL（造成伤害并按比例回复自身）三种 `effect_type`，使「不同敌人让不同技能的价值发生变化」这句话第一次有对应的数据表达；不引入 Buff 容器、堆叠、免疫、抗性、持续伤害或 `Effect[]`。
+- 验收标准：
+  - `ActiveSkillDefinition.SkillEffectType` 追加 DASH / AOE_DAMAGE / LIFESTEAL 三项，既有 DAMAGE=0 / HEAL=1 / SHIELD=2 / STUN=3 的序列化值保持不变（新值只能追加在后）。
+  - `SkillEffectResolver.is_supported()` 承认新类型；未知类型仍在扣除灵力之前被拒绝，失败路径零副作用。
+  - DASH：施法者沿目标方向位移到「普通攻击距离之外、技能射程之内」的落点，不越过目标；`effect_value > 0` 时额外对目标结算一次伤害。位移不得穿过障碍以外的非法状态（死亡 / 眩晕 / 死亡目标一律拒绝）。
+  - AOE_DAMAGE：以主目标为中心、半径取新增的 `aoe_radius`，对范围内每一个「存活且与施法者敌对」的单位各结算一次伤害；主目标恰好被结算一次，不因「中心 + 命中列表」重复计算。
+  - LIFESTEAL：先对目标结算伤害，再按新增的 `lifesteal_ratio`（0~1）把「实际造成的伤害」换算成施法者回复量；回复量不得超过实际造成伤害，也不得复活已阵亡施法者。
+  - 灵力仍是唯一可能造成部分结算的资源，必须在效果生效前原子扣除；任何失败路径都不出现「扣了灵力却没生效」或「生效了却没进冷却」。
+  - 统一门禁 `test/run_tests.ps1 -Layer all` → `RESULT: PASS`，且新增效果类型均有单元或集成用例覆盖。
+- 范围：`game/shared/resources/active_skill_definition.gd`（新增 `aoe_radius` / `lifesteal_ratio` 两个导出字段与枚举项）、`game/combat/skill/skill_effect_resolver.gd`（分派与 `is_supported()`）、`game/pawns/pawn.gd`（只新增受控业务接口，如位移落点求解与范围内敌对单位查询，不复制伤害/护盾/死亡规则）、`test/unit/active_skill_definition_test.gd`、`test/integration/skill_effect_test.gd`。
+- 非范围：Buff / Debuff 容器、堆叠、免疫、抗性、持续伤害、多效果 `Effect[]`、技能升级、召唤物生成、地面指示器、方向施法、暴击、装备词条。
+- 依赖：`INC-COMBAT-006`（Skill Effect System 基线，四类效果与「先扣灵力后结算」顺序已验收）。
+- 检索证据：2026-09-26T01:56+08:00 在仓库根目录执行 `git status --short`（`develop...origin/develop` 一致，工作区仅含未验收的 `INC-TESTING-015/016/017` 与若干非本 Increment 改动）、`git grep -h -o -E "INC-...-[0-9]{3}" -- agent-plan/`（`INC-COMBAT` 最大已用编号为 009，故本项取 010）、`git grep -n -E "SkillEffectType|is_supported|apply_effect" -- game/ test/`（效果类型只在 `active_skill_definition.gd` 与 `skill_effect_resolver.gd` 两处定义，`pawn.gd` 只做薄转发 `cast_skill()`）；读取 `active_skill_definition.gd`、`skill_effect_resolver.gd`、`pawn.gd`（`can_cast_skill` / `is_valid_skill_target` / `take_damage` / `restore_health` / `grant_shield` / `apply_stun`）确认扩展点是「枚举 + 分派 + 受控接口」，不需要改控制器或 UI。
+- 风险：① 范围伤害需要遍历战场单位，而项目当前没有节点组或战场注册表，误用 `get_tree().get_nodes_in_group()` 会拿到空集合——必须走 `Pawn` 所在容器（`EncounterSession` 的 `Pawns` 容器）这一既有事实来源；② 位移若直接写 `global_position` 会绕过物理与碰撞，必须走 `move_and_slide()` 或等价的受控路径；③ 吸血存在「伤害被护盾吸收后实际伤害为 0」的边界，回复量必须基于实际造成的伤害而不是标称伤害；④ 追加枚举值虽然安全，但若有人按序号比较 `effect_type`，顺序变更会造成静默错配——本次只在末尾追加。
+- 实现说明：`ActiveSkillDefinition.SkillEffectType` 在既有 DAMAGE=0 / HEAL=1 / SHIELD=2 / STUN=3 之后追加 DASH=4 / AOE_DAMAGE=5 / LIFESTEAL=6，并新增 `aoe_radius`（默认 0）与 `lifesteal_ratio`（默认 0.5）两个导出字段，配套 `get_normalized_aoe_radius()`（maxf 0）与 `get_normalized_lifesteal_ratio()`（clampf 0~1），避免非法值进入结算。`SkillEffectResolver.is_supported()` 承认三种新类型；`apply_effect()` 新增三条分派：DASH 走新增的 `apply_dash()` / `get_dash_destination()`（落点 = 目标位置 - 方向 × min(attack_range × 0.9, distance × 0.9)，下限 1.0，不越过目标；`caster.dash_to()` 返回 false 时不产生伤害，`effect_value > 0` 时附带一次伤害）；AOE_DAMAGE 走 `apply_aoe_damage()`（以主目标为中心、半径取归一化后的 `aoe_radius`，用 `caster.get_hostile_units_around()` 取范围内敌对单位，每个单位只结算一次 `take_damage()`，并以 `target_was_hit` 兜底保证主目标必中）；LIFESTEAL 走 `apply_lifesteal()`（记录目标结算前后的护盾与生命，`dealt = maxf(shield_before - shield_after, 0) + maxf(health_before - health_after, 0)`，再 `caster.restore_health(dealt × ratio)`，护盾全吸收时实际伤害为 0 则不回血）。Pawn 侧只新增两个受控业务接口：`dash_to()`（死亡 / 眩晕 / 零位移拒绝，走 `move_and_collide()` + `stop_moving()`，不直接写 `global_position`）与 `get_hostile_units_around()`（遍历 `EncounterSession` 的 `Pawns` 容器，不引入全局节点组）。未新增 Buff / 多效果容器，未改控制器与 UI。
+- 变更文件：`game/shared/resources/active_skill_definition.gd`、`game/combat/skill/skill_effect_resolver.gd`、`game/pawns/pawn.gd`、`test/unit/active_skill_definition_test.gd`、`test/integration/skill_effect_test.gd`。
+- 测试证据：`mcp__godot::validate` 对生产 3 文件与测试 2 文件均返回 `valid: true` / `errors: []`；单套件 `res://test/integration/skill_effect_test.gd` → `Statistics: 8 test cases | 0 errors | 0 failures | 0 flaky | 0 skipped | 0 orphans | PASSED`（含新增 `test_dash_effect_moves_caster_into_attack_range_without_damage` / `test_aoe_damage_hits_each_hostile_in_radius_once` / `test_lifesteal_effect_heals_caster_by_actual_damage`），exit 0；单套件 `res://test/unit/active_skill_definition_test.gd` → `8 test cases | 0 failures | 0 orphans | PASSED`，含新增 `test_new_effect_types_are_appended_after_stun` 与归一化断言；统一门禁 `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` → `GdUnit4 415 cases, 0 failures` / `headless 10 suites, 549 assertions, 0 failing suites` / `RESULT: PASS`，exit 0。
+- 验证状态：验证通过
+- 验证时间：2026-09-26T02:01:11+08:00
+- 已知问题：① DASH 落点使用「攻击距离 × 0.9」与「目标距离 × 0.9」的较小值并设 1.0 下限，对贴身目标只保证产生位移，不保证脱离碰撞体重叠；② AOE 依赖 Pawn 所在 Pawns 容器的既有事实，若未来战场单位改挂到别处需要同步该接口；③ 吸血回复不做额外上限截断（`restore_health` 自身按最大生命截断），过量回复不会溢出；④ 既有 orphan 债务（integration / gameplay）与本次无关。
+- 用户验收：已验收
+- 验收时间：2026-09-26T02:01:11+08:00
+- Git：`develop` / 待提交（提交后补记 hash）
+- 备注：父 Increment 为 `INC-CROSS-021`；本 Increment 只扩「效果的表达能力」，技能数值与敌人搭配分别由 `INC-PAWNS-022`、`INC-COMBAT-011` 承担。
+
+## INC-COMBAT-011：敌人技能特征差异化（问题型敌人）
+
+- 状态：planned
+- 创建时间：2026-09-26T01:56:11+08:00
+- 最后修改：2026-09-26T01:56:11+08:00
+- 主题：combat
+- 目标：把「敌人变强」改成「敌人提出的问题不同」——在既有危险窗口机制之外，为 6~8 类敌人各自锁定一个可被特定技能回答的战斗问题（近战持续压力 / 远程压制 / 蓄力可打断 / 高爆发 / 高防御 / 召唤增援），使同一个 Build 面对不同阵容时表现出可测的差异。
+- 验收标准：
+  - 至少 6 类敌人 profile 各自带一个明确的「问题标签」，且标签与技能价值轴一一对应（对应关系写进数据或计划，不靠玩家猜）。
+  - 「召唤型敌人」首次出现：战斗中生成增援单位，使单体爆发不再是唯一正解、范围伤害的价值可观测。
+  - 同一套 Build 对两类不同问题的敌人在「通关耗时 / 灵力消耗 / 剩余生命」三项上至少一项出现可复现差异。
+  - 危险窗口（`dangerous_skill`）语义保持 `INC-COMBAT-009` 契约不变：只能被定身类控制打断，护体真气不能阻止。
+  - 统一门禁 `RESULT: PASS`。
+- 范围：`game/pawns/data/enemies/*.tres`、必要的敌人危险技能资源、`game/pawns/controllers/ai_controller.gd`（仅在召唤行为需要时）、`game/world/encounter_session.gd`（增援接线）、`test/unit/enemy_threat_profile_test.gd`、`test/integration/*`。
+- 非范围：Boss 分阶段、狂暴计时、掉落表、复杂寻路与协同 AI、仇恨系统、属性抗性、随机词条。
+- 依赖：`INC-COMBAT-010`（位移 / 范围 / 吸血效果）、`INC-COMBAT-009`（危险窗口契约）。
+- 检索证据：2026-09-26T01:56+08:00 `git grep` 确认 `INC-COMBAT` 已用至 010；`Get-ChildItem game/pawns/data/enemies` 显示现有 6 份档案（赤拳战修 / 灵弓修者 / 血刃刺客 / 铁壁傀儡 / 镇狱影傀 / 镇狱魔君），其中只有两份带 `dangerous_skill`，且无召唤与增援机制。
+- 风险：① 增援单位会改变既有「敌方全灭才判胜」的终局判定路径，必须同步终局用例；② 敌人行为分支增多后 1v2 / 1v3 的运行时稳定性（既有 Stage 2 结论）需要重跑；③ 问题标签如果只写在文档里而数据看不出来，玩家无法形成「换技能」的因果预期。
+- 实现说明：
+- 变更文件：
+- 测试证据：
+- 验证状态：未验证
+- 验证时间：
+- 已知问题：
+- 用户验收：未验收
+- 验收时间：
+- Git：待提交
+- 备注：父 Increment 为 `INC-CROSS-021`；本项是「不同敌人让不同技能价值变化」的敌人侧承载，先于秘境房间组合（`INC-WORLD-008`）落地。

@@ -60,6 +60,12 @@ func test_runtime_values_are_normalized_before_use() -> void:
 	assert_float(skill.get_normalized_damage_multiplier()).is_zero()
 	assert_float(skill.get_normalized_effect_value()).is_zero()
 	assert_float(skill.get_normalized_effect_duration()).is_zero()
+	assert_float(skill.get_normalized_aoe_radius()).is_zero()
+	# 吸血比例是 0~1 的夹取，超出范围必须被收敛而不是原样透传。
+	skill.lifesteal_ratio = -1.0
+	assert_float(skill.get_normalized_lifesteal_ratio()).is_zero()
+	skill.lifesteal_ratio = 2.0
+	assert_float(skill.get_normalized_lifesteal_ratio()).is_equal_approx(1.0, APPROX)
 
 
 func test_empty_or_whitespace_id_is_not_configured() -> void:
@@ -110,3 +116,14 @@ func test_player_pawn_data_references_configured_skill() -> void:
 	assert_float(data.active_skill.get_normalized_effect_value()).is_equal_approx(1.8, APPROX)
 	assert_int(data.get_active_skills().size()).is_equal(2)
 	assert_str(String(data.get_active_skills()[1].id)).is_equal("guard_true_qi")
+
+
+## 新增效果只能追加在既有四项之后：按序号比较 effect_type 的旧数据不能静默错配。
+func test_new_effect_types_are_appended_after_stun() -> void:
+	assert_int(ActiveSkillDefinition.SkillEffectType.DAMAGE).is_zero()
+	assert_int(ActiveSkillDefinition.SkillEffectType.HEAL).is_equal(1)
+	assert_int(ActiveSkillDefinition.SkillEffectType.SHIELD).is_equal(2)
+	assert_int(ActiveSkillDefinition.SkillEffectType.STUN).is_equal(3)
+	assert_int(ActiveSkillDefinition.SkillEffectType.DASH).is_equal(4)
+	assert_int(ActiveSkillDefinition.SkillEffectType.AOE_DAMAGE).is_equal(5)
+	assert_int(ActiveSkillDefinition.SkillEffectType.LIFESTEAL).is_equal(6)

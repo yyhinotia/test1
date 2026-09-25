@@ -730,6 +730,42 @@ func grant_shield(amount: float) -> float:
 	return maxf(current_shield - before, 0.0)
 
 
+## 位移入口（INC-COMBAT-010）：沿单次碰撞移动把施法者送到落点；死亡 / 眩晕 / 零位移时返回 false。
+## 使用 move_and_collide() 而不是直接写 global_position，保证位移仍然经过物理碰撞路径。
+func dash_to(destination: Vector2) -> bool:
+	if not is_alive() or is_stunned():
+		return false
+	var motion: Vector2 = destination - global_position
+	if motion.length_squared() <= 0.0001:
+		return false
+	move_and_collide(motion)
+	stop_moving()
+	return true
+
+
+## 范围查询入口（INC-COMBAT-010）：返回与自身同容器、敌对阵营、存活且落在半径内的单位。
+## 同容器即 EncounterSession 的 Pawns 容器，是当前战场边界的事实来源；不引入全局节点组，
+## 也不复制阵营与存活判定——两者复用 PawnData.faction 与 is_alive()。
+func get_hostile_units_around(center: Vector2, radius: float) -> Array[Pawn]:
+	var result: Array[Pawn] = []
+	if data == null or not is_finite(radius) or radius < 0.0:
+		return result
+	var container: Node = get_parent()
+	if container == null:
+		return result
+	for child: Node in container.get_children():
+		var pawn: Pawn = child as Pawn
+		if pawn == null or pawn == self or not is_instance_valid(pawn):
+			continue
+		if not pawn.is_alive() or pawn.data == null:
+			continue
+		if pawn.data.faction == data.faction:
+			continue
+		if pawn.global_position.distance_to(center) <= radius:
+			result.append(pawn)
+	return result
+
+
 ## 施加眩晕：立即停止移动并记录剩余时间；重复施加取较长剩余时间，不做叠加。
 func apply_stun(duration: float) -> float:
 	if not is_alive() or not is_finite(duration) or duration <= 0.0:

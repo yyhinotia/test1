@@ -41,6 +41,9 @@ static func is_supported(skill: ActiveSkillDefinition) -> bool:
 		or effect == ActiveSkillDefinition.SkillEffectType.HEAL
 		or effect == ActiveSkillDefinition.SkillEffectType.SHIELD
 		or effect == ActiveSkillDefinition.SkillEffectType.STUN
+		or effect == ActiveSkillDefinition.SkillEffectType.DASH
+		or effect == ActiveSkillDefinition.SkillEffectType.AOE_DAMAGE
+		or effect == ActiveSkillDefinition.SkillEffectType.LIFESTEAL
 	)
 
 
@@ -55,6 +58,12 @@ static func apply_effect(caster, skill: ActiveSkillDefinition, target) -> void:
 			target.grant_shield(skill.get_normalized_effect_value())
 		ActiveSkillDefinition.SkillEffectType.STUN:
 			target.apply_stun(skill.get_normalized_effect_duration())
+		ActiveSkillDefinition.SkillEffectType.DASH:
+			apply_dash(caster, skill, target)
+		ActiveSkillDefinition.SkillEffectType.AOE_DAMAGE:
+			apply_aoe_damage(caster, skill, target)
+		ActiveSkillDefinition.SkillEffectType.LIFESTEAL:
+			apply_lifesteal(caster, skill, target)
 		_:
 			pass
 
@@ -65,3 +74,62 @@ static func get_damage_amount(caster, skill: ActiveSkillDefinition) -> float:
 	if caster == null or caster.data == null or skill == null:
 		return 0.0
 	return maxf(1.0, caster.data.attack * skill.get_normalized_effect_value())
+
+## DASH：先求落点再位移，位移失败时不产生任何伤害（避免「没到却打到了」）。
+static func apply_dash(caster, skill: ActiveSkillDefinition, target) -> void:
+	if caster == null or skill == null or target == null:
+		return
+	var destination: Vector2 = get_dash_destination(caster, skill, target)
+	if not caster.dash_to(destination):
+		return
+	if skill.get_normalized_effect_value() > 0.0:
+		target.take_damage(get_damage_amount(caster, skill))
+
+
+## 落点：停在目标外侧约一个普通攻击距离处，保证位移后仍可继续普攻，且不越过目标。
+static func get_dash_destination(caster, skill: ActiveSkillDefinition, target) -> Vector2:
+	var origin: Vector2 = caster.global_position
+	if target == null or not is_instance_valid(target):
+		return origin
+	var to_target: Vector2 = target.global_position - origin
+	if to_target.length_squared() <= 0.0001:
+		return origin
+	var stop_distance: float = maxf(minf(caster.data.attack_range * 0.9, to_target.length() * 0.9), 1.0)
+	return target.global_position - to_target.normalized() * stop_distance
+
+
+## AOE_DAMAGE：以主目标为中心取半径内的敌对单位，每个单位恰好结算一次伤害。
+## 半径内的单位集合由 Pawn.get_hostile_units_around() 提供，Resolver 不自行遍历场景树。
+static func apply_aoe_damage(caster, skill: ActiveSkillDefinition, target) -> void:
+	if caster == null or skill == null or target == null:
+		return
+	var amount: float = get_damage_amount(caster, skill)
+	var center: Vector2 = target.global_position
+	var units: Array = caster.get_hostile_units_around(center, skill.get_normalized_aoe_radius())
+	var target_was_hit: bool = false
+	for unit: Variant in units:
+		if unit == null or not is_instance_valid(unit) or not unit.is_alive():
+			continue
+		if unit == target:
+			target_was_hit = true
+		unit.take_damage(amount)
+	# 半径 <= 0 或目标恰好不在集合里时，主目标仍必须命中一次。
+	if not target_was_hit and is_instance_valid(target) and target.is_alive():
+		target.take_damage(amount)
+
+
+## LIFESTEAL：伤害仍走既有「先护盾后生命」路由，回复量按实际打掉的护盾 + 生命计算，
+## 因此被完全挡下的攻击不会凭空回血，回复量也不可能超过实际造成的伤害。
+static func apply_lifesteal(caster, skill: ActiveSkillDefinition, target) -> void:
+	if caster == null or skill == null or target == null:
+		return
+	var shield_before: float = target.current_shield
+	var health_before: float = target.current_health
+	target.take_damage(get_damage_amount(caster, skill))
+	var dealt: float = (
+		maxf(shield_before - target.current_shield, 0.0)
+		+ maxf(health_before - target.current_health, 0.0)
+	)
+	if dealt <= 0.0:
+		return
+	caster.restore_health(dealt * skill.get_normalized_lifesteal_ratio())

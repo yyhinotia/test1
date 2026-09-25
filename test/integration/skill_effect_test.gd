@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
 
 ## 集成层：最小 Skill Effect System（`INC-COMBAT-006`）。
-## 覆盖四种效果、上限截断、失败无副作用，以及眩晕的行为封锁与到期恢复。
+## 覆盖七种效果、上限截断、失败无副作用，以及眩晕的行为封锁与到期恢复。
 ## 全部使用真实 Pawn 场景与真实资源池，不直接改写 HP / 护盾 / 灵力内部字段。
 
 const PLAYER_SCENE_PATH: String = "res://game/pawns/player_pawn.tscn"
@@ -259,3 +259,104 @@ func test_failed_cast_is_complete_no_op_for_every_effect() -> void:
 	assert_bool(enemy.is_stunned()).is_false()
 	assert_float(_total_effective_health(enemy)).is_equal_approx(enemy_total_before, APPROX)
 	assert_array(stun_events).is_empty()
+
+
+## DASH（INC-COMBAT-010）：位移到目标外侧的普攻距离内，且不越过目标。
+## effect_value = 0 时位移不附带伤害，避免「位移技能顺手打人」的隐性规则。
+func test_dash_effect_moves_caster_into_attack_range_without_damage() -> void:
+	var skill: ActiveSkillDefinition = _make_skill(
+		&"effect_dash",
+		ActiveSkillDefinition.SkillTargetType.ENEMY,
+		ActiveSkillDefinition.SkillEffectType.DASH,
+		0.0,
+		0.0,
+		20.0,
+		6.0,
+		200.0
+	)
+	var player: Pawn = _spawn(PLAYER_SCENE_PATH, _make_data(PLAYER_DATA_PATH, skill))
+	var enemy: Pawn = _spawn(ENEMY_SCENE_PATH)
+	player.global_position = Vector2.ZERO
+	enemy.global_position = Vector2(180.0, 0.0)
+	var enemy_total_before: float = _total_effective_health(enemy)
+	var distance_before: float = player.global_position.distance_to(enemy.global_position)
+
+	assert_bool(player.cast_skill(skill, enemy)).is_true()
+
+	var distance_after: float = player.global_position.distance_to(enemy.global_position)
+	assert_bool(distance_after < distance_before).is_true()
+	assert_bool(distance_after <= player.data.attack_range).is_true()
+	assert_bool(distance_after > 1.0).is_true()
+	# 仍然停在目标外侧，没有穿过目标。
+	assert_bool(player.global_position.x < enemy.global_position.x).is_true()
+	assert_float(_total_effective_health(enemy)).is_equal_approx(enemy_total_before, APPROX)
+	assert_float(player.current_spirit).is_equal_approx(80.0, APPROX)
+	assert_float(player.get_skill_cooldown_remaining(skill.id)).is_equal_approx(6.0, APPROX)
+
+
+## AOE_DAMAGE（INC-COMBAT-010）：半径内的敌对单位各命中一次，半径外与友方不受影响。
+func test_aoe_damage_hits_each_hostile_in_radius_once() -> void:
+	var skill: ActiveSkillDefinition = _make_skill(
+		&"effect_aoe",
+		ActiveSkillDefinition.SkillTargetType.ENEMY,
+		ActiveSkillDefinition.SkillEffectType.AOE_DAMAGE,
+		1.0,
+		0.0,
+		40.0,
+		7.0,
+		100.0
+	)
+	skill.aoe_radius = 100.0
+	var player: Pawn = _spawn(PLAYER_SCENE_PATH, _make_data(PLAYER_DATA_PATH, skill))
+	var center_enemy: Pawn = _spawn(ENEMY_SCENE_PATH)
+	var near_enemy: Pawn = _spawn(ENEMY_SCENE_PATH)
+	var far_enemy: Pawn = _spawn(ENEMY_SCENE_PATH)
+	var ally: Pawn = _spawn(PLAYER_SCENE_PATH)
+	player.global_position = Vector2.ZERO
+	center_enemy.global_position = Vector2(80.0, 0.0)
+	near_enemy.global_position = Vector2(140.0, 0.0)
+	far_enemy.global_position = Vector2(500.0, 0.0)
+	ally.global_position = Vector2(60.0, 0.0)
+	var center_before: float = _total_effective_health(center_enemy)
+	var near_before: float = _total_effective_health(near_enemy)
+	var far_before: float = _total_effective_health(far_enemy)
+	var ally_before: float = _total_effective_health(ally)
+	var expected_damage: float = maxf(1.0, player.data.attack * 1.0 - center_enemy.data.defense)
+
+	assert_bool(player.cast_skill(skill, center_enemy)).is_true()
+
+	# 主目标与半径内同伴各吃一次，半径外与友方零影响。
+	assert_float(_total_effective_health(center_enemy)).is_equal_approx(center_before - expected_damage, APPROX)
+	assert_float(_total_effective_health(near_enemy)).is_equal_approx(near_before - expected_damage, APPROX)
+	assert_float(_total_effective_health(far_enemy)).is_equal_approx(far_before, APPROX)
+	assert_float(_total_effective_health(ally)).is_equal_approx(ally_before, APPROX)
+
+
+## LIFESTEAL（INC-COMBAT-010）：回复量按「实际打掉的护盾 + 生命」计算，而不是按标称伤害。
+func test_lifesteal_effect_heals_caster_by_actual_damage() -> void:
+	var skill: ActiveSkillDefinition = _make_skill(
+		&"effect_drain",
+		ActiveSkillDefinition.SkillTargetType.ENEMY,
+		ActiveSkillDefinition.SkillEffectType.LIFESTEAL,
+		1.0,
+		0.0,
+		30.0,
+		6.0,
+		120.0
+	)
+	skill.lifesteal_ratio = 0.5
+	var player: Pawn = _spawn(PLAYER_SCENE_PATH, _make_data(PLAYER_DATA_PATH, skill))
+	var enemy: Pawn = _spawn(ENEMY_SCENE_PATH)
+	player.global_position = Vector2.ZERO
+	enemy.global_position = Vector2(80.0, 0.0)
+	# 先制造受伤缺口，确保回复不会被生命上限截断（截断行为另由 HEAL 用例覆盖）。
+	player.take_damage(60.0)
+	var player_health_before: float = player.current_health
+	var enemy_total_before: float = _total_effective_health(enemy)
+
+	assert_bool(player.cast_skill(skill, enemy)).is_true()
+
+	var dealt: float = enemy_total_before - _total_effective_health(enemy)
+	assert_bool(dealt > 0.0).is_true()
+	assert_float(player.current_health).is_equal_approx(player_health_before + dealt * 0.5, APPROX)
+	assert_float(player.current_spirit).is_equal_approx(70.0, APPROX)

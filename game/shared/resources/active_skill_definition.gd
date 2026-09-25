@@ -15,6 +15,12 @@ enum SkillEffectType {
 	HEAL,
 	SHIELD,
 	STUN,
+	## 位移：沿目标方向贴近（INC-COMBAT-010）。
+	DASH,
+	## 范围伤害：以主目标为中心打击半径内的敌对单位（INC-COMBAT-010）。
+	AOE_DAMAGE,
+	## 吸血：造成伤害后按比例回复施法者（INC-COMBAT-010）。
+	LIFESTEAL,
 }
 
 @export var id: StringName = &"skill"
@@ -33,6 +39,10 @@ enum SkillEffectType {
 @export_range(0.0, 1000000.0, 0.01, "or_greater") var effect_value: float = 0.0
 ## 效果持续时间；0 表示瞬时效果。
 @export_range(0.0, 1000000.0, 0.01, "or_greater") var effect_duration: float = 0.0
+## 范围效果半径（像素）；只在 AOE_DAMAGE 生效，0 表示只命中主目标。
+@export_range(0.0, 1000000.0, 1.0, "or_greater") var aoe_radius: float = 0.0
+## 吸血比例（0~1）：LIFESTEAL 用它把「实际造成的伤害」换算成施法者回复量。
+@export_range(0.0, 1.0, 0.01) var lifesteal_ratio: float = 0.5
 
 func is_configured() -> bool:
 	return not String(id).strip_edges().is_empty()
@@ -63,6 +73,12 @@ func get_normalized_effect_value() -> float:
 
 func get_normalized_effect_duration() -> float:
 	return maxf(effect_duration, 0.0)
+
+func get_normalized_aoe_radius() -> float:
+	return maxf(aoe_radius, 0.0)
+
+func get_normalized_lifesteal_ratio() -> float:
+	return clampf(lifesteal_ratio, 0.0, 1.0)
 
 func is_self_targeted() -> bool:
 	return target_type == SkillTargetType.SELF
