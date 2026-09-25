@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://ms821o3x51t2" path="res://game/shared/resources/encounter_definition.gd" id="1_encounter"]
+[ext_resource type="Resource" path="res://game/world/data/squads/build_test_squad_1v2.tres" id="2_squad"]
+
+[resource]
+script = ExtResource("1_encounter")
+id = &"build_test_1v2"
+display_name = "试剑·1v2"
+description = "赤拳战修贴身纠缠、灵弓修者远程持续输出。先杀谁、什么时候控，第一次成为可选项。"
+enemy_squad = ExtResource("2_squad")
+player_count = 1
+threat_tag = 0

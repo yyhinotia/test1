@@ -20,7 +20,7 @@ const PLAYER_DATA_PATH: String = "res://game/pawns/data/player_pawn.tres"
 
 const SWORD_SKILL_PATH: String = "res://game/pawns/data/player_sword_skill.tres"
 const GUARD_SKILL_PATH: String = "res://game/pawns/data/player_guard_skill.tres"
-const BINDING_SKILL_PATH: String = "res://game/pawns/data/player_binding_skill.tres"
+const BINDING_SKILL_PATH: String = "res://game/pawns/data/skills/player_binding_skill.tres"
 
 ## 三份正式敌人档案：现有基线 + INC-PAWNS-016 新增的长线型 / 爆发型。
 const PROFILE_TRIAL: String = "res://game/pawns/data/enemy_pawn.tres"

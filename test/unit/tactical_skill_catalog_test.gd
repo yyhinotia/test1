@@ -4,7 +4,7 @@ extends GdUnitTestSuite
 
 const SWORD_PATH: String = "res://game/pawns/data/player_sword_skill.tres"
 const GUARD_PATH: String = "res://game/pawns/data/player_guard_skill.tres"
-const BINDING_PATH: String = "res://game/pawns/data/player_binding_skill.tres"
+const BINDING_PATH: String = "res://game/pawns/data/skills/player_binding_skill.tres"
 const PLAYER_PATH: String = "res://game/pawns/data/player_pawn.tres"
 const APPROX: float = 0.001
 

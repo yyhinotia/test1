@@ -793,7 +793,7 @@
   - Godot MCP `validate` 对 6 个改动脚本全部 `valid: true`；`& <godot> --headless --path . --import` 生成两个新测试的 `.uid` 且 exit 0。
 - 验证状态：验证通过
 - 验证时间：2026-09-25T21:41:45+08:00
-- 已知问题：`INC-PAWNS-021` 只提供机制，尚未接入玩家可见的 Build 切换面板（`INC-UI-018`）与首通解锁事实（`INC-WORLD-007`）；`game/pawns/data/player_binding_skill.tres` 已存在但未接入任何奖励路径。既有测试债务 `test/gameplay/main_scene_sect_test.gd` 324 orphans 与 `test/integration/sect_panel_test.gd` 目录模式 288 orphans 与本 Increment 无关，统一门禁输出中的 `integration/gameplay ... FAIL` 标签为既有噪音（同行为 `0 errors | 0 failures`）。
+- 已知问题：`INC-PAWNS-021` 只提供机制，尚未接入玩家可见的 Build 切换面板（`INC-UI-018`）与首通解锁事实（`INC-WORLD-007`）；`game/pawns/data/skills/player_binding_skill.tres`（`INC-WORLD-007` 已移动到该目录）已接入 `build_test_1v1.tres` 的首通奖励路径。既有测试债务 `test/gameplay/main_scene_sect_test.gd` 324 orphans 与 `test/integration/sect_panel_test.gd` 目录模式 288 orphans 与本 Increment 无关，统一门禁输出中的 `integration/gameplay ... FAIL` 标签为既有噪音（同行为 `0 errors | 0 failures`）。
 - 用户验收：待验收
 - 验收时间：待验收
 - Git：`develop` / `4e92091`

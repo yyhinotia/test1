@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="PawnData" format=3]
+
+[ext_resource type="Script" uid="uid://ewp2akokimur" path="res://game/shared/resources/pawn_data.gd" id="1_pawn_data"]
+
+[resource]
+script = ExtResource("1_pawn_data")
+id = &"enemy_melee_raider"
+display_name = "赤拳战修"
+faction = &"enemy"
+max_health = 200.0
+max_shield = 20.0
+attack = 18.0
+defense = 5.0
+move_speed = 112.0
+attack_range = 62.0
+attack_interval = 1.5
+display_color = Color(0.9, 0.55, 0.25, 1)

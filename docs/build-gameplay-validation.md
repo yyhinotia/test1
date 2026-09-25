@@ -201,7 +201,7 @@ API：`learn_active_skill(skill)`、`set_active_skill_loadout(skills)`、`get_eq
 
 ```text
 game/
-├── pawns/data/skills/player_binding_skill.tres      （当前位于 game/pawns/data/player_binding_skill.tres）
+├── pawns/data/skills/player_binding_skill.tres      （INC-WORLD-007 已移动到该目录）
 ├── world/data/encounters/
 │   ├── build_test_1v1.tres
 │   ├── build_test_1v2.tres

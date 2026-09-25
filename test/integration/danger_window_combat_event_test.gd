@@ -4,7 +4,7 @@ extends GdUnitTestSuite
 ## 只消费正式 PawnData / EncounterDefinition 与 EncounterSession，不在测试里复制伤害公式。
 
 const DANGER_SKILL_PATH: String = "res://game/pawns/data/skills/enemy_boss_cleave.tres"
-const BINDING_SKILL_PATH: String = "res://game/pawns/data/player_binding_skill.tres"
+const BINDING_SKILL_PATH: String = "res://game/pawns/data/skills/player_binding_skill.tres"
 
 const APPROX: float = 0.001
 

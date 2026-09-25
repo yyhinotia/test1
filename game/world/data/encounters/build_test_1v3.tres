@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://ms821o3x51t2" path="res://game/shared/resources/encounter_definition.gd" id="1_encounter"]
+[ext_resource type="Resource" path="res://game/world/data/squads/build_test_squad_1v3.tres" id="2_squad"]
+
+[resource]
+script = ExtResource("1_encounter")
+id = &"build_test_1v3"
+display_name = "试剑·1v3"
+description = "试剑·1v1 的镇狱影傀带着赤拳战修与灵弓修者一同登场：同一个危险窗口，多了两个必须先做取舍的威胁。"
+enemy_squad = ExtResource("2_squad")
+player_count = 1
+threat_tag = 2

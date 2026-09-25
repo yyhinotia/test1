@@ -149,7 +149,10 @@ func test_every_panel_button_maps_to_a_formal_encounter_resource() -> void:
 		# 结果不依赖测试自造数值：进入的必须是仓库里的正式遭遇资源。
 		assert_str(encounter.resource_path).starts_with(ENCOUNTER_DIR)
 		assert_bool(encounter.is_configured()).is_true()
-		assert_object(encounter.enemy_profile).is_not_null()
+		# 单人遭遇用 enemy_profile，1vN 遭遇用 enemy_squad：至少一侧必须是正式敌人档案，
+		# 且敌人数与站位一一对应（INC-WORLD-007 的 1v2 / 1v3 就是队伍路径）。
+		assert_bool(encounter.enemy_profile != null or encounter.enemy_squad != null).is_true()
+		assert_int(encounter.get_enemy_count()).is_equal(encounter.get_enemy_spawn_offsets().size())
 		assert_str(buttons[index].text).is_equal(encounter.display_name)
 
 

@@ -303,6 +303,12 @@ func get_equipped_active_skills() -> Array[ActiveSkillDefinition]:
 	return preset
 
 
+## 是否显式重配过主动技能装配：false 表示读模型仍完全沿用静态预设。
+## 装配延迟写回（INC-WORLD-007）必须区分「从未重配」与「显式清空」，因此需要暴露这个只读事实。
+func has_explicit_active_skill_loadout() -> bool:
+	return _has_equipped_active_skills
+
+
 ## 校验读模型：未显式重配时保留静态预设的原始条目（含重复与未配置项），
 ## 让 BuildValidator 仍能报 `duplicate_entry` / `unconfigured_entry`；重配后返回已校验的唯一装配。
 func _validator_active_skills() -> Array[ActiveSkillDefinition]:

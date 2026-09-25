@@ -24,6 +24,11 @@ enum ThreatTag {
 @export_range(0, 4, 1, "or_greater") var player_count: int = 0
 ## 威胁标签只用于玩家阅读与后续分组，不参与战斗结算。
 @export var threat_tag: ThreatTag = ThreatTag.BASELINE
+## 首通奖励（INC-WORLD-007）：本遭遇**首次由玩家获胜**时发放的技能；null 表示没有首通奖励。
+## 本字段只描述「奖励是什么」，不记录「是否已发放」——发放状态由运行时的已掌握技能列表承担，
+## 因此重复通关不会重复发放，解锁结果也随本代修士的运行时进度跨遭遇延续。
+## 奖励只允许是技能：本实验用单一变量回答「新能力是否驱动 Build 重构」，不得顺手发资源。
+@export var first_clear_skill_reward: ActiveSkillDefinition
 
 
 ## 遭遇是否可直接进入：id / 名称齐备，且单敌人档案或敌方队伍至少一条可用。
@@ -33,6 +38,11 @@ func is_configured() -> bool:
 	if display_name.strip_edges().is_empty():
 		return false
 	return get_enemy_count() > 0
+
+
+## 是否配置了可用的首通奖励：奖励技能存在且自身配置完整。
+func has_first_clear_reward() -> bool:
+	return first_clear_skill_reward != null and first_clear_skill_reward.is_configured()
 
 
 ## 是否使用多人敌方队伍（enemy_squad 非空且通过自身校验）。

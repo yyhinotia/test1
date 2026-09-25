@@ -10,7 +10,7 @@ const PLAYER_DATA_PATH: String = "res://game/pawns/data/player_pawn.tres"
 const ENEMY_DATA_PATH: String = "res://game/pawns/data/enemy_pawn.tres"
 const SWORD_SKILL_PATH: String = "res://game/pawns/data/player_sword_skill.tres"
 const GUARD_SKILL_PATH: String = "res://game/pawns/data/player_guard_skill.tres"
-const BINDING_SKILL_PATH: String = "res://game/pawns/data/player_binding_skill.tres"
+const BINDING_SKILL_PATH: String = "res://game/pawns/data/skills/player_binding_skill.tres"
 
 const DELTA: float = 1.0 / 60.0
 const TOTAL_STEPS: int = 720

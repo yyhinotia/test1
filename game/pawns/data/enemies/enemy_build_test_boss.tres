@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="PawnData" format=3]
+
+[ext_resource type="Script" uid="uid://ewp2akokimur" path="res://game/shared/resources/pawn_data.gd" id="1_pawn_data"]
+[ext_resource type="Resource" path="res://game/pawns/data/skills/enemy_boss_cleave.tres" id="2_danger_skill"]
+
+[resource]
+script = ExtResource("1_pawn_data")
+id = &"enemy_build_test_boss"
+display_name = "镇狱影傀"
+faction = &"enemy"
+max_health = 520.0
+max_shield = 60.0
+attack = 20.0
+defense = 6.0
+move_speed = 84.0
+attack_range = 70.0
+attack_interval = 1.7
+dangerous_skill = ExtResource("2_danger_skill")
+danger_window_interval = 8.0
+danger_window_duration = 2.0
+display_color = Color(0.78, 0.35, 0.85, 1)

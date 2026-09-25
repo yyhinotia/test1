@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SquadDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://bvj3le3rshsav" path="res://game/shared/resources/squad_definition.gd" id="1_squad"]
+[ext_resource type="Resource" path="res://game/pawns/data/enemies/enemy_melee_raider.tres" id="2_melee"]
+[ext_resource type="Resource" path="res://game/pawns/data/enemies/enemy_spirit_archer.tres" id="3_archer"]
+[ext_resource type="Resource" path="res://game/pawns/data/enemies/enemy_build_test_boss.tres" id="4_boss"]
+
+[resource]
+script = ExtResource("1_squad")
+id = &"build_test_squad_1v3"
+display_name = "试剑·三人组"
+members = Array[PawnData]([ExtResource("2_melee"), ExtResource("3_archer"), ExtResource("4_boss")])
+default_spawn_offsets = Array[Vector2]([Vector2(72, 32), Vector2(-72, -56), Vector2(0, 64)])

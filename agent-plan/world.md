@@ -1,6 +1,6 @@
 # World 主题计划（地图 / 秘境 / 遭遇 / 事件 / 探索）
 
-> 最后修改：2026-09-25T22:12:40+08:00
+> 最后修改：2026-09-25T22:21:30+08:00
 > 主题：world
 > 规则来源：`../AGENTS.md`
 > 设计源：`../docs/project_summary.md` §十（秘境系统）、§十八 MVP ④（一个秘境 + 房间 + Boss）
@@ -208,12 +208,16 @@
 
 ## INC-WORLD-007：固定 1v1 / 1v2 / 1v3 Build 验证遭遇
 
-- 状态：planned
+- 状态：awaiting_acceptance
 - 创建时间：2026-09-25T20:47:54+08:00
-- 最后修改：2026-09-25T22:12:40+08:00
+- 最后修改：2026-09-25T22:21:30+08:00
 - 主题：world
 - 重定义说明：本 Increment 原定义「4v4 Vertical Slice 秘境、奖励与定点数据」于 2026-09-25T21:45:00+08:00 按用户 objective 重定义为「固定 1v1 / 1v2 / 1v3 Build 验证遭遇」；原定义原文保留在 Git 历史 `b36e9c0`（`develop`）。
-- 调整说明（2026-09-25T22:12:40+08:00）：按 objective §25「资源结构」把定身术资源纳入本 Increment 的验收标准——`player_binding_skill.tres` 当前仍在 `game/pawns/data/` 根目录，而 `INC-COMBAT-009` 新增的 `enemy_boss_cleave.tres` 已落在 `game/pawns/data/skills/`，为保持技能资源同目录、避免后续技能继续散落在 `data/` 根，本 Increment 顺带完成目录整理与引用更新；不新增 Increment、不改任何技能数值。原调整说明（2026-09-25T21:50:38+08:00）：按外部设计评审意见补齐 Stage 2 的两处前提——① 1v3 的第三名敌人必须复用 1v1 的同一个核心 Boss，否则 Stage 3 的「同一 Boss」对照不成立；② 1v2 / 1v3 的胜利条件依赖 `INC-COMBAT-009` 的「敌方全灭才判胜」，否则第一名敌人死亡即提前终局。奖励口径不变：首通只给 `player_binding_skill.tres`，不含灵石 / 装备 / 强化 / 随机掉落。
+- 调整说明（2026-09-25T22:20:30+08:00）：进入实现前的三处口径澄清——① 「重开不残留技能状态」只指**瞬时战斗状态**（冷却、控制中、施法进行中、护盾增益），
+  已解锁技能与已装配 Build 属于本代修士的养成进度，按 `INC-WORLD-005` / `INC-WORLD-006` 的延续规则**必须保留**；若连它们一起清掉，Stage 3 的「换 Build 再战」在机制上不成立。
+  ② 把两处必要接线纳入本 Increment 范围：`EncounterDefinition` 增加首通奖励字段并由 `EncounterSession` 在胜利结算时发放；`SquadProgressSnapshot` 增加「已解锁 / 已装配主动技能」的采集与写回（`INC-PAWNS-021` 的运行时覆盖层此前只在单位存活期间有效，换局即丢）。
+  ③ 1v2 / 1v3 的近战 / 远程角色以**最小新增**敌人档案实现（远程 = 高 `attack_range` 的持续输出档案），不引入新系统。
+  原调整说明（2026-09-25T22:12:40+08:00）：按 objective §25「资源结构」把定身术资源纳入本 Increment 的验收标准——`player_binding_skill.tres` 当前仍在 `game/pawns/data/` 根目录，而 `INC-COMBAT-009` 新增的 `enemy_boss_cleave.tres` 已落在 `game/pawns/data/skills/`，为保持技能资源同目录、避免后续技能继续散落在 `data/` 根，本 Increment 顺带完成目录整理与引用更新；不新增 Increment、不改任何技能数值。原调整说明（2026-09-25T21:50:38+08:00）：按外部设计评审意见补齐 Stage 2 的两处前提——① 1v3 的第三名敌人必须复用 1v1 的同一个核心 Boss，否则 Stage 3 的「同一 Boss」对照不成立；② 1v2 / 1v3 的胜利条件依赖 `INC-COMBAT-009` 的「敌方全灭才判胜」，否则第一名敌人死亡即提前终局。奖励口径不变：首通只给 `player_binding_skill.tres`，不含灵石 / 装备 / 强化 / 随机掉落。
 - 目标：用三份独立、可重复挑战的遭遇数据支撑 Build 玩法验证——1v1 用来产生并观察「战斗问题」，1v2 / 1v3 用来观察 Build 是否带来多目标决策差异；首次通关 1v1 只发放定身术，不叠加任何资源奖励。
 - 验收标准：
   - 新增 `game/world/data/encounters/build_test_1v1.tres`、`build_test_1v2.tres`、`build_test_1v3.tres` 三份独立遭遇资源，不覆盖既有 `trial_dungeon.tres` 与既有遭遇目录。
@@ -226,17 +230,36 @@
   - 首通奖励只有定身术：不得同时发放灵石、装备、强化或随机掉落，避免污染 Build 动机归因。
   - 数据测试断言三份遭遇的玩家 / 敌人数量、阵营、敌人 id 唯一性与奖励数量；不依赖截图或人工数值复述。
   - 定身术资源按 objective §25 的建议结构移动到 `game/pawns/data/skills/player_binding_skill.tres`，与 `enemy_boss_cleave.tres` 同目录，并更新全部引用路径（`.tres` / `.tscn` / 脚本 / 测试）；移动后既有 unit / integration 用例（含 `INC-PAWNS-021` 的装配用例）必须全绿。
-- 范围：`game/world/data/encounters/build_test_1v1.tres` / `build_test_1v2.tres` / `build_test_1v3.tres`、必要的首通解锁奖励字段、1v2 / 1v3 敌人组合所需的既有敌人档案复用或最小新增、`player_binding_skill.tres` 的目录整理（`game/pawns/data/` → `game/pawns/data/skills/`）与全量引用更新、相关数据测试。
+  - 「重开不残留上一局状态」限定为**瞬时战斗状态**与事件记录：重开后不得残留上一局单位、上一局 CombatEvent、冷却 / 控制 / 施法进行中状态；已解锁技能与已装配 Build 按跨遭遇延续规则保留。
+  - 跨遭遇延续：`SquadProgressSnapshot` 采集并写回「已解锁主动技能」与「显式装配过的主动技能列表」；在同一运行内「首通 1v1 解锁定身术 → 装配成 Build B → 重开同一遭遇」后，新单位的已掌握技能与已装配 Build 与重开前一致。
+  - 三份试剑遭遇接到 `game/main/main.tscn` 的遭遇面板，实机可直接进入 1v1 / 1v2 / 1v3；面板按钮、遭遇资源、敌人数与站位一一对应（场景化 `tests/` 入口由 `INC-TESTING-012` 另行提供）。
+- 范围：`game/world/data/encounters/build_test_1v1.tres` / `build_test_1v2.tres` / `build_test_1v3.tres`、必要的首通解锁奖励字段、1v2 / 1v3 敌人组合所需的既有敌人档案复用或最小新增、`player_binding_skill.tres` 的目录整理（`game/pawns/data/` → `game/pawns/data/skills/`）与全量引用更新、相关数据测试；`EncounterDefinition` 的首通奖励字段与 `EncounterSession` 的胜利结算发放接线；`SquadProgressSnapshot` 的主动技能采集 / 写回扩展与 `Pawn` 的装配状态只读查询；`game/main/main.tscn` 把三份试剑遭遇接到既有遭遇面板作为实机入口。
 - 依赖：`INC-COMBAT-009`（危险窗口与事件）、`INC-PAWNS-021`（技能掌握与装配）；父 Increment `INC-CROSS-019`。
-- 检索证据：2026-09-25T21:50:38+08:00 执行 `git status --short`（工作区干净）、`git diff --unified=0 -- agent-plan/`（空）、`git diff --cached --unified=0 -- agent-plan/`（空）、`git log --oneline -- agent-plan/`（HEAD `0f8fb41`）与 `git grep -n -E "INC-(COMBAT-009|WORLD-007|TESTING-011)" -- agent-plan/`；结论：三个 Increment 均为 `planned`、未实现，可安全调整；`game/world/encounter_session.gd` 头部注释与 `_on_unit_died()` 仍为单点终局（敌人死亡即 PLAYER_WIN），证明 1vN 全灭判胜确实未实现。历史记录（2026-09-25T21:45:00+08:00） `git status --short`、`git diff --unified=0 -- agent-plan/`（读取本批重定义）、`git log --oneline -5 -- agent-plan/`（最新 `1dbdba5`）与 `git grep -n "INC-WORLD-007"`；`INC-WORLD-007` 仍为 `planned`、未实现。既有 `game/world/data/dungeons/trial_dungeon.tres` 与 `game/world/data/encounters/` 已提供单人遭遇；`EncounterDefinition` 在 `INC-PAWNS-020` 后已支持可选 `enemy_squad`，多敌人数据无需新契约。
+- 检索证据：2026-09-25T22:20:30+08:00 执行 `git status --short`（`INC-COMBAT-009` 已提交后工作区仅剩 Godot 编辑器重写噪音）、`git diff --unified=0 -- agent-plan/`（空）、`git diff --cached --unified=0 -- agent-plan/`（空）、`git log --oneline -3 -- agent-plan/`（HEAD `46ffe71`）与 `git grep -n -E "INC-(WORLD-007|UI-018|TESTING-011)" -- agent-plan/`；结论：`INC-WORLD-007` 仍为 `planned`、无任何实现，可安全开工。依赖核对：`INC-COMBAT-009` 已提供危险窗口与 `dangerous_skill` 字段（`game/pawns/data/enemies/enemy_dungeon_boss.tres` 已配置 8 秒 / 2 秒窗口）、`INC-PAWNS-021` 已提供 `learn_active_skill()` / `set_active_skill_loadout()` / `get_known_active_skills()` / `get_equipped_active_skills()` / `get_enabled_active_skills()`；`EncounterDefinition` 已支持 `enemy_squad` 与 `player_count`；**缺口**：`SquadProgressSnapshot.capture_progress()` 只携带强化等级 / 功法 / 境界 / 修为，不含主动技能的解锁与装配，因此换局会丢失定身术与 Build B（本次补齐）；`EncounterDefinition` 尚无首通奖励字段。 历史记录（2026-09-25T22:12:40+08:00）：`git status --short`（`INC-COMBAT-009` 工作区改动 + 编辑器噪音）、`git diff --unified=0 -- agent-plan/`（读取本批调整）、`git log --oneline -5 -- agent-plan/`（最新 `ca3f2f2`）与 `git grep -n "INC-WORLD-007"`；`INC-WORLD-007` 仍为 `planned`、未实现。既有 `game/world/data/encounters/` 提供 3 份单人遭遇；`SquadDefinition.MAX_MEMBERS = 4`，`get_spawn_offsets()` 可自动生成站位，多敌人数据无需新契约。
 - 风险：如果首通奖励同时给资源，玩家第二轮再战的动机无法归因到定身术；必须坚持「奖励 = 新能力」单一变量。第二个风险是 1v2 / 1v3 退化成同一敌人复制，导致目标选择没有真实差异，必须使用行为角色不同的敌人组合。第三个风险是重复挑战残留上一局状态，必须由重开路径显式清理。
-- 实现说明：待实现。
-- 变更文件：待实现。
-- 测试证据：待实现。
-- 验证状态：待验证
-- 验证时间：待验证
-- 已知问题：待实现。
+- 实现说明：三份试剑遭遇落地为独立数据资源：`build_test_1v1.tres` 指向新增 Boss 档案 `enemy_build_test_boss.tres`（520 血 / 60 盾、8 秒开窗 / 2 秒危险技能），
+  `build_test_1v2.tres` / `build_test_1v3.tres` 用 `SquadDefinition` 组合「赤拳战修（近战 62）+ 灵弓修者（远程 230）」，且 1v3 的第三名成员就是 1v1 的同一个 Boss 资源实例；三份都显式 `player_count = 1`。
+  首通奖励只描述「奖励是什么」：`EncounterDefinition.first_clear_skill_reward`（null 表示无奖励）+ `EncounterSession._grant_first_clear_reward()` 在「敌方全灭判胜」那一刻调用 `Pawn.learn_active_skill()`——只解锁、不装配；
+  重复通关按技能 id 去重返回 false，因此不需要额外的发放记账。
+  跨遭遇延续补齐：`SquadProgressSnapshot.capture_progress()` 增加「已解锁主动技能 / 是否显式重配过 / 已装配列表」，`apply_progress()` 在**恢复境界之后**写回装配，
+  避免新单位用静态炼气容量误判 Build B；`Pawn.has_explicit_active_skill_loadout()` 让「从未重配」与「显式清空」保持可区分。
+  技能资源按 objective §25 的结构从 `game/pawns/data/` 移到 `game/pawns/data/skills/`，4 处引用同步更新；`game/main/main.tscn` 追加三条 `ext_resource` 并把三份遭遇接进遭遇面板作为实机入口。
+- 变更文件：
+  - 数据：`game/world/data/encounters/build_test_1v1.tres`、`build_test_1v2.tres`、`build_test_1v3.tres`、`game/world/data/squads/build_test_squad_1v2.tres`、`build_test_squad_1v3.tres`、`game/pawns/data/enemies/enemy_build_test_boss.tres`、`enemy_melee_raider.tres`、`enemy_spirit_archer.tres`、`game/pawns/data/skills/player_binding_skill.tres`（由 `game/pawns/data/player_binding_skill.tres` 移动）。
+  - 代码：`game/shared/resources/encounter_definition.gd`（首通奖励字段与 `has_first_clear_reward()`）、`game/world/encounter_session.gd`（`_grant_first_clear_reward()`）、`game/shared/core/squad_progress_snapshot.gd`（主动技能采集 / 写回）、`game/pawns/pawn.gd`（`has_explicit_active_skill_loadout()`）、`game/main/main.tscn`（三份遭遇接线）。
+  - 测试：`test/unit/build_test_encounter_catalog_test.gd`（新增）、`test/integration/first_clear_reward_test.gd`（新增）、`test/gameplay/main_scene_encounter_test.gd`（遭遇面板断言兼容 `enemy_squad`）、`test/gameplay/build_decision_differentiation_test.gd` / `build_tactical_trajectory_test.gd` / `test/integration/danger_window_combat_event_test.gd` / `test/unit/tactical_skill_catalog_test.gd`（技能资源路径更新）。
+- 测试证据：
+  - 单套件（数据层）：`godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://test/unit/build_test_encounter_catalog_test.gd --ignoreHeadlessMode` → `5 test cases | 0 errors | 0 failures | 0 orphans`，Exit code 0。
+  - 单套件（集成层）：同命令跑 `res://test/integration/first_clear_reward_test.gd` → `4 test cases | 0 errors | 0 failures | 0 orphans`，Exit code 0。
+  - 全量门禁：`pwsh -File test/run_tests.ps1 -Godot $env:GODOT_BIN -Layer all` → `RESULT: PASS`，exit 0；`GdUnit4 : 386 cases, 0 failures`（unit 161 / integration 165 / gameplay 60）、`headless : 10 suites, 549 assertions, 0 failing suites`。
+  - 首轮暴露两处真实问题并修复后复跑：① 1v2 / 1v3 走 `enemy_squad`，既有 `main_scene_encounter_test.gd` 只接受 `enemy_profile`，已改为「至少一侧是正式档案 + 敌人数与站位一一对应」；② 数据用例最初把敌人 id 唯一性写成跨遭遇唯一（1v3 刻意复用 1v2 的两名角色与 1v1 的 Boss），已改为按场唯一并把复用写成显式期望。
+  - 覆盖点：玩家数恒为 1 且敌人数依次 1 / 2 / 3、敌人阵营与场内 id 唯一、奖励只挂在 1v1 且只有 `binding_spell`、1v3 复用同一 Boss 实例、1v2 近战 / 远程射程差 2 倍以上；首通只解锁不自动装配、无奖励遭遇不发技能、重开清瞬时状态但保留解锁且不重复记账、玩家显式换 Build B 后跨遭遇仍为「御剑斩 + 定身术」。
+- 验证状态：验证通过（数据层 + 集成层 + 全量门禁）
+- 验证时间：2026-09-25T22:21:30+08:00
+- 已知问题：`INC-TESTING-012`（场景化测试入口拆分到 `tests/`）尚未落地，当前实机入口只有主场景遭遇面板；1v2 / 1v3 的人工玩法验收必须等 `INC-UI-018`（Build A/B 切换面板）与 `INC-TESTING-012` 完成。
+  三份试剑遭遇的数值是首版手感值，未做平衡校验，本 Increment 不验证平衡性。
+  本机 Godot 编辑器打开本工程时会把 `main.tscn` / `trial_dungeon.tres` 重新序列化（补 `unique_id` / `uid`、改写 `Array[ExtResource(...)]`），提交前必须还原这些编辑器噪音，否则提交会把无关改动混进增量。
 - 用户验收：待验收
 - 验收时间：待验收
-- Git：待提交
-- 备注：定身术是本次实验唯一的主要变量，45 灵石等经济奖励不进入本 Increment。1v2 / 1v3 只有在 1v1 的 Build 闭环成立后才进入人工验收（`INC-CROSS-019` Stage 2）。
+- Git：待提交（本 Increment 实现提交，提交后补记 hash）
+- 备注：实现顺序上本 Increment 在 `INC-COMBAT-009` / `INC-PAWNS-021` 之后、`INC-UI-018` 之前；它只提供「可重复进入的三档遭遇 + 首通解锁 + 跨遭遇延续」这三件实验器材，不提供人工结论。定身术是本次实验唯一的主要变量，45 灵石等经济奖励不进入本 Increment。1v2 / 1v3 只有在 1v1 的 Build 闭环成立后才进入人工验收（`INC-CROSS-019` Stage 2）。

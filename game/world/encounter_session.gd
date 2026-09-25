@@ -516,10 +516,23 @@ func _on_unit_died(pawn: Pawn) -> void:
 		_state = State.ENEMY_WIN
 	elif _all_units_dead(_enemy_units):
 		_state = State.PLAYER_WIN
+		_grant_first_clear_reward()
 	else:
 		return
 	_combat_event_log.record(CombatEvent.COMBAT_END, &"session")
 	encounter_finished.emit(_encounter, _state)
+
+
+## 首通奖励发放（INC-WORLD-007）：只在玩家获胜时按遭遇定义解锁技能。
+## 「是否已发放」不额外记账——已掌握技能列表本身就是账本：重复通关时 learn_active_skill() 按 id 去重返回 false，
+## 因此不会重复发放；解锁结果随运行时进度（SquadProgressSnapshot）跨局延续。
+## 本方法只解锁，绝不自动装配 Build：Gate C 要求「解锁」与「装配」是玩家可见的两步。
+func _grant_first_clear_reward() -> void:
+	if _encounter == null or not _encounter.has_first_clear_reward():
+		return
+	if _player == null or not is_instance_valid(_player):
+		return
+	_player.learn_active_skill(_encounter.first_clear_skill_reward)
 
 
 func _all_units_dead(units: Array[Pawn]) -> bool:
