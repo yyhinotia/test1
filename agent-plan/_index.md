@@ -1,6 +1,6 @@
 # Agent Plan Index
 
-> 最后修改：2026-09-25T22:15:00+08:00
+> 最后修改：2026-09-25T22:22:00+08:00
 > 规则来源：`../AGENTS.md`
 
 ## 主题索引
@@ -18,7 +18,7 @@
 | 音频 | `audio.md` | 未创建 | - | - |
 | 核心 | `core.md` | 已退役（4v4 冻结） | `INC-CORE-012`（superseded） | 2026-09-25T21:45:00+08:00 |
 | 工具 | `tools.md` | 已验收 | `INC-TOOLS-002` | 2026-09-25T13:54:46+08:00 |
-| 测试 | `testing.md` | 计划中 | `INC-TESTING-011` | 2026-09-25T21:45:00+08:00 |
+| 测试 | `testing.md` | 计划中 | `INC-TESTING-012` | 2026-09-25T22:22:00+08:00 |
 
 ## 跨主题父 Increment
 
@@ -442,7 +442,7 @@
 | `INC-CORE-012` | `INC-CROSS-019` | core | `superseded` | 多单位选择、编组命令与暂停战术路由（4v4 冻结退役） | 2026-09-25T21:45:00+08:00 | 未验证 | 未验收（已退役） | 无提交 |
 | `INC-UI-018` | `INC-CROSS-019` | ui | `planned` | 最小 Build A/B 切换面板 | 2026-09-25T21:45:00+08:00 | 待验证 | 待验收 | 待提交 |
 | `INC-TESTING-011` | `INC-CROSS-019` | testing | `planned` | Build Replay 实验记录（自动化证据 + 人工三问） | 2026-09-25T21:50:38+08:00 | 待验证 | 待验收 | 待提交 |
-| `INC-TESTING-012` | `INC-CROSS-019` | testing | `planned` | 场景化测试入口拆分到 `tests/` | 2026-09-25T21:45:00+08:00 | 待验证 | 待验收 | 待提交 |
+| `INC-TESTING-012` | `INC-CROSS-019` | testing | `planned` | 场景化测试入口拆分到 `tests/` | 2026-09-25T22:22:00+08:00 | 待验证 | 待验收 | 待提交 |
 | `INC-SECT-001` | `INC-CROSS-017` | sect | `accepted` | 宗门设施静态定义与六座设施数据 | 2026-09-25T19:38:41+08:00 | 通过 | 已验收 | `main` / `c25ffbc` |
 | `INC-SECT-002` | `INC-CROSS-017` | sect | `accepted` | SectState 运行时：库存 / 设施等级 / 升级 / 修炼 / 收获 | 2026-09-25T19:38:41+08:00 | 通过 | 已验收 | `main` / `8c65ff1` |
 | `INC-SECT-003` | `INC-CROSS-017` | sect | `accepted` | 转化设施：藏经阁参悟 / 炼器房强化 / 丹房炼丹 | 2026-09-25T19:38:41+08:00 | 通过 | 已验收 | `main` / `9c97ef9` |
@@ -609,6 +609,7 @@
 
 | 版本 | 时间 | 变更 |
 |---|---|---|
+| v5.20 | 2026-09-25T22:22:00+08:00 | 增量口径对齐：`INC-WORLD-007` 已实现并把三份试剑遭遇临时接入 `main.tscn` 遭遇面板（本 Increment 的实机入口），按用户「测试入口拆分到 `tests/`，不要都放在 `main` 中」的硬要求，明确由 `INC-TESTING-012` 把这批临时条目移出到 `tests/` 场景入口，并同步 `main_scene_encounter_test.gd` 断言；`INC-WORLD-007` / `INC-TESTING-012` 的范围、验收标准与已知问题同步更新，不新增 Increment、不改玩法数值 |
 | v5.19 | 2026-09-25T22:21:30+08:00 | 完成 `INC-CROSS-019` 开发顺序第 3 步 `INC-WORLD-007`（固定 1v1 / 1v2 / 1v3 Build 验证遭遇与首通定身术解锁）：新增三份试剑遭遇、三份敌人档案（镇狱影傀 / 赤拳战修 / 灵弓修者）与两份敌方编组，`EncounterDefinition.first_clear_skill_reward` + `EncounterSession._grant_first_clear_reward()` 在敌方全灭判胜时只解锁不装配（重复通关按 id 去重），`SquadProgressSnapshot` 采集 / 写回已解锁与显式装配的主动技能使 Build B 跨遭遇延续，定身术资源移动到 `game/pawns/data/skills/` 并同步 4 处引用，`game/main/main.tscn` 把三份遭遇接入遭遇面板；单套件 unit 5 / integration 4 cases 通过，统一门禁 `RESULT: PASS`（GdUnit4 386 cases / headless 549 assertions，exit 0），提交 `e591f33` 到 `develop`，状态 `awaiting_acceptance`；1v2 / 1v3 的人工验收仍须等 `INC-UI-018` 与 `INC-TESTING-012` |
 | v5.18 | 2026-09-25T22:12:40+08:00 | 按 objective §25「资源结构」把技能资源目录整理纳入 `INC-WORLD-007` 的验收标准与范围：`player_binding_skill.tres` 由 `game/pawns/data/` 移到 `game/pawns/data/skills/`（与 `INC-COMBAT-009` 新增的 `enemy_boss_cleave.tres` 同目录），要求同步更新全部引用并保持既有 unit / integration 用例全绿；不新增 Increment、不改技能数值 |
 | v5.17 | 2026-09-25T22:15:00+08:00 | 完成 `INC-CROSS-019` 开发顺序第 1 步 `INC-COMBAT-009`（1v1 战斗问题窗口与轻量 CombatEvent）：新增 `CombatEvent` / `CombatEventLog`（5 字段 + 8 类白名单事件）、`DangerWindowScheduler`（固定周期开窗、控制优先于释放、打断即零伤害）与 Boss 危险技能数据，`EncounterSession` 接线事件记录并把终局判定落地为 1vN「敌方全灭才判胜、玩家单位死亡即失败」；单套件 unit 4 / integration 5 cases 通过，统一门禁 `RESULT: PASS`（GdUnit4 377 cases / headless 549 assertions，exit 0）；按用户指令推送到 `develop` / `a8a3c9e`（未进 `main`），状态 `awaiting_acceptance` |

@@ -450,18 +450,19 @@
 
 - 状态：planned
 - 创建时间：2026-09-25T21:14:43+08:00
-- 最后修改：2026-09-25T21:45:00+08:00
+- 最后修改：2026-09-25T22:22:00+08:00
 - 主题：testing
 - 重定义说明：本 Increment 原定义（为 4v4 技术 Slice 提供 2v2 / 3v3 / 4v4 与多选编队场景入口）于 2026-09-25T21:45:00+08:00 按用户 objective「每个不同场景的测试入口拆分出来，不要都放在 main 中」重定义为 1v1 / 1v2 / 1v3 / Build 切换 / 首通解锁场景入口。
+- 调整说明（2026-09-25T22:22:00+08:00）：`INC-WORLD-007` 为实现阶段的可玩性，把三份试剑遭遇（`build_test_1v1/1v2/1v3`）**临时**接进了 `game/main/main.tscn` 的遭遇面板（提交 `e591f33`）。按用户硬要求「每个不同场景的测试入口拆分到 `tests/`，不要都放在 `main` 中」，本 Increment 必须把这批临时条目从 `main.tscn` 移出并改为 `tests/` 场景入口；移出后 `main.tscn` 只保留正式遭遇（`encounter_trial_puppet` / `encounter_iron_guard` / `encounter_blood_blade`），`test/gameplay/main_scene_encounter_test.gd` 的面板断言同步回到「三份正式遭遇」。
 - 目标：把「每个不同测试场景一个独立入口」落成仓库结构，使 `main.tscn` 只保留正式游戏入口职责，所有测试专用场景、参数与资源引用都下沉到新增的 `tests/` 目录，并让每个场景有独立的可复现启动命令。
 - 验收标准：
   - 新增 `tests/` 目录与 `tests/README.md`，README 写明目录规范、每个入口的场景用途、启动命令（命令行 / MCP）与与 `test/` 的职责边界。
   - 每个场景一个独立入口 `.tscn`（必要时附 `.gd`），至少覆盖：1v1 战斗问题窗口验证、1v2 遭遇验证、1v3 遭遇验证、Build A/B 切换面板验证、1v1 首通解锁定身术验证。
-  - 测试专用节点、测试专用参数与测试专用资源引用全部下沉到 `tests/` 场景；`main.tscn` 不再为测试内嵌专用引用，也不接受测试专用启动参数。
+  - 测试专用节点、测试专用参数与测试专用资源引用全部下沉到 `tests/` 场景；`main.tscn` 不再为测试内嵌专用引用（含 `INC-WORLD-007` 临时接入的三份试剑遭遇），也不接受测试专用启动参数。
   - `main.tscn` 继续作为正式游戏入口，加载后进入正常秘境流程；测试入口不得改变正式入口行为。
   - `test/`（GdUnit4 自动化断言）与 `tests/`（场景化可交互入口）职责边界写清楚，并在 `test/README.md` 交叉引用。
   - 每个入口在真实窗口下可加载、可重复打开且无脚本错误；重复运行不重复解锁技能、不残留活动单位。
-- 范围：新增 `tests/`（场景、脚本、README）、`AGENTS.md` §5.1 与 §12.6 的目录规范条目（已随本批生效）、`test/README.md` 的交叉说明、`agent-plan/testing.md` 与 `_index.md` 的回写。
+- 范围：新增 `tests/`（场景、脚本、README）、`AGENTS.md` §5.1 与 §12.6 的目录规范条目（已随本批生效）、`test/README.md` 的交叉说明、`game/main/main.tscn` 的测试条目回退（移出三份试剑遭遇）、`test/gameplay/main_scene_encounter_test.gd` 的同步断言、`agent-plan/testing.md` 与 `_index.md` 的回写。
 - 非范围：替换 GdUnit4 自动化断言、引入新测试框架、修改正式游戏玩法规则。
 - 依赖：`INC-WORLD-007`（提供 1v1 / 1v2 / 1v3 遭遇数据）、`INC-UI-018`（提供 Build 切换面板）、`INC-COMBAT-009`（提供问题窗口）、`INC-PAWNS-021`（提供技能解锁 API）。
 - 检索证据：2026-09-25T21:45:00+08:00 执行 `git status --short`、`git diff --unified=0 -- agent-plan/`、`git log --oneline -5 -- agent-plan/`（最新 `1dbdba5`）与 `git grep -n "INC-TESTING-012"`；编号已占用且归属本批，仓库根目录当前没有 `tests/` 目录。
