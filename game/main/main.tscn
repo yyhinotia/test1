@@ -29,9 +29,6 @@
 [ext_resource type="Resource" path="res://game/cultivation/data/techniques/sword_cultivation.tres" id="25_sword_cultivation"]
 [ext_resource type="Resource" path="res://game/cultivation/data/techniques/body_cultivation.tres" id="26_body_cultivation"]
 [ext_resource type="Resource" path="res://game/cultivation/data/techniques/thunder_cultivation.tres" id="27_thunder_cultivation"]
-[ext_resource type="Resource" path="res://game/world/data/encounters/build_test_1v1.tres" id="28_build_1v1"]
-[ext_resource type="Resource" path="res://game/world/data/encounters/build_test_1v2.tres" id="29_build_1v2"]
-[ext_resource type="Resource" path="res://game/world/data/encounters/build_test_1v3.tres" id="30_build_1v3"]
 [ext_resource type="PackedScene" path="res://game/ui/build/build_loadout_panel.tscn" id="31_build_loadout_panel"]
 [ext_resource type="Script" uid="uid://d4crksxfpy623" path="res://game/shared/resources/active_skill_definition.gd" id="32_active_skill"]
 [ext_resource type="Resource" path="res://game/pawns/data/player_sword_skill.tres" id="33_sword_skill"]
@@ -157,7 +154,7 @@ layout_mode = 2
 
 [node name="EncounterPanel" parent="HUD/BottomLeftDock" unique_id=1559428995 instance=ExtResource("9_encounter_panel")]
 layout_mode = 2
-encounters = Array[ExtResource("11_encdef")]([ExtResource("6_encounter_trial"), ExtResource("7_encounter_iron_guard"), ExtResource("8_encounter_blood_blade"), ExtResource("28_build_1v1"), ExtResource("29_build_1v2"), ExtResource("30_build_1v3")])
+encounters = Array[ExtResource("11_encdef")]([ExtResource("6_encounter_trial"), ExtResource("7_encounter_iron_guard"), ExtResource("8_encounter_blood_blade")])
 
 [node name="DungeonPanel" parent="HUD/BottomLeftDock" instance=ExtResource("13_dungeon_panel")]
 layout_mode = 2

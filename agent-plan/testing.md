@@ -448,9 +448,9 @@
 
 ## INC-TESTING-012：场景化测试入口拆分到 `tests/`
 
-- 状态：planned
+- 状态：awaiting_acceptance
 - 创建时间：2026-09-25T21:14:43+08:00
-- 最后修改：2026-09-25T22:22:00+08:00
+- 最后修改：2026-09-25T22:33:49+08:00
 - 主题：testing
 - 重定义说明：本 Increment 原定义（为 4v4 技术 Slice 提供 2v2 / 3v3 / 4v4 与多选编队场景入口）于 2026-09-25T21:45:00+08:00 按用户 objective「每个不同场景的测试入口拆分出来，不要都放在 main 中」重定义为 1v1 / 1v2 / 1v3 / Build 切换 / 首通解锁场景入口。
 - 调整说明（2026-09-25T22:22:00+08:00）：`INC-WORLD-007` 为实现阶段的可玩性，把三份试剑遭遇（`build_test_1v1/1v2/1v3`）**临时**接进了 `game/main/main.tscn` 的遭遇面板（提交 `e591f33`）。按用户硬要求「每个不同场景的测试入口拆分到 `tests/`，不要都放在 `main` 中」，本 Increment 必须把这批临时条目从 `main.tscn` 移出并改为 `tests/` 场景入口；移出后 `main.tscn` 只保留正式遭遇（`encounter_trial_puppet` / `encounter_iron_guard` / `encounter_blood_blade`），`test/gameplay/main_scene_encounter_test.gd` 的面板断言同步回到「三份正式遭遇」。
@@ -467,13 +467,13 @@
 - 依赖：`INC-WORLD-007`（提供 1v1 / 1v2 / 1v3 遭遇数据）、`INC-UI-018`（提供 Build 切换面板）、`INC-COMBAT-009`（提供问题窗口）、`INC-PAWNS-021`（提供技能解锁 API）。
 - 检索证据：2026-09-25T21:45:00+08:00 执行 `git status --short`、`git diff --unified=0 -- agent-plan/`、`git log --oneline -5 -- agent-plan/`（最新 `1dbdba5`）与 `git grep -n "INC-TESTING-012"`；编号已占用且归属本批，仓库根目录当前没有 `tests/` 目录。
 - 风险：目录名 `tests/` 与既有 `test/` 只差一个字母，容易混用；必须在两份 README 与 Agent 规则里显式写明职责边界，否则后续 Agent 可能把自动化断言写进 `tests/` 或把场景入口写进 `test/`。第二个风险是测试入口悄悄改正式入口行为，必须由「`main.tscn` 不含测试专用引用」这一条守住。
-- 实现说明：待实现。
-- 变更文件：待实现。
-- 测试证据：待实现。
-- 验证状态：待验证
-- 验证时间：待验证
-- 已知问题：待实现。
+- 实现说明：新增 `tests/scenario_entry.gd` 作为全部入口的唯一脚本：`scenario_id` / `scenario_title` / `scenario_instructions` / `encounter` / `pre_learn_binding_spell` / `pre_equip_build_b` / `select_player_on_start` 全部由场景导出，`_ready()` 先关掉默认秘境（`dungeon_run.default_dungeon = null`，只作用于本运行实例），再 `session.begin(encounter)`、按导出开关施加前置条件（只动 Pawn 运行时投影：`learn_active_skill()` / `set_active_skill_loadout()`）、`main.call("_set_selected_pawn", ...)`，最后把窗口标题写成 `test1 · tests/<id> · <title>` 并 `print("SCENARIO_READY ", ...)`，便于人工和脚本直接核对「我跑的是哪个入口」。5 个入口各一个 `.tscn`：`scenario_build_test_1v1`（Build A 打问题窗口）、`scenario_build_test_1v2`（预解锁定身术 / 未装配）、`scenario_build_test_1v3`（预解锁）、`scenario_build_loadout_switch`（预解锁，验右下角面板）、`scenario_first_clear_reward`（不解锁，验首通奖励）。`game/main/main.tscn` 移出 `INC-WORLD-007` 临时接入的三份试剑遭遇（`ext_resource` 28/29/30 与 `EncounterPanel.encounters` 的三条条目），只保留 `encounter_trial_puppet` / `encounter_iron_guard` / `encounter_blood_blade` 三份正式遭遇。`test/README.md` 增加 `../tests` 交叉引用与「## 与 `tests/` 的分工」章节。`test/gameplay/main_scene_encounter_test.gd` 的面板断言回到三份正式遭遇并新增 `assert_int(buttons.size()).is_equal(3)`。新增 `test/tools/verify_scenario_entries.gd` 做入口体检：逐入口加载两次（首次 + 重复打开），核对 id / 遭遇 / 敌我人数 / 状态 RUNNING / 定身术解锁状态（期望集合为静态预设 `["sword_strike","guard_true_qi"]`，`pre_learn_binding_spell` 时再追加 `"binding_spell"`）/ 窗口标题 / 释放后无残留，报告落 `.mcp/godot-runtime/screenshots/tests_scenario_entries_report.txt`。
+- 变更文件：新增 `tests/scenario_entry.gd`（含 `.uid`）、`tests/scenario_build_test_1v1.tscn`、`tests/scenario_build_test_1v2.tscn`、`tests/scenario_build_test_1v3.tscn`、`tests/scenario_build_loadout_switch.tscn`、`tests/scenario_first_clear_reward.tscn`、`tests/README.md`、`test/tools/verify_scenario_entries.gd`（含 `.uid`）；修改 `game/main/main.tscn`（移出三份临时试剑遭遇与 3 条 `ext_resource`）、`test/README.md`、`test/gameplay/main_scene_encounter_test.gd`、`agent-plan/testing.md`、`agent-plan/_index.md`。
+- 测试证据：入口体检（真实窗口，非 headless）`& $env:GODOT_BIN --path . --script res://test/tools/verify_scenario_entries.gd` → `SCENARIO_ENTRY_CHECK_DONE FAILURES=0`，5 个入口首次与重复打开两次结果一致（1v1 玩家 1 / 敌人 1、1v2 敌人 2、1v3 敌人 3、状态均为 RUNNING、窗口标题含 `tests/<id>`、重复解锁按 id 去重、无残留活动单位）；报告 `.mcp/godot-runtime/screenshots/tests_scenario_entries_report.txt`。受影响套件 gameplay 层 60 cases / 0 errors / 0 failures。统一门禁 `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` → `RESULT: PASS`（GdUnit4 395 cases / 0 failures；headless 10 suites / 549 assertions / 0 failing suites；exit 0）。`game/main/main.tscn` 已用 `git diff` 确认不再含任何测试专用引用。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T22:33:49+08:00
+- 已知问题：`tests/` 与既有 `test/` 只差一个字母，已由 `tests/README.md`、`test/README.md` 与 `AGENTS.md` §5.1 / §12.6 三处显式划线，但仍是后续 Agent 最容易混用的地方。入口体检脚本需要真实窗口（`--headless` 下 dummy 窗口固定 64x64，不满足布局与窗口标题核对），因此未纳入 `run_tests.ps1`，属于提交前的手工步骤。测试入口在 `_ready()` 里改写 `default_dungeon`，只影响 `tests/` 场景内的运行实例，不写回 `.tres`。
 - 用户验收：待验收
 - 验收时间：待验收
-- Git：待提交
+- Git：`develop` / 待回写
 - 备注：父 Increment 为 `INC-CROSS-019`；本 Increment 只调整测试入口的组织方式，不改变玩法规则与战斗数值。

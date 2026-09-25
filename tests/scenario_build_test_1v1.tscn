@@ -1,0 +1,11 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://tests/scenario_entry.gd" id="1_scenario_entry"]
+[ext_resource type="Resource" path="res://game/world/data/encounters/build_test_1v1.tres" id="2_encounter"]
+
+[node name="ScenarioBuildTest1v1" type="Node2D"]
+script = ExtResource("1_scenario_entry")
+scenario_id = &"build_test_1v1"
+scenario_title = "1v1 战斗问题窗口"
+scenario_instructions = "用 Build A（御剑斩 + 护体真气）单挑镇狱影傀：每 8 秒的危险窗口无法被打断，只能先承受并记住这个麻烦。"
+encounter = ExtResource("2_encounter")

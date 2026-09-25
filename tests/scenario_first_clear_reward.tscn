@@ -1,0 +1,11 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://tests/scenario_entry.gd" id="1_scenario_entry"]
+[ext_resource type="Resource" path="res://game/world/data/encounters/build_test_1v1.tres" id="2_encounter"]
+
+[node name="ScenarioFirstClearReward" type="Node2D"]
+script = ExtResource("1_scenario_entry")
+scenario_id = &"first_clear_reward"
+scenario_title = "1v1 首通解锁定身术"
+scenario_instructions = "这场战斗的奖励只有定身术（没有灵石 / 装备 / 强化）：打完看右下角面板会不会从「未解锁：定身术」变成「可切换」。"
+encounter = ExtResource("2_encounter")

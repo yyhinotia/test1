@@ -1,0 +1,12 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://tests/scenario_entry.gd" id="1_scenario_entry"]
+[ext_resource type="Resource" path="res://game/world/data/encounters/build_test_1v3.tres" id="2_encounter"]
+
+[node name="ScenarioBuildTest1v3" type="Node2D"]
+script = ExtResource("1_scenario_entry")
+scenario_id = &"build_test_1v3"
+scenario_title = "1v3 三人组取舍"
+scenario_instructions = "赤拳战修 + 灵弓修者 + 镇狱影傀（与 1v1 同一个 Boss）：危险窗口还在，但多了两个必须先做取舍的威胁。"
+encounter = ExtResource("2_encounter")
+pre_learn_binding_spell = true

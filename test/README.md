@@ -13,6 +13,7 @@
 | `test/gameplay` | 玩法 | 场景层：在真实 `main.tscn` 上跑通玩家可见的整条链路（选中 → 受伤 → HUD 与头顶资源条同步 → 死亡）。 | GdUnit4 |
 | `test/headless` | 回归 | 自建 headless 断言套件（`extends SceneTree`），逐条 CHECK 的回归基线。 | `--script` 直跑 |
 | `test/tools` | 工具 | 不参与测试发现的证据脚本，例如真实窗口多分辨率截图与报告生成。 | 手动 |
+| `../tests` | 场景入口 | 可交互的测试场景（每个场景一个 `.tscn`）：只负责把游戏摆到确定状态，不做断言、不产出通过结论。 | Godot 直接打开，见 `../tests/README.md` |
 | `reports/` | 产物 | GdUnit4 生成的 JUnit XML 与 HTML 报告。**可重建、不入库**（已在 `.gitignore` 忽略）。 | 自动生成 |
 
 分层原则：**能在单元层验证的，不要放到集成层；能在集成层验证的，不要放到玩法层。** 越靠下的层越快、越稳定，失败原因也越好定位。
@@ -86,6 +87,12 @@ func test_configure_applies_initial_ratio() -> void:
 
 本仓库实测可用的断言与辅助方法：`assert_int` / `assert_float` / `assert_str` / `assert_bool` / `assert_array` / `assert_object` / `assert_that`；浮点用 `is_equal_approx(期望值, 容差)`（**容差参数不能省**）；数组用 `has_size` / `contains` / `contains_exactly` / `is_empty`；字符串用 `contains` / `is_equal` / `has_length`；套件辅助方法有 `auto_free`、`add_child`、`await_idle_frame`、`await_millis`、`before_test`、`after_test`。
 
+## 与 `tests/` 的分工
+
+- `test/`（本目录）：自动化断言与回归门禁，结论是「通过 / 失败」，用于提交前门禁。
+- `tests/`：可交互的测试场景入口（每个场景一个 `.tscn`），结论由人工给出，用于玩法验收与手工复现。
+- 两边都不放彼此的产物：断言脚本不写进 `tests/`，场景入口与测试专用参数也不写进 `test/` 或 `game/main/main.tscn`。
+- 入口清单与运行方式见 `../tests/README.md`。
 ## 已知陷阱
 
 - **GDScript lambda 按值捕获基本类型。** 在信号回调里对 `int` / `float` 这类局部变量自增不会影响外部变量，计数会永远是 0；要改成往 `Array`（引用类型）里 `append`。本仓库早期用例踩过这个坑。
@@ -98,5 +105,6 @@ func test_configure_applies_initial_ratio() -> void:
 - 框架选型与取舍依据：`agent-plan/testing.md`（`INC-TESTING-001`）
 - 测试与验证的强制要求：`AGENTS.md` §6
 - 第三方插件审计要求：`AGENTS.md` §12.4
+- 场景化测试入口（人工验收用）：`../tests/README.md`
 - 各主题的验收标准：`agent-plan/<主题>.md`
 
