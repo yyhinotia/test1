@@ -477,3 +477,32 @@
 - 验收时间：待验收
 - Git：`develop` / `fd3eda8`
 - 备注：父 Increment 为 `INC-CROSS-019`；本 Increment 只调整测试入口的组织方式，不改变玩法规则与战斗数值。
+
+## INC-TESTING-013：Stage 2（1v1 / 1v2 / 1v3）运行时终局收敛与重开清洁证据
+
+- 状态：awaiting_acceptance
+- 创建时间：2026-09-25T23:30:00+08:00
+- 最后修改：2026-09-25T23:55:00+08:00
+- 主题：testing
+- 目标：为 `INC-CROSS-019` §27「技术」退出条件中的「1v1 可稳定运行 / 1v2 / 1v3 可稳定运行 / 同一遭遇可以重复挑战」补上真实运行时证据——三份 Build 验证遭遇用正式 `EncounterSession` 与真实控制器跑到终局，并可重复开局而不残留。
+- 验收标准：
+  - 新增 gameplay 用例，逐份跑 `build_test_1v1` / `build_test_1v2` / `build_test_1v3`：玩家单位 1，敌方单位 1 / 2 / 3，单位容器内单位数与敌人数量一致。
+  - 每份遭遇在固定 60fps 时间步下必须跑到终局（`PLAYER_WIN` 或 `ENEMY_WIN`），不得停在 `RUNNING`；不得用直接致死调用来伪造终局。
+  - 1v2 / 1v3 下主目标死亡后，玩家控制器必须能改打下一个存活敌人（`order_attack`），直到敌方全灭或玩家死亡。
+  - 终局后 `restart()` 同一遭遇：玩家满血、未处于定身、事件记录清空、敌我人数与首次一致、上一局单位不再留在容器内。
+  - 统一门禁 `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` 为 `RESULT: PASS`。
+- 范围：新增 `test/gameplay/build_test_stage2_stability_test.gd`（含 `.uid`）；`test/README.md` 补一行层内说明；`agent-plan/testing.md`、`agent-plan/_index.md` 回写。
+- 非范围：不改玩法数值、不改遭遇数据、不改 `EncounterSession` / 控制器 / 技能实现；不替代 `INC-TESTING-011` 的人工玩法轮；不产生任何「好玩 / 不好玩」结论。
+- 依赖：`INC-WORLD-007`（固定 1v1 / 1v2 / 1v3 遭遇）、`INC-COMBAT-009`（敌方全灭才判胜 + CombatEvent）、`INC-PAWNS-021`（Build / Loadout）、`INC-TESTING-012`（`tests/` 人工入口）。
+- 检索证据：2026-09-25T23:30:00+08:00 执行 `git status --short`（无输出）、`git diff --unified=0 -- agent-plan/` 与 `git diff --cached --unified=0 -- agent-plan/`（均无输出）、`git log --oneline -8 -- agent-plan/`（最新 `78dc351`）、`git grep -n -E "INC-TESTING-0(1[1-9]|2[0-9])" -- agent-plan/`（`INC-TESTING-013` 未被占用）与 `git grep -n "build_test_1v"`（`build_test_encounter_catalog_test.gd` 只查数据目录、`verify_scenario_entries.gd` 只查入口加载、`first_clear_reward_test.gd` 用直接致死抹掉敌人）。结论：§27 技术项的 1v2 / 1v3 目前只有「数据目录 + 入口能加载」两类证据，缺真实运行时终局证据，故新建本 Increment。
+- 风险：1vN 终局收敛依赖 AI 与数值，若 60s 内不分胜负会产生 flaky；用固定时间步 + 明确终局上限，超时即判失败，不截断结果冒充胜负。若修复过程中需要改动 `game/` 下实现即为越界，须另立 Increment。
+- 实现说明：新增 `test/gameplay/build_test_stage2_stability_test.gd`，只用正式 `EncounterSession` + 真实 `Pawn` / `PlayerController` / `AIController` 跑到终局，不另建第二套战斗规则：① 阵容口径先核对（玩家 1 个单位，敌方 1 / 2 / 3，单位容器内单位数 = 敌人数 + 1）；② 关掉引擎物理帧后按固定 60fps 手工步进，玩家只通过 `PlayerController.order_attack()` 下命令，主目标死亡后改打下一个存活敌人（`retargets` 记录实际换目标次数），敌人用 `AIController.update_controller()` 推进，事件时钟与危险窗口由会话自己的 `_physics_process()` 单独推进；③ 断言只盯「是否收敛到终局」「终局语义是否正确（胜 = 敌方全灭，负 = 玩家单位死亡）」「终局是否写进 CombatEvent」「重开是否清洁」；④ 承伤 / 时长只打印不参与断言，不产生平衡与「好不好玩」结论。刻意不做的事：不用 `take_damage()` 直接抹掉敌人来伪造终局（`first_clear_reward_test.gd` 的做法在本 Increment 不可接受），也不给玩家脚本化技能循环（避免把「机制收敛」和「AI 打法」混在一起）。`test/README.md` 只补一条手工步进的陷阱说明，不改分层约定。
+- 变更文件：新增 `test/gameplay/build_test_stage2_stability_test.gd`（含 `.uid`）；修改 `test/README.md`（已知陷阱补一条）、`agent-plan/testing.md`、`agent-plan/_index.md`。
+- 测试证据：① 单套件 `& $env:GODOT_BIN --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://test/gameplay/build_test_stage2_stability_test.gd -rd res://reports/gdunit/debug_stage2 --ignoreHeadlessMode`：`Statistics: 2 test cases | 0 errors | 0 failures | 0 flaky | 0 skipped | 0 orphans`，exit 0。过程事实（两次独立运行）：1v1 `state=失败 seconds=16.68 / 18.43`，1v2 `state=胜利 seconds=12.32 / 12.25 retargets=2 enemies_alive=0`，1v3 `state=失败 seconds=9.93 / 9.95 enemies_alive=2`；重开轮 1v1 `15.07s`、1v2 `11.87 / 11.98s`、1v3 `9.90 / 9.92s`。三份遭遇都在 10~19 秒内收敛到终局，其中 1v2 的胜利发生在主目标死亡后换目标打掉第二名敌人（`retargets=2`），运行时证明 1vN 的目标切换与「敌方全灭才判胜」。② 统一门禁 `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all`：`RESULT: PASS`（GdUnit4 399 cases / 0 failures、headless 10 suites / 549 assertions / 0 failing suites、exit 0；gameplay 层由 62 增至 64 cases）。③ `git status --short` 只有本 Increment 的预期变更。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T23:55:00+08:00
+- 已知问题：① 本用例不保证逐帧可重复：手工步进下 `move_and_slide()` 的位移由引擎物理步给出，同一份遭遇的终局时长跨进程会在 15~19 秒之间波动（断言上限 60 秒，余量充足），因此它只证明「能在预算内收敛」，不证明「耗时固定」；② 驱动里玩家只做普通攻击、不施放主动技能，1v1 / 1v3 的记录结果是玩家落败——这属于编排口径而非难度结论，能否打赢仍以人工轮与 `INC-TESTING-011` 为准；③ 既有测试债务不变（`main_scene_sect_test.gd` 324 orphans、`sect_panel_test.gd` 288 orphans）。
+- 用户验收：未验收
+- 验收时间：
+- Git：待提交
+- 备注：父 Increment 为 `INC-CROSS-019`；本 Increment 只补 Stage 2 的运行时稳定性证据。

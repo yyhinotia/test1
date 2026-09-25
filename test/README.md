@@ -98,6 +98,7 @@ func test_configure_applies_initial_ratio() -> void:
 - **GDScript lambda 按值捕获基本类型。** 在信号回调里对 `int` / `float` 这类局部变量自增不会影响外部变量，计数会永远是 0；要改成往 `Array`（引用类型）里 `append`。本仓库早期用例踩过这个坑。
 - **暂停 SceneTree 会挂住 GdUnit4 的 awaiter。** `get_tree().paused = true` 之后不能再 `await`，否则用例直接死锁；暂停相关用例要写成同步断言，并在 `after_test()` 里恢复 `paused = false` 兜底。
 - **GdUnit4 的控制台输出带 ANSI 颜色转义**，直接对原始输出做正则解析会匹配失败，必须先剥离转义序列（`run_tests.ps1` 已处理）。
+- **手工固定步进下 `move_and_slide()` 的位移由引擎物理步给出。** 禁用 `_physics_process` 后在同一帧内连调 `move_and_slide()` 不会按 `velocity * delta` 累积位移，必须跨物理帧（`await tree.physics_frame`）才走得动（`INC-TESTING-011` 实测：同帧 4000 次步进只移动 175px）。因此这类用例只承诺「在预算内收敛」而不承诺逐帧可重复：`INC-TESTING-013` 的 1v1 终局时长在 15~19 秒之间波动，断言上限是 60 秒。
 - **`--headless` 的 dummy 窗口固定为 64x64**，逻辑视口会退化成方形；多分辨率 UI 验证必须走真实窗口（见 `test/tools/`），不能只靠 headless 断言。
 
 ## 相关文档
