@@ -1,6 +1,6 @@
 # Agent Plan Index
 
-> 最后修改：2026-09-26T01:48:20+08:00
+> 最后修改：2026-09-26T01:52:12+08:00
 > 规则来源：`../AGENTS.md`
 
 ## 主题索引
@@ -616,7 +616,7 @@
 
 | 版本 | 时间 | 变更 |
 |---|---|---|
-| v5.32 | 2026-09-26T01:48:20+08:00 | 用户验收通过 `INC-CROSS-020`（左键统一操作模型）及其三个子 Increment（`INC-CORE-013` / `INC-UI-019` / `INC-TESTING-018`），并按其拆分提交到 `develop`；验收同时确认两项交互决策：左键点敌方只做选中并显示信息（不顺手攻击）、移动仍要求先选中玩家自己的单位 |
+| v5.32 | 2026-09-26T01:52:12+08:00 | 用户验收通过 `INC-CROSS-020`（左键统一操作模型）及其三个子 Increment（`INC-CORE-013` / `INC-UI-019` / `INC-TESTING-018`），并按其拆分提交到 `develop`；本次验收采纳的交互口径是：左键点敌方只做选中并显示信息（不顺手攻击）、移动需先选中玩家自己的单位——两项如需更动另立 Increment |
 | v5.31 | 2026-09-26T00:58:00+08:00 | 完成 `INC-CROSS-020` 的三个子 Increment（`INC-CORE-013` / `INC-UI-019` / `INC-TESTING-018`）：① 左键成为唯一世界交互入口——命中任意存活单位（含敌方）即选中并结束分流，空白地只在「玩家单位被选中」时下达 `order_move()`；② 右键收窄为「TARGETING 取消」+「命中敌方下达 `order_attack()`」，删除移动分支，`project.godot` 的 InputMap 与动作名不变；③ 选中敌方时信息卡绑定敌方、`SkillBar` 与 `BuildLoadoutPanel` 解绑隐藏、`OrderLabel` 显示 `指令：-`、`InstructionsLabel` 与 `main.tscn` 静态文案同步；④ 新增 `_watch_selected_pawn_signals()` 让任意被选中单位的资源 / 状态变化刷新 HUD；⑤ 改写旧契约用例 `test_right_click_cancels_without_move_command` 并新增 4 个用例，统一门禁 `RESULT: PASS`（GdUnit4 402 → 406 cases / 0 failures、headless 549 assertions，exit 0）；⑥ 真实窗口 1v2 入口用 `simulate_input`（OS 级鼠标）复核左键选敌方 / 左键移动 / 右键不移动 / 右键攻击；不新增 InputMap 动作、不改玩法数值与 `Pawn` API |
 | v5.30 | 2026-09-26T00:47:00+08:00 | 新建 `INC-CROSS-020`（左键统一操作模型）：用户指令「左键选择（人物选择，技能对象选择），移动，而非右键移动，选中敌方时需要显示敌方信息ui」；拆分为 `INC-CORE-013`（输入路由：`_handle_select` 成为唯一左键入口，左键选中任意单位 / 空白地移动，右键不再移动但保留取消瞄准与对敌方普通攻击）、`INC-UI-019`（选中敌方时信息卡绑定敌方、技能栏与 Build 面板解绑，HUD 指令行与操作提示文案同步）、`INC-TESTING-018`（改写 `test_right_click_cancels_without_move_command` 旧契约并新增左键移动 / 选中敌方用例）；不新增 InputMap 动作、不改玩法数值与 `Pawn` API |
 | v5.25 | 2026-09-25T23:01:35+08:00 | 完成 `INC-TESTING-014`（人工轮 CombatEvent 取证）：人工入口 `tests/scenario_build_replay.tscn` 原有 `SCENARIO_READY` 但没有 CombatEvent 落盘，Gate D 的「事件佐证」未绑定人工轮；本 Increment 在 `tests/scenario_entry.gd` 加只读事件记录器（每局结算追加局号 / 遭遇 / 结算 / 时钟 / 装配 / 完整事件行到不入库的 `.mcp/godot-runtime/screenshots/human_replay_events.md`），新增 `entry_ready` 就绪标志避免记录器挂载前结算，并新增 `test/gameplay/human_round_record_test.gd` 覆盖「未结算不写 + 首局落盘 + 第二局追加」；单套件 `2 cases | 0 failures | 0 orphans`，入口体检 6 入口 × 2 次 `FAILURES=0`，统一门禁 `RESULT: PASS`（GdUnit4 401 cases / headless 549 assertions，exit 0）；状态 `awaiting_acceptance`，不新增玩法内容、不改数值与实现 |
