@@ -5,7 +5,8 @@ extends RefCounted
 ## 整理成可直接渲染的快照，并派生稳定文案。本类不持有节点、不订阅信号、不修改任何数据。
 ##
 ## 数据边界（对应 `docs/pawns信息ui.md` 的统一数据契约）：
-##   - 静态部分：姓名、境界、小境界、灵根、属性与 Build 配置（功法 / 武器 / 主动 / 被动）全部来自 `PawnData`。
+##   - 静态部分：姓名、境界、小境界、灵根、属性与 Build 配置（功法 / 武器 / 被动）来自 `PawnData`；
+##     主动技能列表可由调用方通过 `runtime["active_skills"]` 传入运行时装配结果以避免直读 `PawnData`。
 ##   - 运行时部分：气血/护体/灵力与 Build 容量占用由调用方（`PawnInfoPanel`）以字典传入，
 ##     因为运行时数值只存在于 `Pawn/Resources/*` 的 `ResourcePoolComponent`，不写入 `.tres`。
 ##   - 本类不实现 Build 校验规则：容量与校验结论由 `RealmDefinition` / `BuildValidator` 提供后传入。
@@ -81,6 +82,14 @@ static func build_snapshot(data: PawnData, runtime: Dictionary = {}) -> Dictiona
 		defense = data.defense
 		attack_interval = data.attack_interval
 		move_speed = data.move_speed
+
+	# 运行时装配覆盖静态预设：Build 重配后信息卡与技能栏必须读同一份装配结果。
+	var runtime_skills: Variant = runtime.get("active_skills")
+	if runtime_skills is Array:
+		var equipped: Array[ActiveSkillDefinition] = []
+		equipped.assign(runtime_skills)
+		skill = equipped[0] if not equipped.is_empty() else null
+		skill_names = _skill_names(equipped)
 
 	# 运行时境界覆盖静态档案：突破后的身份名与容量预览都必须看到同一个 Pawn 运行时状态。
 	var runtime_realm: Variant = runtime.get("realm")

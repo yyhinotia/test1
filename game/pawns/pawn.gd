@@ -90,6 +90,13 @@ var _stun_remaining: float = 0.0
 var _learned_techniques: Array[TechniqueDefinition] = []
 var _forge_level: int = 0
 
+## 运行时主动技能覆盖层（INC-PAWNS-021）：已掌握与已装配是两份独立的运行时事实。
+## 「已掌握」= 静态预设 + 运行时解锁；「已装配」= 本代修士当前实际生效的技能列表。
+## 两者都只属于本代修士的运行时状态，绝不写回 `PawnData`；没有显式重配时读模型完全沿用静态预设。
+var _learned_active_skills: Array[ActiveSkillDefinition] = []
+var _equipped_active_skills: Array[ActiveSkillDefinition] = []
+var _has_equipped_active_skills: bool = false
+
 var state: int:
 	get:
 		return _state
@@ -175,8 +182,8 @@ func get_base_realm() -> RealmDefinition:
 		return null
 	return data.realm
 
-## 只读 Build 汇总：境界 + 功法 + 主武器 + 原始主动技能配置（被动尚无数据来源，保持为空）。
-## 这里故意保留未去重 / 未过滤的原始条目，让 BuildValidator 能看到 duplicate_entry 与 unconfigured_entry；
+## 只读 Build 汇总：境界 + 功法 + 主武器 + 当前生效的主动技能装配（被动尚无数据来源，保持为空）。
+## 主动技能读的是运行时装配结果：没有显式重配时等于静态预设，重配后立即反映新 Build；
 ## 运行时可用列表请使用 get_enabled_active_skills()，它按容量投影并已去重。
 ## 每次调用返回新实例，调用方可以自由修改结果而不影响 PawnData 预设。
 func get_build_loadout() -> BuildLoadout:
@@ -191,11 +198,8 @@ func get_build_loadout() -> BuildLoadout:
 		loadout.techniques.append(technique)
 	if data.weapon != null:
 		loadout.weapons.append(data.weapon)
-	if not data.active_skills.is_empty():
-		for skill: ActiveSkillDefinition in data.active_skills:
-			loadout.active_skills.append(skill)
-	elif data.active_skill != null:
-		loadout.active_skills.append(data.active_skill)
+	# 主动技能统一走运行时装配读模型，禁止调用方再直接消费 PawnData.active_skills。
+	loadout.active_skills.assign(_validator_active_skills())
 	return loadout
 
 ## Build 校验结果：只做规则判定，不装备、不卸载、不修改任何资源池或冷却。
@@ -273,6 +277,119 @@ func get_attack_power() -> float:
 		return 0.0
 	return data.attack + float(_forge_level) * FORGE_ATTACK_BONUS_PER_LEVEL
 
+## 已掌握主动技能：静态预设在前，运行时解锁按解锁顺序追加；同一 id 只保留首次出现。
+## 这是「这个修士会什么」的唯一读模型，技能输入与技能栏只允许查它，不得直接读 PawnData。
+func get_known_active_skills() -> Array[ActiveSkillDefinition]:
+	var result: Array[ActiveSkillDefinition] = []
+	var seen_ids: Dictionary = {}
+	if data != null:
+		for skill: ActiveSkillDefinition in data.get_active_skills():
+			_append_known_active_skill(result, seen_ids, skill)
+	for skill: ActiveSkillDefinition in _learned_active_skills:
+		_append_known_active_skill(result, seen_ids, skill)
+	return result
+
+
+## 已装配主动技能（生效投影的事实源）：显式重配过时返回装配结果，
+## 否则完全沿用静态预设的「去重 + 过滤后」列表（与 INC-PAWNS-021 之前的投影行为逐字一致）。
+func get_equipped_active_skills() -> Array[ActiveSkillDefinition]:
+	if _has_equipped_active_skills:
+		return _equipped_active_skills.duplicate()
+	var preset: Array[ActiveSkillDefinition] = []
+	if data != null:
+		preset.assign(data.get_active_skills())
+	return preset
+
+
+## 校验读模型：未显式重配时保留静态预设的原始条目（含重复与未配置项），
+## 让 BuildValidator 仍能报 `duplicate_entry` / `unconfigured_entry`；重配后返回已校验的唯一装配。
+func _validator_active_skills() -> Array[ActiveSkillDefinition]:
+	if _has_equipped_active_skills:
+		return _equipped_active_skills.duplicate()
+	var raw: Array[ActiveSkillDefinition] = []
+	if data == null:
+		return raw
+	if not data.active_skills.is_empty():
+		raw.assign(data.active_skills)
+	elif data.active_skill != null:
+		raw.append(data.active_skill)
+	return raw
+
+
+## 是否已掌握该技能实例：采用实例身份比较，与 PlayerController / SkillBar 的历史判定一致。
+func is_active_skill_known(skill: ActiveSkillDefinition) -> bool:
+	if skill == null:
+		return false
+	for known: ActiveSkillDefinition in get_known_active_skills():
+		if known == skill:
+			return true
+	return false
+
+
+## 运行时解锁主动技能（INC-PAWNS-021）：按 id 去重（含静态预设），成功返回 true 并广播 build_changed。
+## 本方法只让技能进入「已掌握」，不自动装配；是否装备由 set_active_skill_loadout() 显式裁决。
+func learn_active_skill(skill: ActiveSkillDefinition) -> bool:
+	if skill == null or not skill.is_configured():
+		return false
+	for known: ActiveSkillDefinition in get_known_active_skills():
+		if known == skill:
+			return false
+		if known.is_configured() and known.id == skill.id:
+			return false
+	_learned_active_skills.append(skill)
+	build_changed.emit(self)
+	return true
+
+
+## 运行时已解锁的主动技能列表（不含静态预设）；返回副本，调用方不能就地改写内部状态。
+func get_learned_active_skills() -> Array[ActiveSkillDefinition]:
+	return _learned_active_skills.duplicate()
+
+
+## 是否在运行时解锁过该 id；静态预设不算「解锁」，因此重复解锁同一技能会被拒绝。
+func has_learned_active_skill(skill_id: StringName) -> bool:
+	for skill: ActiveSkillDefinition in _learned_active_skills:
+		if skill != null and skill.id == skill_id:
+			return true
+	return false
+
+
+## Build 重配的唯一出口：只接受已掌握、唯一且不超过当前境界主动技能容量的技能。
+## 任一校验失败都保持调用前状态完全不变（零副作用）；传入空数组是合法的「显式清空装配」，
+## 它与「从未重配」不同：清空后 get_enabled_active_skills() 返回空列表而不是回退静态预设。
+func set_active_skill_loadout(skills: Array[ActiveSkillDefinition]) -> bool:
+	var capacity: int = get_active_skill_capacity()
+	if capacity >= 0 and skills.size() > capacity:
+		return false
+	var validated: Array[ActiveSkillDefinition] = []
+	var seen_ids: Dictionary = {}
+	for skill: ActiveSkillDefinition in skills:
+		if skill == null or not skill.is_configured():
+			return false
+		if not is_active_skill_known(skill):
+			return false
+		if seen_ids.has(skill.id):
+			return false
+		seen_ids[skill.id] = true
+		validated.append(skill)
+	_equipped_active_skills = validated
+	_has_equipped_active_skills = true
+	build_changed.emit(self)
+	return true
+
+
+## 已掌握列表的内部追加：空条目忽略；有 id 的条目按 id 去重；无 id 的条目保留但不参与去重。
+func _append_known_active_skill(target: Array[ActiveSkillDefinition], seen_ids: Dictionary, skill: ActiveSkillDefinition) -> void:
+	if skill == null:
+		return
+	var skill_id: StringName = skill.id if skill.is_configured() else &""
+	if skill_id != &"":
+		if seen_ids.has(skill_id):
+			return
+		seen_ids[skill_id] = true
+	target.append(skill)
+
+
 ## 当前 Build 的主动技能容量：无境界或无效境界返回 -1 表示无约束；
 ## 有效境界返回 RealmDefinition 的主动技能槽容量，容量 0 是有效结果而不是“未配置”。
 func get_active_skill_capacity() -> int:
@@ -282,13 +399,13 @@ func get_active_skill_capacity() -> int:
 	return realm.get_slot_capacity(RealmDefinition.KIND_ACTIVE_SKILL)
 
 
-## 当前 Build 实际可用的主动技能只读投影：按 PawnData 顺序返回前 N 个有效技能。
-## 无境界单位返回全部合法技能；完整列表仍由 get_build_loadout() 提供给 BuildValidator 报 over_capacity。
+## 当前 Build 实际可用的主动技能只读投影：按当前装配顺序返回前 N 个有效技能。
+## 无境界单位返回全部已装配技能；完整列表仍由 get_build_loadout() 提供给 BuildValidator 报 over_capacity。
 func get_enabled_active_skills() -> Array[ActiveSkillDefinition]:
 	var result: Array[ActiveSkillDefinition] = []
-	if data == null:
+	var skills: Array[ActiveSkillDefinition] = get_equipped_active_skills()
+	if skills.is_empty():
 		return result
-	var skills: Array[ActiveSkillDefinition] = data.get_active_skills()
 	var capacity: int = get_active_skill_capacity()
 	if capacity < 0:
 		result.assign(skills)

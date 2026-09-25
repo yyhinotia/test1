@@ -114,7 +114,8 @@ func refresh() -> void:
 		cancel_targeting()
 	# 超容量技能仍保留槽位以便显示 DISABLED；无境界时容量哨兵按 0 槽参与布局。
 	var capacity: int = maxi(_pawn.get_active_skill_capacity(), 0)
-	var skills: Array[ActiveSkillDefinition] = _pawn.data.get_active_skills()
+	# 技能栏读的是运行时装配结果：重配后槽位内容必须立刻跟随，且不回退到 PawnData。
+	var skills: Array[ActiveSkillDefinition] = _pawn.get_equipped_active_skills()
 	var count: int = clampi(maxi(capacity, skills.size()), 0, MAX_SLOTS)
 	_ensure_slot_count(count)
 	for index: int in count:
@@ -124,14 +125,11 @@ func refresh() -> void:
 		else:
 			slot.show_empty(str(index + 1))
 
-## 瞄准对象必须仍属于当前 Pawn 的技能列表，避免 UI 用任意资源绕过 Build 配置。
+## 瞄准对象必须仍属于当前 Pawn 已掌握技能列表，避免 UI 用任意资源绕过 Build 配置。
 func _is_known_skill(skill: ActiveSkillDefinition) -> bool:
-	if skill == null or _pawn == null or _pawn.data == null:
+	if skill == null or _pawn == null:
 		return false
-	for candidate: ActiveSkillDefinition in _pawn.data.get_active_skills():
-		if candidate == skill:
-			return true
-	return false
+	return _pawn.is_active_skill_known(skill)
 
 
 ## 瞄准对象必须同时属于完整技能列表且位于当前容量投影内。
@@ -170,6 +168,8 @@ func _connect_pawn_signals() -> void:
 	_connect_signal(_pawn.skill_cast, _on_skill_cast)
 	_connect_signal(_pawn.died, _on_died)
 	_connect_signal(_pawn.state_changed, _on_state_changed)
+	# 运行时解锁 / 重配只广播 Pawn 自己的 build_changed，技能栏必须据此重建槽位。
+	_connect_signal(_pawn.build_changed, _on_runtime_build_changed)
 	if _pawn.data != null:
 		_connect_signal(_pawn.data.build_changed, _on_data_changed)
 		_connect_signal(_pawn.data.realm_changed, _on_data_changed)
@@ -182,6 +182,7 @@ func _disconnect_pawn_signals() -> void:
 	_disconnect_signal(_pawn.skill_cast, _on_skill_cast)
 	_disconnect_signal(_pawn.died, _on_died)
 	_disconnect_signal(_pawn.state_changed, _on_state_changed)
+	_disconnect_signal(_pawn.build_changed, _on_runtime_build_changed)
 	if _pawn.data != null:
 		_disconnect_signal(_pawn.data.build_changed, _on_data_changed)
 		_disconnect_signal(_pawn.data.realm_changed, _on_data_changed)
@@ -210,4 +211,7 @@ func _on_state_changed(_changed_pawn: Pawn, _new_state: int) -> void:
 	refresh()
 
 func _on_data_changed(_data: PawnData) -> void:
+	refresh()
+
+func _on_runtime_build_changed(_changed_pawn: Pawn) -> void:
 	refresh()

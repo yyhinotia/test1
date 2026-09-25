@@ -140,14 +140,12 @@ func _get_ordered_skill() -> ActiveSkillDefinition:
 		return _ordered_skill
 	return _get_active_skill()
 
-## 只接受当前 Pawn 生效技能列表中的实例，避免 UI 用任意资源绕过 Build 配置。
+## 只接受当前 Pawn 已掌握技能列表中的实例，避免 UI 用任意资源绕过 Build 配置。
+## 判定统一走 Pawn 的运行时读模型，控制器不再直接消费 `PawnData.active_skills`。
 func _is_known_skill(skill: ActiveSkillDefinition) -> bool:
-	if skill == null or pawn == null or pawn.data == null:
+	if skill == null or pawn == null:
 		return false
-	for candidate: ActiveSkillDefinition in pawn.data.get_active_skills():
-		if candidate == skill:
-			return true
-	return false
+	return pawn.is_active_skill_known(skill)
 
 ## 目标解析只处理“未显式传入目标”的默认值；最终合法性仍由 Pawn 按技能目标类型裁决。
 func _resolve_skill_target(skill: ActiveSkillDefinition, target: Pawn) -> Pawn:

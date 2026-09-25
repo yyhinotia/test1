@@ -115,6 +115,8 @@ func _read_runtime_values() -> Dictionary:
 		PawnInfoModel.SPIRIT_KEY: _read_pool_values(SPIRIT_RESOURCE_ID),
 	}
 	runtime["realm"] = _pawn.get_realm()
+	# 主动技能列表以运行时装配为准，信息卡不再直接读 PawnData.active_skills。
+	runtime["active_skills"] = _pawn.get_equipped_active_skills()
 	var loadout: BuildLoadout = _pawn.get_build_loadout()
 	runtime["technique_used"] = loadout.get_used_slots(RealmDefinition.KIND_TECHNIQUE)
 	runtime["technique_max"] = loadout.get_capacity(RealmDefinition.KIND_TECHNIQUE)
@@ -204,6 +206,8 @@ func _connect_pawn_signals() -> void:
 	_connect_signal(_pawn.realm_changed, _on_pawn_realm_changed)
 	_connect_signal(_pawn.state_changed, _on_state_changed)
 	_connect_signal(_pawn.died, _on_died)
+	# 运行时 Build 变更（功法领悟 / 主动技能重配）只广播 Pawn 自己的信号，信息卡必须跟随。
+	_connect_signal(_pawn.build_changed, _on_runtime_build_changed)
 	if _pawn.data != null:
 		_connect_signal(_pawn.data.identity_changed, _on_data_changed)
 		_connect_signal(_pawn.data.attributes_changed, _on_data_changed)
@@ -220,6 +224,7 @@ func _disconnect_pawn_signals() -> void:
 	_disconnect_signal(_pawn.realm_changed, _on_pawn_realm_changed)
 	_disconnect_signal(_pawn.state_changed, _on_state_changed)
 	_disconnect_signal(_pawn.died, _on_died)
+	_disconnect_signal(_pawn.build_changed, _on_runtime_build_changed)
 	if _pawn.data != null:
 		_disconnect_signal(_pawn.data.identity_changed, _on_data_changed)
 		_disconnect_signal(_pawn.data.attributes_changed, _on_data_changed)
@@ -251,6 +256,8 @@ func _on_died(_changed_pawn: Pawn) -> void:
 	refresh()
 
 func _on_data_changed(_data: PawnData) -> void:
+	refresh()
+func _on_runtime_build_changed(_changed_pawn: Pawn) -> void:
 	refresh()
 
 ## UI 只表达玩家意图；真正的突破由主场景调用 Pawn.try_breakthrough()。

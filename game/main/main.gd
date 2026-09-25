@@ -347,17 +347,19 @@ func _handle_command(screen_position: Vector2) -> void:
 		player_controller.order_move(_screen_to_world(screen_position))
 	_update_hud()
 
-## Q 键技能入口：默认选择第一个已配置主动技能，并统一经过 SkillBar 的 SELF/TARGETING 分流。
+## Q 键技能入口：默认选择第一个已装配主动技能，并统一经过 SkillBar 的 SELF/TARGETING 分流。
 func _handle_cast_skill() -> void:
 	if player_pawn == null or player_pawn.data == null:
 		return
-	_request_selected_skill(player_pawn.data.get_primary_active_skill())
+	var equipped: Array[ActiveSkillDefinition] = player_pawn.get_equipped_active_skills()
+	_request_selected_skill(equipped[0] if not equipped.is_empty() else null)
 
 ## 数字键技能入口：按技能栏顺序解析具体技能，对不存在/未配置的槽位保持完全无操作。
 func _handle_cast_skill_slot(index: int) -> void:
 	if player_pawn == null or player_pawn.data == null:
 		return
-	var skills: Array[ActiveSkillDefinition] = player_pawn.data.get_active_skills()
+	# 数字键按装配顺序解析槽位，禁止直接消费 PawnData.active_skills。
+	var skills: Array[ActiveSkillDefinition] = player_pawn.get_equipped_active_skills()
 	if index < 0 or index >= skills.size():
 		return
 	_request_selected_skill(skills[index])
