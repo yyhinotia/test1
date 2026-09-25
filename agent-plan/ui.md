@@ -1,6 +1,6 @@
 # UI 主题计划
 
-> 最后修改：2026-09-25T19:38:19+08:00
+> 最后修改：2026-09-25T20:39:32+08:00
 > 主题：ui  
 > 规则来源：`../AGENTS.md`
 
@@ -619,9 +619,9 @@
 
 ## INC-UI-017：突破入口与突破后容量预览
 
-- 状态：planned
+- 状态：accepted
 - 创建时间：2026-09-25T20:11:34+08:00
-- 最后修改：2026-09-25T20:11:34+08:00
+- 最后修改：2026-09-25T20:39:32+08:00
 - 主题：UI
 - 目标：在选中修士的信息卡中暴露“修为已满 → 可突破”的明确入口，并在突破前展示下一境界的 Build 容量预览，让突破的玩法价值在 UI 上可见。
 - 验收标准：
@@ -634,13 +634,29 @@
 - 依赖：`INC-PAWNS-019`、既有 `INC-UI-008` / `INC-UI-009` 信息卡。
 - 检索证据：同 `INC-CULT-005`；`game/ui/pawn_info_panel.gd` 当前只有 `refreshed(snapshot)`，没有玩家意图信号；`pawn_info_model.gd:75` 仍直接读 `data.realm`，确认运行时境界覆盖与突破入口均为缺口。
 - 风险：面板已有只读边界，按钮若直接修改 Pawn 会把 UI 变成业务入口；本 Increment 只发 `breakthrough_requested(pawn)`，由主场景转发。容量预览若从静态 `PawnData.realm.next_realm` 读取会绕过 Pawn 的运行时链，必须使用 Pawn 的只读查询结果。
-- 实现说明：待实现。
-- 变更文件：待实现。
-- 测试证据：待实现。
-- 验证状态：待验证
-- 验证时间：待验证
-- 已知问题：待实现。
-- 用户验收：待验收
-- 验收时间：待验收
-- Git：待提交
+- 实现说明：
+  - `PawnInfoModel.build_snapshot()` 接受 `runtime["realm"]`（`RealmDefinition`）覆盖静态 `PawnData.realm`；`_read_cultivation()` 补齐 `has_next_realm` 与 `capacity_preview`，容量数字只来自 `RealmDefinition.get_slot_capacity()`，UI 不维护境界容量表。
+  - 新增 `PawnInfoModel.breakthrough_preview_line(snapshot)` 输出「突破后容量：功法 x / 武器 x / 主动 x / 被动 x」；`available == false` 或无下一境界 / 无容量数据时返回空串，由面板安全降级。
+  - `PawnInfoPanel` 新增 `breakthrough_requested(pawn: Pawn)` 信号与「突破」按钮：`_ready()` 连接 `pressed`，`_render()` 由 `available / has_next_realm / ready` 三者决定 `disabled`，按钮只发玩家意图，不修改任何数值；新增 `_on_pawn_realm_changed` 订阅 `Pawn.realm_changed` 重新渲染，`_read_runtime_values()` 注入 `runtime["realm"] = _pawn.get_realm()`。
+  - `pawn_info_panel.tscn` 新增 `CultivationSection/BreakthroughRow`（预览 Label + 按钮）；为在固定尺寸信息卡内放下新增行：按钮改为 16px 高并覆盖 normal / hover / pressed / disabled `StyleBoxFlat`，`CultivationProgress` 8 → 6，面板最小高度 354 → 366，`BottomLeftDock.offset_top` -370 → -382。
+- 变更文件：
+  - `game/ui/pawn_info_model.gd`、`game/ui/pawn_info_panel.gd`、`game/ui/pawn_info_panel.tscn`
+  - `game/main/main.tscn`（左下 Dock 高度随信息卡增长）
+  - `test/unit/pawn_info_model_test.gd`、`test/integration/pawn_info_panel_test.gd`、`test/tools/capture_pawn_info_panel_evidence.gd`
+- 测试证据：
+  - `test/unit/pawn_info_model_test.gd`：15 test cases / 0 errors / 0 failures（新增运行时境界覆盖与预览行用例），报告 `reports/inc_ui_017_unit`。
+  - `test/integration/pawn_info_panel_test.gd`：10 test cases / 0 errors / 0 failures；新增 `test_breakthrough_button_and_capacity_preview` 用真实 `player_pawn.tscn` + `pawn_info_panel.tscn` 证明未就绪不发请求、就绪只发一次 `breakthrough_requested`、预览数字来自下一境界容量（功法 2 / 武器 1 / 主动 3 / 被动 2），突破后按钮回到禁用，报告 `reports/inc_ui_017_integration`。
+  - 回归：`test/integration/skill_bar_test.gd` 8 cases / 0 failures（`reports/inc_ui_017_recheck`）。
+  - 真实窗口三档取证 `test/tools/capture_pawn_info_panel_evidence.gd`：`1152x648` / `1152x720` / `800x720`（窄屏逻辑视口 1152x1036）全部 `DOCK_INSIDE=true`、`PANEL_HUD_OVERLAP=false`、`CONTENT_FITS=true`，`FAILURES=0`（退出码 0）；突破行实测 `ROW=(332,16)`、预览 `LABEL=(274,14)`、`LINES=1`，战斗中随修为区隐藏、暂停时可见；修为拉满后 `DISABLED=false`、恢复后 `DISABLED=true`；境界容量 2~6 对应槽位 2~6。报告 `.mcp/godot-runtime/screenshots/pawn_info_panel_evidence_report.txt`（`.mcp/` 不入库）。
+  - 取证脚本同步修正：容量扫描改为配置运行时境界（`INC-PAWNS-019` 后 `data.realm` 不再是槽位来源）；量测前隔离宗门 / 遭遇 / 秘境面板，避免把既有 Dock 溢出记到信息卡；新增突破行显隐、按钮可用性、行高与文本宽度断言。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T20:37:38+08:00
+- 已知问题：
+  - `test/gameplay/main_scene_sect_test.gd` 报告 324 orphans（GdUnit4 退出码 101）：用 `git stash` 在 HEAD 上复跑得到相同 324 orphans，确认为既有测试债务，与本 Increment 无关；本 Increment 相关套件 orphan 均为 0。
+  - Dock 内宗门 / 遭遇 / 秘境面板同时可见时 `BottomLeftDock` 最小宽度为 1248 > 1152 逻辑视口（既有 HUD 布局债务），本 Increment 不处理，取证时与同族脚本一致先隔离。
+  - 终点境界下预览行返回空串、按钮保持禁用；突破后的数值结算与主场景转发分别属于 `INC-CULT-005` / `INC-PAWNS-019` 与 `INC-CORE-011`。
+- 用户验收：已验收（依据用户指令「验收通过，分increment提交」与「推送，保持本地远端一致」）
+- 验收时间：2026-09-25T20:37:38+08:00
+- Git：main / 8de54d9
+- 计划修订（2026-09-25T20:39:32+08:00）：实现提交已推送，回填 Git 提交号。
 - 备注：父 Increment 为 `INC-CROSS-018`；本 Increment 将突破从内部能力提升为玩家可见的 Build 决策节点。

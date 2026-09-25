@@ -1,13 +1,13 @@
 # Agent Plan Index
 
-> 最后修改：2026-09-25T20:17:57+08:00
+> 最后修改：2026-09-25T20:39:32+08:00
 > 规则来源：`../AGENTS.md`
 
 ## 主题索引
 
 | 主题 | 计划文件 | 状态 | 当前 Increment | 最后修改 |
 |---|---|---|---|---|
-| UI | `ui.md` | 计划中 | `INC-UI-017` | 2026-09-25T20:11:34+08:00 |
+| UI | `ui.md` | 已验收 | `INC-UI-017` | 2026-09-25T20:39:32+08:00 |
 | 战斗 | `combat.md` | 已验收 | `INC-COMBAT-008` | 2026-09-25T18:30:17+08:00 |
 | Pawns | `pawns.md` | 已验收 | `INC-PAWNS-019` | 2026-09-25T20:16:30+08:00 |
 | 修炼 | `cultivation.md` | 已验收 | `INC-CULT-005` | 2026-09-25T20:16:30+08:00 |
@@ -41,7 +41,7 @@
 | `INC-CROSS-016` | `accepted` | `INC-PAWNS-017`、`INC-WORLD-003`、`INC-WORLD-004`、`INC-UI-015`、`INC-CORE-009`、`INC-TESTING-008` | 秘境深入：把「一次遭遇」升级成「房间链 + 收益 + 继续/撤退 + Boss」，验证「越深入收益越高、风险越大」的贪不贪决策 | 通过 | 已验收 | 2026-09-25T19:16:03+08:00 |
 | `INC-CROSS-015` | `accepted` | `INC-WORLD-001`、`INC-WORLD-002`、`INC-UI-014`、`INC-CORE-008`、`INC-TESTING-007` | 秘境遭遇入口：把敌人威胁档案变成玩家可进入的遭遇（选择 → 战斗 → 结果 → 重选） | 通过 | 已验收 | 2026-09-25T18:52:41+08:00 |
 | `INC-CROSS-017` | `accepted` | `INC-SECT-001`、`INC-SECT-002`、`INC-SECT-003`、`INC-PAWNS-018`、`INC-UI-016`、`INC-CORE-010`、`INC-WORLD-005`、`INC-TESTING-009` | 最小宗门（MVP-⑤）：把秘境灵石收益变成可升级的宗门设施，产出修为 / 灵草 / 丹药 / 功法 / 强化武器，形成「回去修炼 / 制作 / 强化，然后再次出发」的闭环 | 通过 | 已验收 | 2026-09-25T20:05:25+08:00 |
-| `INC-CROSS-018` | `in_progress` | `INC-CULT-005`、`INC-PAWNS-019`、`INC-WORLD-006`、`INC-UI-017`、`INC-CORE-011`、`INC-TESTING-010` | 突破 → Build 重构：突破执行、运行时境界覆盖、跨遭遇延续、玩家入口与再战证据 | 进行中（3/6 子项已验收） | 待验收 | 2026-09-25T20:17:57+08:00 |
+| `INC-CROSS-018` | `in_progress` | `INC-CULT-005`、`INC-PAWNS-019`、`INC-WORLD-006`、`INC-UI-017`、`INC-CORE-011`、`INC-TESTING-010` | 突破 → Build 重构：突破执行、运行时境界覆盖、跨遭遇延续、玩家入口与再战证据 | 进行中（4/6 子项已验收） | 待验收 | 2026-09-25T20:39:32+08:00 |
 
 ### INC-CROSS-001：第一个 Pawn MVP
 
@@ -433,6 +433,7 @@
 | `INC-CULT-005` | `INC-CROSS-018` | cultivation | `accepted` | 突破执行：消费修为并沿境界链推进 | 2026-09-25T20:16:30+08:00 | 验证通过 | 已验收 | `main` / `d9213d2` |
 | `INC-PAWNS-019` | `INC-CROSS-018` | pawns | `accepted` | 运行时境界覆盖层、突破入口与恢复校验 | 2026-09-25T20:16:30+08:00 | 验证通过 | 已验收 | `main` / `ff07dbe` |
 | `INC-WORLD-006` | `INC-CROSS-018` | world | `accepted` | 跨遭遇延续运行时境界与容量 | 2026-09-25T20:16:30+08:00 | 验证通过 | 已验收 | `main` / `dba3f01` |
+| `INC-UI-017` | `INC-CROSS-018` | ui | `accepted` | 突破入口与突破后容量预览 | 2026-09-25T20:39:32+08:00 | 验证通过 | 已验收 | `main` / `8de54d9` |
 | `INC-SECT-001` | `INC-CROSS-017` | sect | `accepted` | 宗门设施静态定义与六座设施数据 | 2026-09-25T19:38:41+08:00 | 通过 | 已验收 | `main` / `c25ffbc` |
 | `INC-SECT-002` | `INC-CROSS-017` | sect | `accepted` | SectState 运行时：库存 / 设施等级 / 升级 / 修炼 / 收获 | 2026-09-25T19:38:41+08:00 | 通过 | 已验收 | `main` / `8c65ff1` |
 | `INC-SECT-003` | `INC-CROSS-017` | sect | `accepted` | 转化设施：藏经阁参悟 / 炼器房强化 / 丹房炼丹 | 2026-09-25T19:38:41+08:00 | 通过 | 已验收 | `main` / `9c97ef9` |
@@ -599,6 +600,7 @@
 
 | 版本 | 时间 | 变更 |
 |---|---|---|
+| v5.11 | 2026-09-25T20:39:32+08:00 | 完成并推送 `INC-UI-017`（`8de54d9`）（信息卡突破入口）：`PawnInfoModel` 用运行时境界覆盖静态档案并派生「突破后容量：功法 / 武器 / 主动 / 被动」预览，`PawnInfoPanel` 新增 `breakthrough_requested(pawn)` 与「突破」按钮（只在修为已满且有下一境界时可用，只发意图不改数值）；为在固定尺寸信息卡内放下新增行，按钮行压到 16px 并把面板最小高度 354 → 366、`BottomLeftDock.offset_top` -370 → -382；unit 15 / integration 10（另含 skill_bar 回归 8）0 failures，真实窗口三档取证 `FAILURES=0`；父 `INC-CROSS-018` 继续开发主场景接线与 gameplay 证据 |
 | v5.10 | 2026-09-25T20:17:57+08:00 | 分批完成并推送 `INC-CULT-005`（`d9213d2`）、`INC-PAWNS-019`（`ff07dbe`）、`INC-WORLD-006`（`dba3f01`）：修为达标可原子突破、Pawn 以组件为唯一运行时境界源、秘境换房 / 重开保留境界与容量；三个子项各自独立提交推送，父 `INC-CROSS-018` 继续开发 UI / 主场景 / gameplay 证据 |
 | v5.9 | 2026-09-25T20:05:25+08:00 | 完成并验收 `INC-CROSS-017`（最小宗门，MVP-⑤）：六座宗门设施静态定义与数据、SectState 运行时（灵石 / 灵草 / 丹药库存与设施等级）、藏经阁 / 炼器房 / 丹房转化、Pawn 运行时 Build 覆盖层、宗门面板、主场景接线与秘境收益一次性入账，并补齐 `INC-WORLD-005`（同代修士运行时进度跨对局延续）与 `INC-TESTING-009`（真实 main.tscn 闭环证据：收益 → 设施 / 修炼 / 炼丹 / 强化 → 重开再战）；GdUnit4 unit 125 / integration 139 / gameplay 60（324 cases、0 failures）、headless 10 suites / 549 assertions / 0 failing，三档分辨率取证 FAILURES=0 |
 | v5.8 | 2026-09-25T19:22:00+08:00 | 按 `docs/project_summary.md` §十七 / §十八 ⑤ 启动 `INC-CROSS-017`（最小宗门，MVP-⑤）：新建 sect 主题与 `agent-plan/sect.md`，登记 `INC-SECT-001`（设施静态定义与六座设施数据）、`INC-SECT-002`（SectState 运行时：灵石 / 灵草 / 丹药库存、设施等级、升级、修炼与灵田收获）、`INC-SECT-003`（转化设施：藏经阁参悟功法 / 炼器房强化武器 / 丹房炼丹）、`INC-PAWNS-018`（运行时 Build 覆盖层，禁止改写静态 `.tres`）、`INC-UI-016`（宗门面板）、`INC-CORE-010`（主场景接线与 `run_finished` 收益入账，含 `main.gd` 只做信号转发的约束）、`INC-TESTING-009`（收益 → 修炼 / 制作 / 强化 → 再战的闭环证据） |
@@ -662,7 +664,7 @@
 
 - 状态：planned
 - 创建时间：2026-09-25T20:11:34+08:00
-- 最后修改：2026-09-25T20:11:34+08:00
+- 最后修改：2026-09-25T20:39:32+08:00
 - 目标：把设计文档定义的核心成长循环补到可运行状态：修为达到阈值后玩家可以显式突破；突破推进运行时境界并扩大 Build 容量；成果在秘境换房 / 重开后仍属于同一代修士；主场景 UI 能展示并完成这一节点。
 - 验收标准：
   - 六个子 Increment 全部 `validated`，并且 unit / integration / gameplay 三层按依赖顺序通过。
