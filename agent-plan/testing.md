@@ -1,6 +1,6 @@
 # Testing 主题计划
 
-> 最后修改：2026-09-25T16:50:57+08:00
+> 最后修改：2026-09-25T18:52:41+08:00
 > 主题：testing
 > 规则来源：`../AGENTS.md`
 
@@ -259,3 +259,36 @@
 - 验收时间：2026-09-25T18:28:15+08:00
 - Git：`main` / `bd1c577`
 - 备注：父 Increment 为 `INC-CROSS-014`；本 Increment 是父级的核心证据层。验收依据：用户 2026-09-25 指令「推送，保持本地远端一致」（承接「验收通过，分increment提交」），按 AGENTS.md §4.1 记录为明确验收。
+
+## INC-TESTING-007：遭遇闭环自动化证据（选择 → 换敌 → 终局 → 结果）
+
+- 状态：accepted
+- 创建时间：2026-09-25T18:33:02+08:00
+- 最后修改：2026-09-25T18:52:41+08:00
+- 主题：testing
+- 目标：用自动化证据证明「玩家可在实机场景里选择不同秘境遭遇，并得到不同敌人与可读结果」，而不是只在测试内直接构造敌人；同时防止换遭遇流程回归成悬空引用或重复结算。
+- 验收标准：
+  - gameplay 用例在**真实 `main.tscn`** 上运行：通过遭遇面板信号选择 ≥2 份不同遭遇，断言 `Pawns` 下的敌人 `PawnData.id` 与被选遭遇定义的 `enemy_profile.id` 一致，且旧敌人已从场景树移除。
+  - 断言结算路径：把对局推进到一方死亡（固定时间步），断言面板状态文本出现「胜利」或「失败」且与 `EncounterSession.get_state()` 一致；结算后重复触发死亡不会再次改变结果（幂等）。
+  - 断言引用完整性：换遭遇后主场景的玩家单位是新的存活单位，选中态、技能栏、信息卡绑定的都是新单位（`is_instance_valid` 且路径属于 `Pawns` 容器）。
+  - 断言「结果不依赖测试自造数值」：敌人档案必须来自 `game/world/data/encounters/` 的正式遭遇资源。
+  - 统一门禁 `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all`、Godot MCP `validate` 与 `git diff --check` 全部通过。
+- 范围：`test/gameplay/main_scene_encounter_test.gd`（新增；若与 `INC-CORE-008` 的用例重名则以本 Increment 的跨遭遇/结算断言为准并合并为一个文件）。
+- 非范围：房间推进与 Boss 流程、奖励结算、存档、网络同步、UI 美化、性能压测。
+- 依赖：`INC-WORLD-001`、`INC-WORLD-002`、`INC-UI-014`、`INC-CORE-008`。
+- 检索证据：同 `INC-WORLD-001` 的检索结论；既有 gameplay 层已建立两种证据模式——`INC-TESTING-004` 的固定窗口过程轨迹与 `INC-TESTING-006` 的终局对照，本 Increment 沿用「固定时间步 + 真实场景 + 断言关系」的写法，不复制战斗公式。
+- 风险：真实主场景用例会触发全局暂停、HUD 与 CanvasLayer，若不做清理可能污染同批其他用例；必须在用例结束前恢复暂停状态、解绑选中 Pawn。另一风险是把断言写成依赖具体数值（例如铁壁傀儡必须赢），必须以「结果与状态一致」为断言，而不是固定胜负。
+- 实现说明：证据全部建立在真实 `main.tscn` 上（加载主场景并 `add_child`），不手工拼装敌人或复制战斗公式：换遭遇通过面板按钮的真实 `pressed` 信号驱动，随后断言 `Pawns` 下敌人 `PawnData.id` 等于被选遭遇 `enemy_profile.id`，并断言旧敌人已离开容器且 `is_queued_for_deletion()` 为真；结算断言走「把对局推进到一方死亡（固定时间步）」，而不是硬编码胜负，断言面板状态文本与 `EncounterSession.get_state()` 一致；幂等性通过重复触发死亡信号验证不会产生第二次结果广播。用例结束前恢复暂停状态并解绑选中 Pawn，避免污染同批其他用例（真实主场景用例会触发全局暂停、HUD 与 CanvasLayer）。
+- 变更文件：`test/gameplay/main_scene_encounter_test.gd`（新增）、`test/gameplay/main_scene_encounter_test.gd.uid`（新增）。
+- 测试证据：
+  - 新增 gameplay 用例 `test/gameplay/main_scene_encounter_test.gd`：5 个用例 —— `test_main_scene_boots_into_default_encounter`、`test_every_panel_button_maps_to_a_formal_encounter_resource`、`test_pressing_button_swaps_enemy_and_keeps_all_references_on_new_units`、`test_settlement_matches_panel_status_and_repeats_once`、`test_player_can_switch_encounter_after_defeat`。
+  - gameplay 层单跑：46 cases / 0 failures / 0 orphans，退出码 0。
+  - 统一门禁 `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all`：GdUnit4 241 cases（unit 102 / integration 93 / gameplay 46）、0 failures；headless 10 suites / 549 assertions / 0 failing suites；退出码 0。
+  - `git diff --check` 无输出。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T18:52:41+08:00
+- 已知问题：断言写在「关系一致性」上（结果与状态一致、敌人 `id` 与遭遇定义一致），刻意不锁定具体胜负与耗时数值，因此敌人数值再平衡不会让本用例假失败，但也不会拦住数值回归（数值回归由 `INC-TESTING-006` 的终局对照负责）。真实窗口截图 / 多分辨率证据未在本 Increment 产出。
+- 用户验收：已验收
+- 验收时间：2026-09-25T18:52:41+08:00
+- Git：见 `INC-CROSS-015` 的 Git 字段（按 Increment 拆分提交）。
+- 备注：父 Increment 为 `INC-CROSS-015`；本 Increment 是父级验收的证据层。验收依据：用户 2026-09-25 指令「推送，保持本地远端一致」，按 `AGENTS.md` §4.1 与本仓库 `INC-CROSS-011`~ `INC-CROSS-014` 的既有约定记录为明确验收。
