@@ -20,6 +20,7 @@ realm = ExtResource("3_realm")
 techniques = Array[TechniqueDefinition]([ExtResource("4_technique")])
 weapon = ExtResource("5_weapon")
 active_skill = ExtResource("2_sword_skill")
+active_skills = Array[ActiveSkillDefinition]([ExtResource("2_sword_skill")])
 attack = 28.0
 defense = 5.0
 move_speed = 145.0

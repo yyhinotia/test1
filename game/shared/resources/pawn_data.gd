@@ -24,8 +24,10 @@ signal build_changed(data: PawnData)
 @export_range(0.0, 1000000.0, 0.1, "or_greater") var max_spirit: float = 0.0
 ## 出生时灵力的初始比例（0..1）；灵力池只在 max_spirit > 0 时创建。
 @export_range(0.0, 1.0, 0.001) var initial_spirit_ratio: float = 1.0
-## 可选的主动技能配置；null 表示该单位只有普通攻击。
+## 旧版单主动技能字段：保留用于兼容既有预设与调用方；新配置应优先填写 `active_skills`。
 @export var active_skill: ActiveSkillDefinition
+## 有序主动技能列表；非空时它是唯一权威来源，空列表才回退到旧的 `active_skill`。
+@export var active_skills: Array[ActiveSkillDefinition] = []
 ## 可选的主武器配置；null 表示该单位没有武器，Build 校验与信息卡按“无武器”处理。
 @export var weapon: WeaponDefinition
 ## 可选的境界配置；null 表示该单位没有修炼体系（例如傀儡），Build 校验会返回 missing_realm。
@@ -54,3 +56,28 @@ func notify_realm_changed() -> void:
 
 func notify_build_changed() -> void:
 	build_changed.emit(self)
+
+## 返回当前生效的有序主动技能列表。
+## 新列表非空时不再读取旧字段；同一 id 只返回一次，避免新旧字段同时配置造成重复槽位。
+func get_active_skills() -> Array[ActiveSkillDefinition]:
+	var result: Array[ActiveSkillDefinition] = []
+	var source: Array[ActiveSkillDefinition] = []
+	if not active_skills.is_empty():
+		source = active_skills
+	elif active_skill != null:
+		source.append(active_skill)
+
+	var seen_ids: Array[StringName] = []
+	for skill: ActiveSkillDefinition in source:
+		if skill == null or not skill.is_configured():
+			continue
+		if seen_ids.has(skill.id):
+			continue
+		seen_ids.append(skill.id)
+		result.append(skill)
+	return result
+
+## 第一个主动技能：Q 和旧调用方的兼容入口；没有有效技能时返回 null。
+func get_primary_active_skill() -> ActiveSkillDefinition:
+	var skills: Array[ActiveSkillDefinition] = get_active_skills()
+	return skills[0] if not skills.is_empty() else null

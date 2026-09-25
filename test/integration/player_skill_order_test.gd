@@ -40,6 +40,10 @@ func _make_skill(
 func _make_player_data(skill: ActiveSkillDefinition, max_spirit: float = 100.0) -> PawnData:
 	var data: PawnData = (load(PLAYER_DATA_PATH) as PawnData).duplicate(true) as PawnData
 	data.active_skill = skill
+	var skills: Array[ActiveSkillDefinition] = []
+	if skill != null:
+		skills.append(skill)
+	data.active_skills = skills
 	data.max_spirit = max_spirit
 	data.initial_spirit_ratio = 1.0
 	return data

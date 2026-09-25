@@ -58,6 +58,7 @@ static func build_snapshot(data: PawnData, runtime: Dictionary = {}) -> Dictiona
 	var techniques: Array[TechniqueDefinition] = []
 	var weapon: WeaponDefinition = null
 	var skill: ActiveSkillDefinition = null
+	var skill_names: Array[String] = []
 	var name_text: String = UNKNOWN_TEXT
 	var faction_text: String = UNKNOWN_TEXT
 	var sub_realm_text: String = UNKNOWN_TEXT
@@ -74,7 +75,8 @@ static func build_snapshot(data: PawnData, runtime: Dictionary = {}) -> Dictiona
 		realm = data.realm
 		techniques.assign(data.techniques)
 		weapon = data.weapon
-		skill = data.active_skill
+		skill = data.get_primary_active_skill()
+		skill_names = _skill_names(data.get_active_skills())
 		attack = data.attack
 		defense = data.defense
 		attack_interval = data.attack_interval
@@ -109,7 +111,7 @@ static func build_snapshot(data: PawnData, runtime: Dictionary = {}) -> Dictiona
 			"has_realm": has_realm,
 			"technique": _read_slot(runtime, "technique", _technique_names(techniques)),
 			"weapon": _read_slot(runtime, "weapon", _weapon_names(weapon)),
-			"active_skill": _read_slot(runtime, "active_skill", _skill_names(skill)),
+			"active_skill": _read_slot(runtime, "active_skill", skill_names),
 			"passive_skill": _read_slot(runtime, "passive_skill", passive_names),
 			"error_summary": String(runtime.get("build_error_summary", "")),
 		},
@@ -274,10 +276,11 @@ static func _technique_names(techniques: Array[TechniqueDefinition]) -> Array[St
 	return names
 
 
-static func _skill_names(skill: ActiveSkillDefinition) -> Array[String]:
+static func _skill_names(skills: Array[ActiveSkillDefinition]) -> Array[String]:
 	var names: Array[String] = []
-	if skill != null and not skill.display_name.strip_edges().is_empty():
-		names.append(skill.display_name)
+	for skill: ActiveSkillDefinition in skills:
+		if skill != null and not skill.display_name.strip_edges().is_empty():
+			names.append(skill.display_name)
 	return names
 
 

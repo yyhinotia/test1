@@ -8,6 +8,7 @@ var _attack_target: Pawn
 var _move_target: Vector2 = Vector2.ZERO
 var _has_move_order: bool = false
 var _skill_target: Pawn
+var _ordered_skill: ActiveSkillDefinition
 var _has_skill_order: bool = false
 
 func order_move(target_position: Vector2) -> void:
@@ -23,15 +24,20 @@ func order_attack(target: Pawn) -> void:
 	_has_move_order = false
 	_clear_skill_order()
 
-## 下达一次主动技能命令：未传目标时沿用当前攻击目标。
-## 无技能配置或目标不是存活的敌方单位时返回 false，且不修改任何既有指令与资源数值。
+## 旧入口：默认下达第一个主动技能；未传目标时沿用当前攻击目标。
 func order_skill(target: Pawn = null) -> bool:
-	if _get_active_skill() == null:
+	return order_skill_instance(_get_active_skill(), target)
+
+## 按具体技能实例下达一次主动技能命令。
+## 技能必须来自 Pawn 当前生效的技能列表；无技能、无效目标时返回 false，且不修改既有指令与资源数值。
+func order_skill_instance(skill: ActiveSkillDefinition, target: Pawn = null) -> bool:
+	if not _is_known_skill(skill):
 		return false
 	var resolved_target: Pawn = target if target != null else _attack_target
 	if not _is_valid_enemy_target(resolved_target):
 		return false
 
+	_ordered_skill = skill
 	_skill_target = resolved_target
 	_has_skill_order = true
 	# 技能命令与普通攻击共用目标：施法结束后无需重新下达攻击命令。
@@ -46,7 +52,7 @@ func clear_orders() -> void:
 
 func get_order_description() -> String:
 	if _has_skill_order and _is_valid_enemy_target(_skill_target):
-		var skill: ActiveSkillDefinition = _get_active_skill()
+		var skill: ActiveSkillDefinition = _get_ordered_skill()
 		if skill != null:
 			return "施放技能 %s → %s" % [skill.display_name, _skill_target.data.display_name]
 	if _attack_target != null and is_instance_valid(_attack_target) and _attack_target.is_alive():
@@ -79,7 +85,7 @@ func update_controller(_delta: float) -> void:
 
 ## 技能命令优先于普通攻击：先接近到技能距离，再交回 Pawn 统一裁决灵力、冷却与目标合法性。
 func _tick_skill_order() -> void:
-	var skill: ActiveSkillDefinition = _get_active_skill()
+	var skill: ActiveSkillDefinition = _get_ordered_skill()
 	if skill == null:
 		_clear_skill_order()
 		return
@@ -116,7 +122,22 @@ func _tick_move_order() -> void:
 func _get_active_skill() -> ActiveSkillDefinition:
 	if pawn == null or pawn.data == null:
 		return null
-	return pawn.data.active_skill
+	return pawn.data.get_primary_active_skill()
+
+## 技能命令优先使用下达时记录的具体技能；若引用失效则回退到第一个技能。
+func _get_ordered_skill() -> ActiveSkillDefinition:
+	if _ordered_skill != null and _is_known_skill(_ordered_skill):
+		return _ordered_skill
+	return _get_active_skill()
+
+## 只接受当前 Pawn 生效技能列表中的实例，避免 UI 用任意资源绕过 Build 配置。
+func _is_known_skill(skill: ActiveSkillDefinition) -> bool:
+	if skill == null or pawn == null or pawn.data == null:
+		return false
+	for candidate: ActiveSkillDefinition in pawn.data.get_active_skills():
+		if candidate == skill:
+			return true
+	return false
 
 ## 技能目标必须是存活的敌方单位；空目标、自身、友军和已失效实例一律拒绝。
 func _is_valid_enemy_target(target: Pawn) -> bool:
@@ -130,4 +151,5 @@ func _is_valid_enemy_target(target: Pawn) -> bool:
 
 func _clear_skill_order() -> void:
 	_skill_target = null
+	_ordered_skill = null
 	_has_skill_order = false

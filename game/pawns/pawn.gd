@@ -151,8 +151,8 @@ func get_build_loadout() -> BuildLoadout:
 	loadout.techniques.assign(data.techniques)
 	if data.weapon != null:
 		loadout.weapons.append(data.weapon)
-	if data.active_skill != null:
-		loadout.active_skills.append(data.active_skill)
+	for skill: ActiveSkillDefinition in data.get_active_skills():
+		loadout.active_skills.append(skill)
 	return loadout
 
 ## Build 校验结果：只做规则判定，不装备、不卸载、不修改任何资源池或冷却。
