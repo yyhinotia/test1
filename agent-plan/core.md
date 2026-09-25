@@ -222,9 +222,9 @@
 
 ## INC-CORE-006：主场景技能目标选择与取消路由
 
-- 状态：planned
+- 状态：accepted
 - 创建时间：2026-09-25T17:31:30+08:00
-- 最后修改：2026-09-25T17:31:30+08:00
+- 最后修改：2026-09-25T17:57:16+08:00
 - 主题：core
 - 来源：`docs/build-mvp.md` MVP-4 的输入闭环。
 - 目标：把 SkillBar 的 targeting 请求、鼠标左键目标点击、右键/Escape 取消与 PlayerController 的目标命令接到同一个主场景路由，形成“点技能 → 选合法目标 → 高亮确认 → 施法”的可操作闭环。
@@ -237,13 +237,15 @@
 - 范围：`game/main/main.gd`、`game/main/main.tscn`、必要的 `project.godot` InputMap（仅当需要 cancel 动作时）与 gameplay/integration 测试。
 - 非范围：建筑菜单、4v4 编队、拖拽施法、范围/AOE 指示器、连续施法队列。
 - 依赖：`INC-UI-012`、`INC-COMBAT-005`、`INC-COMBAT-006`。
-- 检索证据：待前置 Increment 计划落库后按 Git Diff 复核；当前左键只负责选中玩家，右键只负责攻击/移动，技能点击直接使用既有攻击目标。
+- 检索证据：`git diff --unified=0 -- agent-plan/` 确认依赖 `INC-UI-012`、`INC-COMBAT-005`、`INC-COMBAT-006` 已落库并验证；`git grep` 实测 `main.gd` 的数字键仍直接调用 `order_skill_instance()`，左键只选中玩家、右键只下达攻击/移动，`project.godot` 尚无 cancel 动作。
 - 风险：左键既要选中玩家又要确认技能目标，必须由明确 targeting 状态隔离；鼠标 UI 点击不应穿透到世界坐标；暂停/恢复必须清理由死引用。
-- 实现说明：主场景保留唯一 targeting 路由，不把鼠标坐标或 UI 文案下沉到 Pawn/Controller；控制器仍负责最终合法性裁决。
-- 变更文件：待实现回填。
-- 测试证据：待实现回填。
-- 验证状态：未验证
-- 已知问题：待实现回填。
-- 用户验收：待验收
-- Git：待验收后提交
+- 实现说明：新增 `cancel_targeting` InputMap（Escape）；`main.gd` 连接 `targeting_started` / `targeting_cancelled`，Q/数字键/技能格统一先走 `SkillBar.request_skill()`，SELF 由 `skill_requested` 直交控制器，ENEMY/ALLY 进入 TARGETING。TARGETING 期间鼠标移动只更新 `Pawn.set_target_highlight()`；合法左键调用 `PlayerController.order_skill_instance(skill, target)` 后立即取消，非法目标/空白点击不下达命令，右键或 Escape 只取消不移动，目标死亡、施法者死亡、技能列表失效均由信号自动清理。
+- 变更文件：`game/main/main.gd`、`project.godot`、`test/gameplay/main_scene_gameplay_test.gd`、`test/gameplay/main_scene_skill_targeting_test.gd`、`test/gameplay/main_scene_skill_targeting_test.gd.uid`。
+- 测试证据：Godot MCP `validate` 于 2026-09-25T17:55:34+08:00 对 `game/main/main.gd`、`test/gameplay/main_scene_gameplay_test.gd`、`test/gameplay/main_scene_skill_targeting_test.gd` 返回 `valid: true`；`pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` 返回 192 cases / 0 failures（unit 87 / integration 67 / gameplay 38）与 headless 10 suites / 549 assertions / 0 failing；专项 `main_scene_skill_targeting_test.gd` 覆盖 SELF 直发、ENEMY 合法确认、ALLY 点击确认、非法/空白拒绝、右键/Escape 取消、悬停高亮、暂停恢复、目标死亡、玩家死亡与技能失效清理；`git diff --check` 无输出。
+- 验证状态：验证通过（2026-09-25T17:55:34+08:00）
+- 验证时间：2026-09-25T17:55:34+08:00
+- 已知问题：无。
+- 用户验收：已验收（2026-09-25T17:31:30+08:00，用户授权“验收通过，分increment提交”）
+- 验收时间：2026-09-25T17:31:30+08:00
+- Git：`main` / `a72f475`
 - 备注：父 Increment 为 `INC-CROSS-012`；本 Increment 只负责输入与命令接线。

@@ -235,7 +235,7 @@
 
 - 状态：accepted
 - 创建时间：2026-09-25T17:31:30+08:00
-- 最后修改：2026-09-25T17:39:59+08:00
+- 最后修改：2026-09-25T17:57:16+08:00
 - 主题：combat
 - 来源：`docs/build-mvp.md` MVP-3。
 - 目标：把主动技能的成功结算从 `Pawn.cast_skill()` 内的单一伤害代码抽出为最小 Effect Resolver，支持 Damage、Heal、Shield、Stun 四种效果，并让 Stun 成为可观察、可推进、可恢复的战斗状态。
@@ -258,5 +258,5 @@
 - 已知问题：`Pawn` 与 `SkillEffectResolver` 互相引用，GDScript 4 在函数签名上标注双方 `class_name` 会触发脚本循环依赖编译失败，因此 Resolver 的 `caster` / `target` 参数不加 `Pawn` 静态类型（已在文件内注明，调用契约由 `Pawn.cast_skill()` 单点保证）；第一版仅支持单效果技能，无 Buff 容器、叠加、免疫与持续伤害。
 - 用户验收：已验收
 - 验收时间：2026-09-25T17:39:59+08:00
-- Git：待提交（提交后回填 hash）
+- Git：`main` / `0438397`、`60355ae`（新增脚本 UID）
 - 备注：父 Increment 为 `INC-CROSS-012`；本 Increment 只实现最小效果系统。验收依据：用户 2026-09-25T17:31+08:00 回复“验收通过，分increment提交”。

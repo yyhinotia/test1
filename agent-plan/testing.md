@@ -150,9 +150,9 @@
 
 ## INC-TESTING-004：三种技能战术差异与 Build 变化证据
 
-- 状态：planned
+- 状态：accepted
 - 创建时间：2026-09-25T17:31:30+08:00
-- 最后修改：2026-09-25T17:31:30+08:00
+- 最后修改：2026-09-25T17:57:16+08:00
 - 主题：testing
 - 来源：`docs/build-mvp.md` MVP-5 的“不同 Build 产生不同战斗过程”验收问题。
 - 目标：用可重复的测试场景证明御剑斩、护体真气、定身术不是同一伤害技能换皮，并证明两槽 Build 至少产生三种可区分的战斗过程指标，而不是只验证“三个技能都能成功施放”。
@@ -164,13 +164,15 @@
 - 范围：新增/扩展 GdUnit4 gameplay/integration 测试、必要的测试专用 Build 构造函数与轨迹记录器。
 - 非范围：正式数值平衡、玩家 Build 编辑器、存档、网络同步、AI 难度调参。
 - 依赖：`INC-PAWNS-014`、`INC-COMBAT-005`、`INC-COMBAT-006`、`INC-CORE-006`。
-- 检索证据：待前置 Increment 计划落库后按 Git Diff 复核；当前没有跨 Build 的战斗过程轨迹测试。
+- 检索证据：`git diff --unified=0 -- agent-plan/` 确认 `INC-PAWNS-014` / `INC-COMBAT-005` / `INC-COMBAT-006` / `INC-UI-012` 已落库；`INC-CORE-006` 实现后数字键/Q/技能格已统一进入目标路由。现有测试只覆盖单技能效果与命令接线，没有跨 Build 的固定时间步过程轨迹测试。
 - 风险：确定性测试必须避免墙钟和渲染帧依赖；目标寻路/移动造成的微小浮点差异需要容差或离散事件记录；测试不能替业务层伪造效果。
-- 实现说明：测试只组装已存在的数据资源与控制器 API，记录事件/数值快照，不把平衡逻辑写进测试代码。
-- 变更文件：待实现回填。
-- 测试证据：待实现回填。
-- 验证状态：未验证
-- 已知问题：待实现回填。
-- 用户验收：待验收
-- Git：待验收后提交
+- 实现说明：新增 `build_tactical_trajectory_test.gd`，加载正式御剑斩 / 护体真气 / 定身术资源，按固定 `DELTA = 1/60`、720 步、同一“槽位 0 完成后执行槽位 1”脚本运行三套 2 槽 Build；使用真实 Pawn、资源池、PlayerController/AIController、技能信号与伤害/眩晕结算，逐步记录有效生命、护盾、敌人失效时间、灵力消耗、施法/普攻次数和敌人有效生命。测试专用敌人只拉长生命到 600、去掉护盾以避免最终死亡截断过程，不改业务平衡数据。
+- 变更文件：`test/gameplay/build_tactical_trajectory_test.gd`、`test/gameplay/build_tactical_trajectory_test.gd.uid`。
+- 测试证据：`pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` 于 2026-09-25T17:55:34+08:00 返回 192 cases / 0 failures（unit 87 / integration 67 / gameplay 38）与 headless 10 suites / 549 assertions / 0 failing；专项 `build_tactical_trajectory_test.gd` 返回 1 case / 0 failures，轨迹摘要为：输出+生存 `shield_max=30, stun=0.0s, spirit=55, damage=422.4, min_effective=73`；输出+控制 `shield_max=0, stun=2.0s, spirit=60, damage=422.4, min_effective=57`；生存+控制 `shield_max=30, stun=2.0s, spirit=65, damage=375.0, min_effective=87`。测试同时断言 12 个固定采样点上的有效生命曲线确实不同，且输出+生存在生存下限上优于输出+控制、输出+控制在敌人失效时间上优于前者。
+- 验证状态：验证通过（2026-09-25T17:55:34+08:00）
+- 验证时间：2026-09-25T17:55:34+08:00
+- 已知问题：本用例是固定场景的确定性过程证据，不是正式平衡结论；数值仍可能随后续战斗调参改变。
+- 用户验收：已验收（2026-09-25T17:31:30+08:00，用户授权“验收通过，分increment提交”）
+- 验收时间：2026-09-25T17:31:30+08:00
+- Git：`main` / `a895e2b`
 - 备注：父 Increment 为 `INC-CROSS-012`；本 Increment 是父级 Gameplay 验收的核心证据层。
