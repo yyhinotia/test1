@@ -18,7 +18,7 @@ enum State {
 
 @onready var visual: Sprite2D = $Visual/Sprite2D
 @onready var collision_shape: CollisionShape2D = $Collision/CollisionShape2D
-@onready var health_bar: PawnHealthBar = $HealthBar
+@onready var health_bar: PawnHealthBar = $HealthBarAnchor/HealthBar
 @onready var selection_indicator: CanvasItem = $SelectionIndicator
 @onready var controller: PawnController = $Controller
 
@@ -123,8 +123,17 @@ func take_damage(raw_attack: float) -> void:
 		current_health = maxf(current_health - remaining_damage, 0.0)
 		health_changed.emit(self, current_health, data.max_health)
 
+	notify_health_state_changed()
+
 	if current_health <= 0.0:
 		die()
+
+## 生命状态变化的统一入口：伤害、护盾、治疗、死亡等状态变化都应通过它刷新血条。
+## 血条由这个入口驱动，而不是常驻显示，避免战场信息噪音。
+func notify_health_state_changed() -> void:
+	if health_bar == null or data == null:
+		return
+	health_bar.notify_health_state_changed(current_health, data.max_health, current_shield, data.max_shield)
 
 func die() -> void:
 	if _state == State.DEAD:
@@ -137,7 +146,7 @@ func die() -> void:
 	collision_layer = 0
 	collision_mask = 0
 	visual.modulate = Color(0.35, 0.35, 0.38, 0.72)
-	health_bar.queue_redraw()
+	notify_health_state_changed()
 	died.emit(self)
 
 func set_selected(value: bool) -> void:

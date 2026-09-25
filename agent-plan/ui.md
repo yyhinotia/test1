@@ -52,11 +52,12 @@
 - 验收时间：2026-09-25T13:43:51+08:00
 - Git：分支 main，commit d7c2e1e（feat(pawns): add pawn MVP with movement, combat, HUD and pause [INC-CROSS-001]）
 - 备注：此 Increment 是 `INC-CROSS-001` 的子 Increment。
+
 ## INC-UI-002：血条改为生命状态变化时显示并延迟自动隐藏
 
-- 状态：in_progress
+- 状态：accepted
 - 创建时间：2026-09-25T13:54:22+08:00
-- 最后修改：2026-09-25T13:54:22+08:00
+- 最后修改：2026-09-25T14:09:39+08:00
 - 主题：ui
 - 目标：按 `docs/血条ui需求.txt` 的方案，把 Pawn 头顶血条由“常驻显示”改成“生命状态变化时立即显示、最后一次变化后 2 秒无变化再隐藏”，减少战场 UI 噪音（当前 2 个单位，目标战斗规模为 4v4 / 4-8 单位）。
 - 验收标准：
@@ -68,17 +69,38 @@
   - 血条仍固定在 Pawn 头顶锚点（`Pawn/HealthBarAnchor/HealthBar`），Pawn 移动时跟随。
   - 暂停期间血条不因暂停消失（隐藏计时随 `SceneTree.paused` 冻结）。
   - 不引入 GDScript 解析错误、场景加载错误和信号断链。
-- 范围：`game/ui/pawn_health_bar.gd`、`game/ui/pawn_health_bar.tscn`（新增）、`game/pawns/pawn.tscn` 中的 `HealthBarAnchor/HealthBar` 结构、`test/headless/health_bar_visibility_test.gd`（新增，自建 headless 验证）。
+- 范围：`game/ui/pawn_health_bar.gd`、`game/ui/pawn_health_bar.tscn`（新增）、`game/pawns/pawn.tscn` 中的 `HealthBarAnchor/HealthBar` 结构、`test/headless/health_bar_visibility_test.gd`（新增，自建 headless 验证）、`test/tools/capture_health_bar_evidence.gd`（新增，截图证据脚本）。
 - 非范围：渐隐/闪烁动画（需求文档列为第二阶段）、治疗与护盾技能、HUD 信息面板改造、正式血条美术、HealthComponent 抽取（见 `INC-PAWNS-003`）。
 - 依赖：`INC-UI-001`（常驻血条现状）、`INC-PAWNS-001`、`INC-PAWNS-002`（生命状态变化统一入口）。
 - 风险：可见性由常驻改为事件驱动，若未来有代码绕过统一入口直接修改 `current_health`，血条不会出现；通过 `Pawn.notify_health_state_changed()` 单一入口降低风险，并写入已知问题。
-- 实现说明：待实现完成后填写。
-- 变更文件：待填写。
-- 测试证据：待填写。
-- 验证状态：未验证
-- 验证时间：
-- 已知问题：“同一帧显示”依赖伤害帧内的同步信号链，需要运行态证据确认；需求文档的“① HealthComponent”未在本 Increment 实现，已登记 `INC-PAWNS-003`。
-- 用户验收：未验收
-- 验收时间：
-- Git：
+- 实现说明：
+  - `PawnHealthBar` 改为事件驱动：`notify_health_state_changed()` 刷新数值并立即 `reveal()`，`tick()`/`_process()` 做倒计时，归零后 `hide_now()`；隐藏时 `set_process(false)`，避免每帧空转。
+  - `set_values()` 只同步数值、不改变可见性，用于初始化与无事件同步；`auto_hide_delay <= 0` 保留为“常驻显示”的逃生开关（默认 2.0 秒）。
+  - 血条独立为 `game/ui/pawn_health_bar.tscn`（根 `Control` 默认 `visible = false`），Pawn 通过 `HealthBarAnchor` 节点挂载其实例，保持头顶位置。
+  - 未做渐隐/闪烁动画，按需求文档规则 4 保持 MVP 的“直接隐藏”。
+- 变更文件：
+  - `game/ui/pawn_health_bar.gd`（改为状态变化驱动显示 + 自动隐藏）
+  - `game/ui/pawn_health_bar.tscn`（新增，独立血条场景，根节点默认隐藏）
+  - `game/pawns/pawn.tscn`（`HealthBarAnchor` + `pawn_health_bar.tscn` 实例，移除内联血条节点）
+  - `game/pawns/pawn.gd`（新增 `notify_health_state_changed()`，伤害/死亡通过统一入口刷新）
+  - `test/headless/health_bar_visibility_test.gd`（新增，自建 headless 断言）
+  - `test/tools/capture_health_bar_evidence.gd`（新增，截图证据脚本）
+- 测试证据：
+  - 替代原因：2026-09-25 本会话 Godot MCP 工具调用返回 `unsupported call`，按 `AGENTS.md` §6 改用 Godot 4.7.2 CLI headless 与自建脚本做等价验证。
+  - headless 断言：`godot --headless --path . --script res://test/headless/health_bar_visibility_test.gd` → 退出码 0，输出 `CHECKS=38 FAILURES=0` / `HEALTH_BAR_TEST_OK`。覆盖：初始隐藏、变化同帧显示、2 秒自动隐藏、连续变化重置计时、护盾变化触发、死亡触发、`Pawn/HealthBarAnchor/HealthBar` 路径与头顶坐标 (364,246)（Pawn 在 (400,300) 时）、暂停冻结计时、恢复后隐藏。
+  - 运行态真实计时（同一脚本）：伤害后血条同帧显示，`HIDE_ELAPSED_MS=1972` 后自动隐藏；暂停 30 帧后 `PAUSED_BAR_VISIBLE=true`；恢复运行后 `RESUME_HIDE_ELAPSED_MS=2030` 隐藏。
+  - 主场景冒烟：`godot --headless --path . --quit-after 600` → 退出码 0，无脚本解析错误、节点缺失或信号断链（仅有沙箱环境导致的 `user://logs/godot.log` 写入警告，与本改动无关）。
+  - 截图证据（1152x648 真实渲染，脚本 `test/tools/capture_health_bar_evidence.gd`）：`.mcp/godot-runtime/screenshots/health_bar_01_idle.png`（无血条）、`health_bar_02_player_hit.png`（玩家血条出现）、`health_bar_03_both_hit.png`（双方血条）、`health_bar_04_hidden_after_delay.png`（延迟后隐藏）、`health_bar_05_paused_still_visible.png`（暂停中仍显示）、`health_bar_06_hidden_after_resume.png`（恢复后隐藏）。
+  - 截图像素核验：idle 帧玩家血条区域绿色像素 0；玩家受击帧 621 px，bbox `(834,362)-(902,370)`，与 Pawn(870,410) 头顶 -46px 锚点 + 72x16 血条预期一致；双方受击帧 1188 px；暂停帧玩家区域仍有 513 个绿色主导像素（被暂停遮罩压暗）；隐藏帧恢复为 0。
+  - 多分辨率复验（AGENTS.md §5.4，真实窗口渲染，脚本同上）：`health_bar_res_1152x648.png`（16:9，窗口 1152x648，逻辑视口 1152x648）、`health_bar_res_1152x720.png`（16:10，窗口 1152x720，逻辑视口 1152x720）、`health_bar_res_800x720.png`（窄屏，窗口 800x720 → 逻辑视口 1152x1036）三档全部满足 `BAR_RECT=(834,356,72,16)`、`BAR_CENTER.x = PAWN.x = 870`、`ABOVE_HEAD=true`、`INSIDE_VIEWPORT=true`；窗口 DPI 缩放 1.00、`RESIZE_OK=true`。
+  - 多分辨率渲染核验（按图宽等比缩放后统计血条区域绿色像素）：1152 宽两张均为 504 px，bbox `(834,362)-(889,370)`；800 宽为 222 px，bbox `(580,252)-(616,257)`，面积与位移随缩放等比变化，确认血条在三档分辨率下都真实渲染在 Pawn 头顶。
+  - 证据报告文件：`.mcp/godot-runtime/screenshots/health_bar_evidence_report.txt`（Windows GUI 子系统进程的 stdout 无法回传到 PowerShell，脚本改为 `print()` 与写文件双写，可重复执行）。
+  - 复跑（验收前最终一轮）：headless 断言 `CHECKS=38 FAILURES=0`（退出码 0）、主场景冒烟 `--quit-after 600` 退出码 0、运行态 `HIDE_ELAPSED_MS=1964` / `PAUSED_BAR_VISIBLE=true` / `RESUME_HIDE_ELAPSED_MS=2035`。
+  - 方法学说明：`--headless` 的 dummy 窗口固定为 64x64（逻辑视口退化为 1152x1152），无法模拟分辨率；多分辨率验证只能在真实窗口渲染下执行，且 GUI 子系统进程必须用 `Start-Process -Wait` 才能取得退出码。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T14:09:39+08:00
+- 已知问题：渐隐动画未实现（非范围）；`auto_hide_delay <= 0` 的常驻模式未编写用例；MCP 不可用期间的截图由自建脚本产出，不是 MCP 截图；“① HealthComponent”未在本 Increment 实现，已登记 `INC-PAWNS-003`。
+- 用户验收：已验收
+- 验收时间：2026-09-25T14:09:39+08:00
+- Git：分支 main，commit 待本次提交后回写（见后续 docs(plan) 提交）
 - 备注：父 Increment 为 `INC-CROSS-002`；本 Increment 取代 `INC-UI-001` 中“每个 Pawn 常驻显示生命条”的表现约定，数值刷新与选中 HUD 行为保持不变。

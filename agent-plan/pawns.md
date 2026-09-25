@@ -56,11 +56,12 @@
 - 验收时间：2026-09-25T13:43:51+08:00
 - Git：分支 main，commit d7c2e1e（feat(pawns): add pawn MVP with movement, combat, HUD and pause [INC-CROSS-001]）
 - 备注：此 Increment 是 `INC-CROSS-001` 的子 Increment。
+
 ## INC-PAWNS-002：Pawn 生命状态变化统一入口与血条挂载结构
 
-- 状态：in_progress
+- 状态：accepted
 - 创建时间：2026-09-25T13:54:28+08:00
-- 最后修改：2026-09-25T13:54:28+08:00
+- 最后修改：2026-09-25T14:09:39+08:00
 - 主题：pawns
 - 目标：让 Pawn 提供唯一的“生命状态变化”入口，使血条显示与伤害、护盾、死亡解耦，并把血条改为“独立场景 + 头顶锚点”的可复用结构。
 - 验收标准：
@@ -73,22 +74,32 @@
 - 非范围：HealthComponent 抽取（`INC-PAWNS-003`）、治疗/护盾/吸血技能、分层生命（护体灵力/真元/气血/元神）、寻路与 AI 决策。
 - 依赖：`INC-PAWNS-001`、`INC-UI-002`。
 - 风险：节点路径由 `Pawn/HealthBar` 变为 `Pawn/HealthBarAnchor/HealthBar`，会影响继承该场景的 `player_pawn.tscn` / `enemy_pawn.tscn`；本次在静态验证与运行态断言中一并检查新路径。
-- 实现说明：待实现完成后填写。
-- 变更文件：待填写。
-- 测试证据：待填写。
-- 验证状态：未验证
-- 验证时间：
+- 实现说明：
+  - Pawn 新增 `notify_health_state_changed()`，作为生命状态变化通知血条的唯一入口；`take_damage()` 与 `die()` 都通过它刷新，对外信号 `health_changed` / `shield_changed` / `state_changed` / `died` 的参数与时序保持不变。
+  - `pawn.tscn` 移除内联血条节点，改为 `HealthBarAnchor(Node2D, position = (0, -46))` + `pawn_health_bar.tscn` 实例（节点名 `HealthBar`），`pawn.gd` 使用 `$HealthBarAnchor/HealthBar`。
+  - 血条节点保留 `PROCESS_MODE_INHERIT`，继承 Pawn 的 `PROCESS_MODE_PAUSABLE`，使暂停时隐藏计时冻结。
+- 变更文件：
+  - `game/pawns/pawn.gd`
+  - `game/pawns/pawn.tscn`
+- 测试证据：
+  - 替代原因：本会话 Godot MCP 不可用（工具调用返回 `unsupported call`），按 `AGENTS.md` §6 改用 Godot 4.7.2 CLI headless 验证。
+  - headless 断言（`test/headless/health_bar_visibility_test.gd`，退出码 0，`CHECKS=38 FAILURES=0`）：`Pawn/HealthBarAnchor/HealthBar` 路径存在、内联 `HealthBar` 已移除、锚点位置为 (0, -46)、血条全局位置符合锚点 + (-36, -8)、`player_pawn.tscn` 实例化后信号与 `@onready` 引用正常、护盾变化与死亡均经统一入口触发血条。
+  - 主场景冒烟：`godot --headless --path . --quit-after 600` → 退出码 0，无脚本错误、节点缺失或信号断链；`player_pawn.tscn` / `enemy_pawn.tscn` 继承结构未受影响。
+  - 多分辨率复验（AGENTS.md §5.4，真实窗口渲染）：16:9（1152x648）、16:10（1152x720）、窄屏（窗口 800x720 → 逻辑视口 1152x1036）三档下 `HealthBarAnchor/HealthBar` 的全局矩形均为 `(834,356,72,16)`，`BAR_CENTER.x` 与 Pawn 全局 x 完全一致（870），血条始终位于 Pawn 头顶且在逻辑视口内；证明锚点结构在 `canvas_items + expand` 拉伸下不随分辨率漂移。
+  - 复跑（验收前最终一轮）：`test/headless/health_bar_visibility_test.gd` 退出码 0、`CHECKS=38 FAILURES=0`；主场景冒烟退出码 0。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T14:09:39+08:00
 - 已知问题：Pawn 仍直接持有 `current_health` / `current_shield`，尚未抽取为独立组件；该工作登记为 `INC-PAWNS-003`。
-- 用户验收：未验收
-- 验收时间：
-- Git：
+- 用户验收：已验收
+- 验收时间：2026-09-25T14:09:39+08:00
+- Git：分支 main，commit 待本次提交后回写（见后续 docs(plan) 提交）
 - 备注：父 Increment 为 `INC-CROSS-002`。
 
 ## INC-PAWNS-003：抽取 HealthComponent（计划中）
 
 - 状态：planned
 - 创建时间：2026-09-25T13:54:28+08:00
-- 最后修改：2026-09-25T13:54:28+08:00
+- 最后修改：2026-09-25T14:02:20+08:00
 - 主题：pawns
 - 目标：把 Pawn 内的生命/护盾数据与信号抽取为独立 `HealthComponent`，作为多生命层（护体灵力/真元/气血/元神）以及治疗、护盾、持续伤害等状态效果的单一数据源。
 - 验收标准：待细化。方向是 `HealthComponent` 持有 `current_hp` / `max_hp` / `current_shield` / `max_shield` 与 `health_state_changed` 信号，Pawn 只做转发，HUD 与血条订阅同一信号源，并复跑 `INC-PAWNS-002`、`INC-UI-002` 的验收路径。

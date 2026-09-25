@@ -1,0 +1,14 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/ui/pawn_health_bar.gd" id="1_gcrlf"]
+
+[node name="PawnHealthBar" type="Control" unique_id=1454157651]
+visible = false
+layout_mode = 3
+anchors_preset = 0
+offset_left = -36.0
+offset_top = -8.0
+offset_right = 36.0
+offset_bottom = 8.0
+mouse_filter = 2
+script = ExtResource("1_gcrlf")

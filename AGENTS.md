@@ -4,7 +4,7 @@
 > 项目定位：修仙 RPG + 宗门经营 + 秘境探索 + 暂停式实时战术战斗  
 > 设计源：`docs/project_summary.md`  
 > 引擎版本：Godot `4.7.2.stable`  
-> 文档最后修改：`2026-09-25T13:55:10+08:00`
+> 文档最后修改：`2026-09-25T14:09:53+08:00`
 
 ## 0. 指令优先级
 
@@ -489,6 +489,10 @@ res://
 - 2026-09-25T13:52:23+08:00 已按用户授权完成首次 push：`origin/main` = `567b6e7`；`INC-TOOLS-001`、`INC-TOOLS-002` 已登记验收。
 - `docs/血条ui需求.txt` 是用户提供的血条 UI 需求输入（“变化时显示 + 延迟自动隐藏”），对应父 Increment `INC-CROSS-002`；需求文档中的“① HealthComponent”登记为 `INC-PAWNS-003`（planned）。
 - 2026-09-25T13:55 起本会话 Godot MCP 工具调用返回 unsupported，改用 Godot CLI headless 与 `test/headless/` 自建脚本验证；MCP 恢复后应优先回到 MCP。
+- Pawn 场景结构自 `INC-PAWNS-002` 起为 `Pawn/HealthBarAnchor(Node2D, y = -46)/HealthBar`（`game/ui/pawn_health_bar.tscn` 实例）；血条默认隐藏，只在生命状态变化时显示，最后一次变化 2 秒后隐藏。
+- 自建验证脚本位于 `test/headless/health_bar_visibility_test.gd`（逻辑与运行态计时断言）与 `test/tools/capture_health_bar_evidence.gd`（截图证据）；项目仍未引入 GUT 或 GdUnit。
+- `INC-CROSS-002` 已通过用户验收：血条改为“生命状态变化时显示、最后一次变化 2 秒后隐藏”；16:9（1152x648）/ 16:10（1152x720）/ 窄屏（窗口 800x720 → 逻辑视口 1152x1036）三档真实渲染验证通过，证据报告为 `.mcp/godot-runtime/screenshots/health_bar_evidence_report.txt`（`.mcp/` 不入库，需重跑脚本再生成）。
+- 已知工具限制：`--headless` 的 dummy 窗口固定为 64x64，逻辑视口会退化成 1152x1152，因此多分辨率 UI 验证必须使用真实窗口渲染；Windows 版 Godot 是 GUI 子系统进程，必须用 `Start-Process -Wait` 才能取得退出码与 stdout，否则会静默脱离。
 - 这些是已知基线问题，不得在无对应 Increment 的情况下顺手修复。
 
 ---

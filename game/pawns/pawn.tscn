@@ -2,7 +2,8 @@
 
 [ext_resource type="Script" path="res://game/pawns/pawn.gd" id="1_npvev"]
 [ext_resource type="Texture2D" path="res://game/pawns/art/pawn_placeholder.svg" id="1_qn51p"]
-[ext_resource type="Script" path="res://game/ui/pawn_health_bar.gd" id="3_c1mxi"]
+
+[ext_resource type="PackedScene" path="res://game/ui/pawn_health_bar.tscn" id="3_jyj0u"]
 [ext_resource type="Script" path="res://game/pawns/controllers/pawn_controller.gd" id="4_aotyo"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_npvev"]
@@ -24,15 +25,10 @@ texture = ExtResource("1_qn51p")
 position = Vector2(0, 5)
 shape = SubResource("CircleShape2D_npvev")
 
-[node name="HealthBar" type="Control" parent="." unique_id=601924100]
-layout_mode = 3
-anchors_preset = 0
-offset_left = -36.0
-offset_top = -54.0
-offset_right = 36.0
-offset_bottom = -38.0
-mouse_filter = 2
-script = ExtResource("3_c1mxi")
+[node name="HealthBarAnchor" type="Node2D" parent="." unique_id=1016088576]
+position = Vector2(0, -46)
+
+[node name="HealthBar" type="Control" parent="HealthBarAnchor" unique_id=1454157651 instance=ExtResource("3_jyj0u")]
 
 [node name="SelectionIndicator" type="Line2D" parent="." unique_id=1539328049]
 visible = false
