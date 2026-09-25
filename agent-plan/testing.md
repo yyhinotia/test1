@@ -1,6 +1,6 @@
 # Testing 主题计划
 
-> 最后修改：2026-09-25T18:52:41+08:00
+> 最后修改：2026-09-25T18:53:57+08:00
 > 主题：testing
 > 规则来源：`../AGENTS.md`
 
@@ -292,3 +292,33 @@
 - 验收时间：2026-09-25T18:52:41+08:00
 - Git：`main` / `e2a0594`（+ `INC-CROSS-015` 计划回写提交）
 - 备注：父 Increment 为 `INC-CROSS-015`；本 Increment 是父级验收的证据层。验收依据：用户 2026-09-25 指令「推送，保持本地远端一致」，按 `AGENTS.md` §4.1 与本仓库 `INC-CROSS-011`~ `INC-CROSS-014` 的既有约定记录为明确验收。
+
+## INC-TESTING-008：秘境「贪不贪」闭环证据（深度 / 收益 / 撤退 / 阵亡）
+
+- 状态：accepted
+- 创建时间：2026-09-25T18:53:57+08:00
+- 最后修改：2026-09-25T19:15:13+08:00
+- 主题：testing
+- 目标：用自动化证据回答「继续深入是否真的成为一个有风险的选择」：同一次秘境里，深入与撤退必须产生不同的终局状态与不同收益，且战败必须让本局收益归零——而不是只有几行文案不同。
+- 验收标准：
+  - gameplay 用例在**真实 `main.tscn`** 上运行：断言开机进入秘境第 1 间；清空第 1 间后进入等待决策，收益等于第 1 间定义的 `reward_spirit_stones`。
+  - 「见好就收」路径：触发撤退后 `DungeonRun` 进入 `RETREATED`，收益保留，且不再产生新的对局。
+  - 「继续深入」路径：触发继续后深度 +1、敌人换成第 2 间定义的档案，并且玩家单位携带的是上一间剩余的生命 / 灵力（断言小于满值），证明风险真的累积而非每间满血重置。
+  - 「阵亡」路径：让玩家在某一间死亡后 `DungeonRun` 进入 `DEFEATED`、收益归零，且面板状态与 `DungeonRun` 状态一致。
+  - 收益一律从 `game/world/data/dungeons/` 的正式秘境资源读取，用例不硬编码奖励数值；断言关系（深度递增、收益累加、战败归零）而不是固定胜负。
+  - 统一门禁 `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all`、Godot MCP `validate` 与 `git diff --check` 全部通过。
+- 范围：`test/gameplay/main_scene_dungeon_test.gd`（新增；若与 `INC-CORE-009` 的用例重名则合并为一个文件，语义以本 Increment 的跨房间 / 收益断言为准）。
+- 非范围：完整通关全部房间的耗时压测、Boss 数值平衡验证、多分辨率截图、随机事件与奖励表。
+- 依赖：`INC-PAWNS-017`、`INC-WORLD-003`、`INC-WORLD-004`、`INC-UI-015`、`INC-CORE-009`。
+- 检索证据：同一轮检索（工作区干净、无 pending Increment）；`INC-TESTING-007` 已确立「真实主场景 + 面板按钮驱动 + 固定时间步 + 关系断言」的写法，本 Increment 沿用同一模式，把断言从「一次遭遇」扩展到「一次秘境」。
+- 风险：秘境用例会连续创建多个单位（每间房重建玩家与敌人），若换房间后不补帧会留下孤儿节点导致退出码非零；必须沿用 `INC-TESTING-007` 的 `await_idle_frame()` 与暂停恢复护栏。另一风险是把断言写成「必须通关」，因此本 Increment 只断言状态机与收益关系。
+- 实现说明：新增 `test/gameplay/main_scene_dungeon_test.gd`，在真实 `main.tscn` 上以「程序化按下主场景面板按钮 = 玩家点击」驱动，终局只走真实死亡路径；房间数 / 敌人档案 / 灵石收益全部从 `game/world/data/dungeons/trial_dungeon.tres` 读取，用例只断言关系。6 个用例分别锁定：开机进入第 1 间且单场入口与「重新挑战」被锁；清空第 1 间进入等待抉择且收益等于该间定义奖励；「见好就收」保留收益、不创建新对局且结算后推进无效；「重新开始秘境」回到第 1 间满状态且收益清零；「继续深入」后深度 +1、敌人换成第 2 间档案、玩家单位被重建但生命 / 灵力带着上一间损耗（小于满值）；战败 `DEFEATED` 收益归零并与面板文案一致。
+- 变更文件：`test/gameplay/main_scene_dungeon_test.gd`（新增）。
+- 测试证据：`pwsh -File test/run_tests.ps1 -Godot <godot> -Layer gameplay` → PASS（52 cases / 0 failures）；`-Layer all` → PASS（GdUnit4 272 cases / 0 failures；headless 10 suites / 549 assertions / 0 failing；退出码 0）。Godot MCP `validate`（`test/gameplay/main_scene_dungeon_test.gd`）= `valid: true`。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T19:15:13+08:00
+- 已知问题：用例用 `ResourcePoolComponent.decrease()` 制造「上一间的剩余生命 / 灵力」这一前置状态，因此它锁定的是「损耗必须延续」的机制，而不是某一次随机战斗的具体数值；完整通关耗时、Boss 数值平衡与多分辨率验证属于非范围。
+- 用户验收：已验收（依据用户 2026-09-25 指令「分批incre单独推送后继续开发」：本批按 Increment 单独提交并推送）
+- 验收时间：2026-09-25T19:15:13+08:00
+- Git：
+- 备注：父 Increment 为 `INC-CROSS-016`；本 Increment 是父级验收的证据层。
