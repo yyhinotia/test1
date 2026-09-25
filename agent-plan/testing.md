@@ -389,9 +389,9 @@
 
 ## INC-TESTING-011：Build Replay 实验记录（自动化证据 + 人工三问）
 
-- 状态：planned
+- 状态：awaiting_acceptance
 - 创建时间：2026-09-25T20:47:54+08:00
-- 最后修改：2026-09-25T21:50:38+08:00
+- 最后修改：2026-09-25T23:05:40+08:00
 - 主题：testing
 - 重定义说明：本 Increment 原定义「4v4 闭环证据、同 Boss 再战对照与人工玩法验收剧本」于 2026-09-25T21:45:00+08:00 按用户 objective 重定义为「1v1 → 1vN 的 Build Replay 实验记录」；4v4 专用证据口径退役，原定义原文保留在 Git 历史 `b36e9c0`（`develop`）。
 - 调整说明（2026-09-25T21:50:38+08:00）：按外部设计评审意见做两处收紧——① 把「重构后战斗是否真的发生变化」从只靠玩家自述改为「原话 + CombatEvent 客观对照判据」（Round 1 不得出现 `skill_cancelled`；Round 2 必须出现 `skill_stunned` → `skill_cancelled`，且该次危险技能伤害不结算；两轮序列相同即判 Failure 4）；② 保留三问硬门不变，新增非门控问题 Q4，用于观察「奖励是否是再战动机」。
@@ -433,17 +433,17 @@
 - 范围：`tests/` 下的 1v1 Build Replay 场景入口与取证脚本、`test/gameplay/` 下的真实主场景机制闭环用例、`test/README.md` 与 `tests/README.md` 的索引说明、人工验收记录归档。
 - 非范围：替代人工验收、1v2 / 1v3 的多目标决策结论（属于 `INC-CROSS-019` Stage 2）、正式平衡测试、随机化压力测试、AOE / 仇恨 / 存档 / 联网测试。
 - 依赖：`INC-COMBAT-009`、`INC-PAWNS-021`、`INC-WORLD-007`、`INC-UI-018`、`INC-TESTING-012`；父 Increment `INC-CROSS-019`。
-- 检索证据：2026-09-25T21:50:38+08:00 执行 `git status --short`（工作区干净）、`git diff --unified=0 -- agent-plan/`（空）、`git diff --cached --unified=0 -- agent-plan/`（空）、`git log --oneline -- agent-plan/`（HEAD `0f8fb41`）与 `git grep -n -E "INC-(COMBAT-009|WORLD-007|TESTING-011)" -- agent-plan/`；结论：三个 Increment 均为 `planned`、未实现，可安全调整；`game/world/encounter_session.gd` 头部注释与 `_on_unit_died()` 仍为单点终局（敌人死亡即 PLAYER_WIN），证明 1vN 全灭判胜确实未实现。历史记录（2026-09-25T21:45:00+08:00） `git status --short`（工作区为 `INC-PAWNS-021` 实现与本批 plan 调整）、`git diff --unified=0 -- agent-plan/`（读取本批重定义）、`git log --oneline -5 -- agent-plan/`（最新 `1dbdba5`）与 `git grep -n "INC-TESTING-011"`；现有 gameplay 证据覆盖单单位宗门闭环、秘境闭环与 Build 决策对照，但没有「首通解锁 → 主动重构 → 同遭遇再战 → 行为变化」的实验记录。
+- 检索证据（2026-09-25T22:42:10+08:00）：`git status --short` 工作区干净（HEAD `9be2198`，本地 = `origin/develop`）；`git diff --unified=0 -- agent-plan/` 与 `git diff --cached --unified=0 -- agent-plan/` 均无输出；`git log --oneline -3` 显示 `9be2198`（`INC-TESTING-012` 计划回写）→ `fd3eda8`（`INC-TESTING-012` 实现）→ `1cce5bf`（`INC-UI-018`）；`git grep -n -E "INC-TESTING-011|build_replay" -- agent-plan/ test/ docs/` 只命中本计划、父级索引与 `docs/build-gameplay-validation.md`，`test/tools/` 与 `test/gameplay/` 下没有任何 `build_replay` 产物，`test/tools/` 现有 4 份取证脚本（血条 / 信息卡 / 宗门面板 / Build 面板）；`tests/` 现有 5 个入口但没有 Replay 专用入口。依赖 `INC-COMBAT-009` / `INC-PAWNS-021` / `INC-WORLD-007` / `INC-UI-018` / `INC-TESTING-012` 均已实现并推送到 `develop`（仅 `INC-TESTING-011` 自身为 `planned`）。既有证据缺口：`test/integration/danger_window_combat_event_test.gd` 已证明「无控制必被命中」与「定身打断且零伤害」两条机制，但它用测试自造 PawnData，未在真实 `main.tscn` 上跑「首通解锁 → 主动切 Build B → 同一遭遇再战」的对照，也没有产出 Round 1 / Round 2 的 `build_replay_record`。历史记录（2026-09-25T21:50:38+08:00）执行 `git status --short`（工作区干净）、`git diff --unified=0 -- agent-plan/`（空）、`git diff --cached --unified=0 -- agent-plan/`（空）、`git log --oneline -- agent-plan/`（HEAD `0f8fb41`）与 `git grep -n -E "INC-(COMBAT-009|WORLD-007|TESTING-011)" -- agent-plan/`；结论：三个 Increment 均为 `planned`、未实现，可安全调整；`game/world/encounter_session.gd` 头部注释与 `_on_unit_died()` 仍为单点终局（敌人死亡即 PLAYER_WIN），证明 1vN 全灭判胜确实未实现。历史记录（2026-09-25T21:45:00+08:00） `git status --short`（工作区为 `INC-PAWNS-021` 实现与本批 plan 调整）、`git diff --unified=0 -- agent-plan/`（读取本批重定义）、`git log --oneline -5 -- agent-plan/`（最新 `1dbdba5`）与 `git grep -n "INC-TESTING-011"`；现有 gameplay 证据覆盖单单位宗门闭环、秘境闭环与 Build 决策对照，但没有「首通解锁 → 主动重构 → 同遭遇再战 → 行为变化」的实验记录。
 - 风险：真实主场景测试容易受暂停、自动隐藏与活动单位残留影响，必须在 `after_test()` 清理，否则用例之间互相污染。第二个风险是把人工结论自动化替代，必须坚持「自动化只证明机制」。第三个风险是提问诱导，必须保持 Q1~Q3 原文并避免在问题里提示定身术与危险技能的关系。
-- 实现说明：待实现。
-- 变更文件：待实现。
-- 测试证据：待实现。
-- 验证状态：待验证
-- 验证时间：待验证
-- 已知问题：待实现。
+- 实现说明：拆成「驱动层 + 用例 + 取证脚本 + 人工入口」四件可复核产物：① `test/tools/build_replay_driver.gd`（`class_name BuildReplayDriver`）：Replay 的唯一驱动层，用例与取证脚本都调它，避免两份对照代码漂移。流程为「先关默认秘境（入树前 `default_dungeon = null`，与 `tests/` 入口同序）→ `session.begin()` 正式 1v1 遭遇 → 用真实 `PlayerController` 跨物理帧走到定身施放距离（走位期间不推进会话，保证两轮同一个时间原点）→ 推进危险窗口 → Round 2 用 `Pawn.cast_skill()` 施放定身 → 走到原结算时刻之外确认没有补结算」，只读公开 API 与 `CombatEventLog`，不复制伤害 / 奖励 / 眩晕公式。② `test/gameplay/build_replay_loop_test.gd`：在真实 `main.tscn` 上跑脚本化 Replay，断言机制事实与客观对照判据（Round 1 无 `skill_cancelled`、Round 2 必须 `skill_stunned` → `skill_cancelled`、两轮序列相同即 Failure 4、事件日志不跨局累积、首通只解锁不装配、切换只经生产面板按钮且 SkillBar 跟随）。③ `test/tools/capture_build_replay_record.gd`：产出 `build_replay_record`（`.md` + `.json`，落不入库的 `.mcp/godot-runtime/screenshots/`），自动段写 Round 1 / Round 2 的事件序列、危险技能结算方式、承伤合计、战斗时长、首通奖励与面板切换裁决；人工段留 `待人工` 占位（Q1~Q4 原话、四个归档标签、Gate 0 与 Gate A~E），脚本只做机制自检，不代填结论。④ `tests/scenario_build_replay.tscn`：人工实验入口（未解锁定身术起局），把 §8 的四步剧本写进场景说明，并登记进 `test/tools/verify_scenario_entries.gd` 的入口体检清单。关键取舍：走位必须跨物理帧驱动——同一帧内手工连调 `move_and_slide()` 的实际位移远小于 `velocity * delta`（实测 4000 次步进只移动 175px），因此 `approach_target()` 改成 `await tree.physics_frame` 的真实走位；两轮的可比条件锁定为「站位与时机相同」，不比较输出。Round 1 / Round 2 的承伤与时长只作对照数据，明确不写成通过条件（docs §8）。
+- 变更文件：新增 `test/tools/build_replay_driver.gd`（含 `.uid`）、`test/tools/capture_build_replay_record.gd`（含 `.uid`）、`test/gameplay/build_replay_loop_test.gd`（含 `.uid`）、`tests/scenario_build_replay.tscn`；修改 `test/tools/verify_scenario_entries.gd`（入口体检清单加 `build_replay` 一行）、`tests/README.md`（入口清单加一行 + 取证脚本运行方式）、`test/README.md`（`test/tools` 行补驱动层说明）、`agent-plan/testing.md`、`agent-plan/_index.md`。
+- 测试证据：① 单套件 `& $env:GODOT_BIN --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://test/gameplay/build_replay_loop_test.gd -rd res://reports/gdunit/debug_replay --ignoreHeadlessMode`：`Statistics: 2 test cases | 0 errors | 0 failures | 0 flaky | 0 skipped | 0 orphans`，两个用例 PASSED。② 取证脚本（真实窗口）`& $env:GODOT_BIN --path . --script res://test/tools/capture_build_replay_record.gd`：`BUILD_REPLAY_CAPTURE_DONE FAILURES=0`，退出码 0。产出记录的可复核事实：Round 1 `danger_window_opened → skill_cast → skill_hit`（承伤 生命 5.0 / 护盾 40.0，事件时钟 10.20s），Round 2 `danger_window_opened → skill_cast → skill_stunned → skill_cancelled`（承伤 0.0 / 0.0，事件时钟 10.30s），两轮序列不同故 Failure 4 未触发；首通 `known_before ["sword_strike","guard_true_qi"] → known_after [...,"binding_spell"]` 且 `auto_equipped_by_reward=false`；面板裁决 `accepted=true reason=""`，切换后装配 `["sword_strike","binding_spell"]` 且技能栏含 `binding_spell`。③ 入口体检（真实窗口）`& $env:GODOT_BIN --path . --script res://test/tools/verify_scenario_entries.gd`：`SCENARIO_ENTRY_CHECK_DONE FAILURES=0`（6 个入口各加载两次，含新增 `build_replay`）。④ 统一门禁 `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all`：`RESULT: PASS`（GdUnit4 397 cases 0 failures、headless 10 suites / 549 assertions / 0 failing suites、exit 0）。⑤ 人工轮：待用户按 `tests/scenario_build_replay.tscn` 剧本实机跑一次并回答三问（本轮不计入自动证据）。
+- 验证状态：验证通过（机制层 + 客观对照判据；Gate A~E 属人工轮）
+- 验证时间：2026-09-25T23:05:40+08:00
+- 已知问题：① Gate A~E 与四个归档标签必须由玩家原话填写，本轮只交付机制事实与记录骨架——`build_replay_record` 的人工段仍为「待人工」，不得由自动化代填；② 脚本化 Replay 与真实人工 Replay 可能不一致（脚本走位到定身距离后停手，人工玩家会有普通攻击与走位差异），两者冲突时以人工轮为准并记入已知问题；③ 抓取脚本未纳入 `run_tests.ps1` 门禁（需要真实窗口且耗时约 12s），属于提交前手工步骤；④ `approach_target()` 依赖真实物理帧（约 4s 实时/轮），单套件约 14s，比既有 gameplay 套件慢；⑤ 既有测试债务不变（`main_scene_sect_test.gd` 324 orphans、`sect_panel_test.gd` 288 orphans）。
 - 用户验收：待验收
 - 验收时间：待验收
-- Git：待提交
+- Git：`develop` / 待回写
 - 备注：Gate A~E 的顺序不可颠倒：玩家先发现问题，才可能理解奖励与问题的关联，才可能主动重构，才可能改变行为并解释原因。
 
 ## INC-TESTING-012：场景化测试入口拆分到 `tests/`

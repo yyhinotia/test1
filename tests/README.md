@@ -30,6 +30,7 @@ test/       自动化断言：unit / integration / gameplay + headless 回归
 | `tests/scenario_build_test_1v3.tscn` | 1v3（近战 + 远程 + 同一个镇狱影傀 Boss） | 定身术已解锁（未装配） | 危险窗口仍在，同时多了必须先取舍的两个威胁 |
 | `tests/scenario_build_loadout_switch.tscn` | 1v1 与 Build 切换面板 | 定身术已解锁（未装配） | 右下角面板：Build A「当前 Build」、Build B「可切换」；必须玩家主动点击才切换 |
 | `tests/scenario_first_clear_reward.tscn` | 1v1 首通奖励 | 未解锁定身术 | 打完这一场后奖励只有定身术，面板从「未解锁：定身术」变成「可切换」（不自动装配） |
+| `tests/scenario_build_replay.tscn` | Build Replay 实验（1v1 全流程） | 未解锁定身术 | `INC-TESTING-011` 的人工剧本：① Build A 打完 → ② 首通只拿定身术 → ③ 自己决定是否换 Build → ④ 再战同一遭遇；三问原话与 Gate 结论填进 `build_replay_record` |
 
 每个入口都会把窗口标题写成 `test1 · tests/<场景 id> · <场景名>`，人工记录时可以直接对照标题确认自己跑的是哪个入口。
 
@@ -58,6 +59,15 @@ run_project(projectPath="<仓库根>", scene="tests/scenario_build_test_1v1.tscn
 ```
 
 报告写入 `.mcp/godot-runtime/screenshots/tests_scenario_entries_report.txt`（该目录不入库）。
+
+Build Replay 实验（`INC-TESTING-011`）的机制事实与记录骨架由取证脚本生成：
+
+```powershell
+& $env:GODOT_BIN --path . --script res://test/tools/capture_build_replay_record.gd
+```
+
+产出 `.mcp/godot-runtime/screenshots/build_replay_record.md` / `.json`（不入库，需重跑脚本再生成）。
+脚本只填「机制事实」（Round 1 / Round 2 的事件序列、结算方式、承伤与时长），三问原话与 Gate A~E 必须由玩家填写。
 
 ## 新增入口的要求
 

@@ -16,6 +16,7 @@ const EXPECTED_ENTRIES: Array[Dictionary] = [
 		{"scene": "res://tests/scenario_build_test_1v3.tscn", "id": "build_test_1v3", "encounter": "build_test_1v3", "enemies": 3, "binding": true},
 		{"scene": "res://tests/scenario_build_loadout_switch.tscn", "id": "build_loadout_switch", "encounter": "build_test_1v1", "enemies": 1, "binding": true},
 		{"scene": "res://tests/scenario_first_clear_reward.tscn", "id": "first_clear_reward", "encounter": "build_test_1v1", "enemies": 1, "binding": false},
+		{"scene": "res://tests/scenario_build_replay.tscn", "id": "build_replay", "encounter": "build_test_1v1", "enemies": 1, "binding": false},
 ]
 
 var _report_lines: Array[String] = []

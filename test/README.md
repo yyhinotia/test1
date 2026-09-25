@@ -12,7 +12,7 @@
 | `test/integration` | 集成 | 系统组合：Pawn、资源池、状态条等 2~3 个组件之间的真实信号链路。 | GdUnit4 |
 | `test/gameplay` | 玩法 | 场景层：在真实 `main.tscn` 上跑通玩家可见的整条链路（选中 → 受伤 → HUD 与头顶资源条同步 → 死亡）。 | GdUnit4 |
 | `test/headless` | 回归 | 自建 headless 断言套件（`extends SceneTree`），逐条 CHECK 的回归基线。 | `--script` 直跑 |
-| `test/tools` | 工具 | 不参与测试发现的证据脚本，例如真实窗口多分辨率截图与报告生成。 | 手动 |
+| `test/tools` | 工具 | 不参与测试发现的证据脚本，例如真实窗口多分辨率截图与报告生成；`build_replay_driver.gd` 是 Build Replay 的共用驱动层（用例与取证脚本都调它）。 | 手动 |
 | `../tests` | 场景入口 | 可交互的测试场景（每个场景一个 `.tscn`）：只负责把游戏摆到确定状态，不做断言、不产出通过结论。 | Godot 直接打开，见 `../tests/README.md` |
 | `reports/` | 产物 | GdUnit4 生成的 JUnit XML 与 HTML 报告。**可重建、不入库**（已在 `.gitignore` 忽略）。 | 自动生成 |
 
