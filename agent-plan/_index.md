@@ -1,24 +1,24 @@
 # Agent Plan Index
 
-> 最后修改：2026-09-25T20:39:32+08:00
+> 最后修改：2026-09-25T20:47:54+08:00
 > 规则来源：`../AGENTS.md`
 
 ## 主题索引
 
 | 主题 | 计划文件 | 状态 | 当前 Increment | 最后修改 |
 |---|---|---|---|---|
-| UI | `ui.md` | 已验收 | `INC-UI-017` | 2026-09-25T20:39:32+08:00 |
-| 战斗 | `combat.md` | 已验收 | `INC-COMBAT-008` | 2026-09-25T18:30:17+08:00 |
-| Pawns | `pawns.md` | 已验收 | `INC-PAWNS-019` | 2026-09-25T20:16:30+08:00 |
+| UI | `ui.md` | 计划中 | `INC-UI-018` | 2026-09-25T20:47:54+08:00 |
+| 战斗 | `combat.md` | 计划中 | `INC-COMBAT-009` | 2026-09-25T20:47:54+08:00 |
+| Pawns | `pawns.md` | 计划中 | `INC-PAWNS-021` | 2026-09-25T20:47:54+08:00 |
 | 修炼 | `cultivation.md` | 已验收 | `INC-CULT-005` | 2026-09-25T20:16:30+08:00 |
 | 宗门 | `sect.md` | 已验收 | `INC-SECT-003` | 2026-09-25T19:38:41+08:00 |
-| 世界 | `world.md` | 已验收 | `INC-WORLD-006` | 2026-09-25T20:16:30+08:00 |
+| 世界 | `world.md` | 计划中 | `INC-WORLD-007` | 2026-09-25T20:47:54+08:00 |
 | 背包 | `inventory.md` | 已验收 | `INC-INVENTORY-001` | 2026-09-25T16:51:32+08:00 |
 | 存档 | `save.md` | 未创建 | - | - |
 | 音频 | `audio.md` | 未创建 | - | - |
-| 核心 | `core.md` | 计划中 | `INC-CORE-011` | 2026-09-25T20:11:34+08:00 |
+| 核心 | `core.md` | 计划中 | `INC-CORE-012` | 2026-09-25T20:47:54+08:00 |
 | 工具 | `tools.md` | 已验收 | `INC-TOOLS-002` | 2026-09-25T13:54:46+08:00 |
-| 测试 | `testing.md` | 计划中 | `INC-TESTING-010` | 2026-09-25T20:11:34+08:00 |
+| 测试 | `testing.md` | 计划中 | `INC-TESTING-011` | 2026-09-25T20:47:54+08:00 |
 
 ## 跨主题父 Increment
 
@@ -42,6 +42,7 @@
 | `INC-CROSS-015` | `accepted` | `INC-WORLD-001`、`INC-WORLD-002`、`INC-UI-014`、`INC-CORE-008`、`INC-TESTING-007` | 秘境遭遇入口：把敌人威胁档案变成玩家可进入的遭遇（选择 → 战斗 → 结果 → 重选） | 通过 | 已验收 | 2026-09-25T18:52:41+08:00 |
 | `INC-CROSS-017` | `accepted` | `INC-SECT-001`、`INC-SECT-002`、`INC-SECT-003`、`INC-PAWNS-018`、`INC-UI-016`、`INC-CORE-010`、`INC-WORLD-005`、`INC-TESTING-009` | 最小宗门（MVP-⑤）：把秘境灵石收益变成可升级的宗门设施，产出修为 / 灵草 / 丹药 / 功法 / 强化武器，形成「回去修炼 / 制作 / 强化，然后再次出发」的闭环 | 通过 | 已验收 | 2026-09-25T20:05:25+08:00 |
 | `INC-CROSS-018` | `in_progress` | `INC-CULT-005`、`INC-PAWNS-019`、`INC-WORLD-006`、`INC-UI-017`、`INC-CORE-011`、`INC-TESTING-010` | 突破 → Build 重构：突破执行、运行时境界覆盖、跨遭遇延续、玩家入口与再战证据 | 进行中（4/6 子项已验收） | 待验收 | 2026-09-25T20:39:32+08:00 |
+| `INC-CROSS-019` | `planned` | `INC-PAWNS-020`、`INC-PAWNS-021`、`INC-COMBAT-009`、`INC-WORLD-007`、`INC-CORE-012`、`INC-UI-018`、`INC-TESTING-011` | 4v4 Vertical Slice：验证奖励是否驱动重构与再战 | 待验证 | 待验收 | 2026-09-25T20:47:54+08:00 |
 
 ### INC-CROSS-001：第一个 Pawn MVP
 
@@ -434,6 +435,13 @@
 | `INC-PAWNS-019` | `INC-CROSS-018` | pawns | `accepted` | 运行时境界覆盖层、突破入口与恢复校验 | 2026-09-25T20:16:30+08:00 | 验证通过 | 已验收 | `main` / `ff07dbe` |
 | `INC-WORLD-006` | `INC-CROSS-018` | world | `accepted` | 跨遭遇延续运行时境界与容量 | 2026-09-25T20:16:30+08:00 | 验证通过 | 已验收 | `main` / `dba3f01` |
 | `INC-UI-017` | `INC-CROSS-018` | ui | `accepted` | 突破入口与突破后容量预览 | 2026-09-25T20:39:32+08:00 | 验证通过 | 已验收 | `main` / `8de54d9` |
+| `INC-PAWNS-020` | `INC-CROSS-019` | pawns | `planned` | 四人队伍数据契约与多单位运行时快照 | 2026-09-25T20:47:54+08:00 | 待验证 | 待验收 | 待提交 |
+| `INC-PAWNS-021` | `INC-CROSS-019` | pawns | `planned` | 运行时主动技能装配与 Build 重配 | 2026-09-25T20:47:54+08:00 | 待验证 | 待验收 | 待提交 |
+| `INC-COMBAT-009` | `INC-CROSS-019` | combat | `planned` | 四方战队遭遇、团队胜负与 AI 目标重选 | 2026-09-25T20:47:54+08:00 | 待验证 | 待验收 | 待提交 |
+| `INC-WORLD-007` | `INC-CROSS-019` | world | `planned` | 4v4 Vertical Slice 秘境、奖励与定点数据 | 2026-09-25T20:47:54+08:00 | 待验证 | 待验收 | 待提交 |
+| `INC-CORE-012` | `INC-CROSS-019` | core | `planned` | 多单位选择、编组命令与暂停战术路由 | 2026-09-25T20:47:54+08:00 | 待验证 | 待验收 | 待提交 |
+| `INC-UI-018` | `INC-CROSS-019` | ui | `planned` | 四人队伍 HUD 与 Build 重配面板 | 2026-09-25T20:47:54+08:00 | 待验证 | 待验收 | 待提交 |
+| `INC-TESTING-011` | `INC-CROSS-019` | testing | `planned` | 4v4 闭环、再战证据与人工验收剧本 | 2026-09-25T20:47:54+08:00 | 待验证 | 待验收 | 待提交 |
 | `INC-SECT-001` | `INC-CROSS-017` | sect | `accepted` | 宗门设施静态定义与六座设施数据 | 2026-09-25T19:38:41+08:00 | 通过 | 已验收 | `main` / `c25ffbc` |
 | `INC-SECT-002` | `INC-CROSS-017` | sect | `accepted` | SectState 运行时：库存 / 设施等级 / 升级 / 修炼 / 收获 | 2026-09-25T19:38:41+08:00 | 通过 | 已验收 | `main` / `8c65ff1` |
 | `INC-SECT-003` | `INC-CROSS-017` | sect | `accepted` | 转化设施：藏经阁参悟 / 炼器房强化 / 丹房炼丹 | 2026-09-25T19:38:41+08:00 | 通过 | 已验收 | `main` / `9c97ef9` |
@@ -600,6 +608,7 @@
 
 | 版本 | 时间 | 变更 |
 |---|---|---|
+| v5.12 | 2026-09-25T20:47:54+08:00 | 持久化 `INC-CROSS-019` 4v4 Vertical Slice 设计基线与 7 个子 Increment（`INC-PAWNS-020` / `INC-PAWNS-021` / `INC-COMBAT-009` / `INC-WORLD-007` / `INC-CORE-012` / `INC-UI-018` / `INC-TESTING-011`）；以 `docs/4v4-vertical-slice.md` 为唯一问题硬门，依赖 `INC-CROSS-018` 收尾后按计划顺序开发 |
 | v5.11 | 2026-09-25T20:39:32+08:00 | 完成并推送 `INC-UI-017`（`8de54d9`）（信息卡突破入口）：`PawnInfoModel` 用运行时境界覆盖静态档案并派生「突破后容量：功法 / 武器 / 主动 / 被动」预览，`PawnInfoPanel` 新增 `breakthrough_requested(pawn)` 与「突破」按钮（只在修为已满且有下一境界时可用，只发意图不改数值）；为在固定尺寸信息卡内放下新增行，按钮行压到 16px 并把面板最小高度 354 → 366、`BottomLeftDock.offset_top` -370 → -382；unit 15 / integration 10（另含 skill_bar 回归 8）0 failures，真实窗口三档取证 `FAILURES=0`；父 `INC-CROSS-018` 继续开发主场景接线与 gameplay 证据 |
 | v5.10 | 2026-09-25T20:17:57+08:00 | 分批完成并推送 `INC-CULT-005`（`d9213d2`）、`INC-PAWNS-019`（`ff07dbe`）、`INC-WORLD-006`（`dba3f01`）：修为达标可原子突破、Pawn 以组件为唯一运行时境界源、秘境换房 / 重开保留境界与容量；三个子项各自独立提交推送，父 `INC-CROSS-018` 继续开发 UI / 主场景 / gameplay 证据 |
 | v5.9 | 2026-09-25T20:05:25+08:00 | 完成并验收 `INC-CROSS-017`（最小宗门，MVP-⑤）：六座宗门设施静态定义与数据、SectState 运行时（灵石 / 灵草 / 丹药库存与设施等级）、藏经阁 / 炼器房 / 丹房转化、Pawn 运行时 Build 覆盖层、宗门面板、主场景接线与秘境收益一次性入账，并补齐 `INC-WORLD-005`（同代修士运行时进度跨对局延续）与 `INC-TESTING-009`（真实 main.tscn 闭环证据：收益 → 设施 / 修炼 / 炼丹 / 强化 → 重开再战）；GdUnit4 unit 125 / integration 139 / gameplay 60（324 cases、0 failures）、headless 10 suites / 549 assertions / 0 failing，三档分辨率取证 FAILURES=0 |
@@ -687,3 +696,32 @@
 - 验收时间：待验收
 - Git：待提交
 - 备注：4v4 战斗是下一候选父 Increment，仍属于 MVP 缺口；本批完成不等于整个 MVP 完成。
+
+### INC-CROSS-019：4v4 Vertical Slice
+
+- 状态：planned
+- 创建时间：2026-09-25T20:47:54+08:00
+- 最后修改：2026-09-25T20:47:54+08:00
+- 目标：用最小内容的 4v4 Vertical Slice 回答唯一问题——玩家完成第一轮秘境后，会不会因为获得新功法 / 装备而主动重构自己的修士并再战一轮；机制通过但玩家回答“不会”时，必须停止扩内容并回到战斗核心。
+- 验收标准：
+  - 七个子 Increment 全部 `validated`，并且 unit / integration / gameplay 三层按依赖顺序通过。
+  - 真实主场景完成一次 2v2 → 3v3 → 4v4 的完整秘境；四人队伍、团队胜负、多选命令与暂停指挥均可复现。
+  - 第三间首通解锁 `player_binding_skill.tres`（定身术）并给予至少 45 灵石；主角 Build 能从“御剑斩 + 护体真气”切换为“御剑斩 + 定身术”。
+  - 第二轮存在可观察的不同战斗过程证据（生存、控制窗口、战斗时长或承伤差异），而不是只增加数值。
+  - 用户完成 5 步人工验收，明确回答“会 / 不会”以及想换什么、为什么换；该回答是父级验收硬门，不能用自动化证据替代。
+  - 三档分辨率 1152x648 / 1152x720 / 800x720 的布局证据无重叠 / 无溢出；未验收的增量只能停留在工作区，不得进入稳定 `main`。
+- 范围：`INC-PAWNS-020`、`INC-PAWNS-021`、`INC-COMBAT-009`、`INC-WORLD-007`、`INC-CORE-012`、`INC-UI-018`、`INC-TESTING-011` 的并集。
+- 非范围：招募 / 长期队友养成、拖拽 Build 编辑器、仇恨表、AOE / 五行克制、存档 / 联网、正式美术、把宗门扩成 Colony Sim。
+- 依赖：`INC-CROSS-018` accepted；本父 Increment 设计基线已落 `docs/4v4-vertical-slice.md`。
+- 检索证据：2026-09-25T20:47:54+08:00 执行 `git status --short`（仅 `?? docs/4v4-vertical-slice.md`）、`git diff --unified=0 -- agent-plan/`（空）、`git diff --cached --unified=0 -- agent-plan/`（空）、`git log --oneline -5 -- agent-plan/`（最新 `cdbc535`）与 `git grep` 编号检查；`INC-CROSS-019` 及七个候选编号均未占用。设计依据为 `docs/project_summary.md` §八 / §十七 / §十八 / §二十二与 `docs/build-mvp.md` MVP-5。
+- 风险：最大风险是把 4v4 做成单位数量扩张而没有决策变化；因此 Build 重配、第二轮过程差异和人工唯一问题必须同时成立。第二大风险是多人快照按数组下标写回造成成员错位，必须按成员 id 键值延续。
+- 实现说明：待实现。
+- 变更文件：待实现。
+- 测试证据：待实现。
+- 验证状态：待验证
+- 验证时间：待验证
+- 已知问题：`INC-CROSS-018` 尚未完全收尾（`INC-CORE-011`、`INC-TESTING-010` 仍为 planned）；在父级 accepted 前，本批只能保持计划或独立分支实现，不得把未验收代码合入稳定 `main`。
+- 用户验收：待验收
+- 验收时间：待验收
+- Git：待提交
+- 备注：设计基线 `docs/4v4-vertical-slice.md` 已由用户指令“推送，保持本地远端一致”进入验收与 Git 收尾；本父 Increment 的实现验收仍以人工唯一问题为最终退出条件。

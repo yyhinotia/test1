@@ -1,6 +1,6 @@
 # Pawns 主题计划
 
-> 最后修改：2026-09-25T20:17:57+08:00
+> 最后修改：2026-09-25T20:47:54+08:00
 > 主题：pawns  
 > 规则来源：`../AGENTS.md`
 
@@ -730,3 +730,62 @@
 - 验收时间：2026-09-25T20:16:30+08:00
 - Git：`main` / `ff07dbe`
 - 备注：父 Increment 为 `INC-CROSS-018`；本 Increment 负责把“能突破”变成“突破后 Build 空间真的变化”。
+
+## INC-PAWNS-020：四人队伍数据契约与多单位运行时快照
+
+- 状态：planned
+- 创建时间：2026-09-25T20:47:54+08:00
+- 最后修改：2026-09-25T20:47:54+08:00
+- 主题：pawns
+- 目标：建立 `SquadDefinition` 队伍静态契约，并让遭遇运行时能够按队伍定义创建、持有和延续多名成员；本 Increment 只提供多单位数据与快照能力，不负责 Vertical Slice 内容、AI 战术或 UI。
+- 验收标准：
+  - 新增 `SquadDefinition` 资源，至少包含 `id`、`display_name`、`members: Array[PawnData]`、`default_spawn_offsets: Array[Vector2]` 与 `is_configured()`；当 `members` 非空时，成员 id 必须唯一且不能为空，`default_spawn_offsets` 要么为空（由运行时生成安全默认偏移），要么与 `members` 数量一致。
+  - `EncounterDefinition` 保留既有 `enemy_profile`，新增可选 `enemy_squad` 与 `player_count`；`enemy_squad` 非空时必须优先于 `enemy_profile`，旧资源不因新增字段改变行为。
+  - `EncounterSession` 运行时持有 `_player_units` / `_enemy_units` 数组，公开 `get_player_units()` / `get_enemy_units()`；既有 `get_player_pawn()` / `get_enemy_pawn()` 仍返回主单位，旧调用方无需改签名。
+  - 2 / 3 / 4 人队伍均可按成员顺序创建真实 Pawn 单位，且玩家单位与敌人单位数量可独立断言；队友死亡不直接终局，主角死亡或敌方全灭的终局判定留给 `INC-COMBAT-009` 接线。
+  - `SquadResourceSnapshot` / `SquadProgressSnapshot` 按成员 id 捕获与写回；缺成员安全跳过，绝不允许按数组下标把 A 的进度写给 B；旧单人快照 API 保持兼容。
+  - 单元 / 集成测试覆盖：空队伍拒绝、重复 id 拒绝、偏移数量不匹配拒绝、单人旧档案兼容、多人创建顺序、按 id 快照匹配与缺员跳过。
+- 范围：`SquadDefinition` 资源类及其 `.uid`、`EncounterDefinition` 数据契约扩展、`EncounterSession` 多单位集合与队伍快照、相关 unit / integration 测试。
+- 非范围：Vertical Slice 队伍 / 敌人内容资源、团队胜负与 AI 目标、玩家多选输入、四人 HUD、技能装配、正式职业或招募系统。
+- 依赖：`INC-CROSS-018` accepted（现有运行时境界 / Build 延续是多人快照的前置事实源）；父 Increment `INC-CROSS-019`。
+- 检索证据：2026-09-25T20:47:54+08:00 执行 `git status --short`（仅 `?? docs/4v4-vertical-slice.md`）、`git diff --unified=0 -- agent-plan/`（空）、`git diff --cached --unified=0 -- agent-plan/`（空）、`git log --oneline -5 -- agent-plan/`（最新 `cdbc535`）与 `git grep` 编号检查（`INC-PAWNS-020`、`INC-PAWNS-021` 均未占用）。当前 `EncounterDefinition` 只有单 `enemy_profile`，`EncounterSession` 只有 `_player` / `_enemy` 与单点死亡终局。
+- 风险：最容易出现的回归是多人化后旧单单位 API 语义漂移；必须保持主单位代理并在快照写回时以成员 id 为键，不能以顺序复制。另一个风险是把内容数据硬编码进运行时代码，故本 Increment 只定义契约，Vertical Slice 具体资源留给 `INC-WORLD-007`。
+- 实现说明：待实现。
+- 变更文件：待实现。
+- 测试证据：待实现。
+- 验证状态：待验证
+- 验证时间：待验证
+- 已知问题：待实现。
+- 用户验收：待验收
+- 验收时间：待验收
+- Git：待提交
+- 备注：本 Increment 是 `INC-CROSS-019` 的第一个数据契约层；不改变现有单人遭遇的对外行为。
+
+## INC-PAWNS-021：运行时主动技能装配与 Build 重配
+
+- 状态：planned
+- 创建时间：2026-09-25T20:47:54+08:00
+- 最后修改：2026-09-25T20:47:54+08:00
+- 主题：pawns
+- 目标：把已掌握主动技能与当前装配主动技能拆成两套运行时事实，使玩家获得新功法后可以显式重配 Build；未配置运行时装配时继续沿用 `PawnData.active_skills` 的旧行为。
+- 验收标准：
+  - Pawn 运行时提供 `get_known_active_skills()`、`get_equipped_active_skills()`、`learn_active_skill()`、`set_active_skill_loadout()`；已掌握与已装配必须可分别断言，同一技能不得在已掌握列表重复。
+  - `set_active_skill_loadout()` 只接受已掌握且满足当前运行时境界主动技能容量的技能；重复、未知或超容量输入失败时保持调用前状态完全不变。
+  - 未调用过重配接口的 Pawn 行为保持原样：玩家控制器、技能栏和施法入口继续按 `PawnData.get_active_skills()` 读取旧配置。
+  - 重配成功后 `build_changed` / 技能可用性读模型更新，`get_enabled_active_skills()` 按当前装配顺序截取容量，不修改任何静态 `.tres`。
+  - 单元 / 集成测试覆盖：学习解锁、重复学习、未掌握装配、超容量装配、空装配与旧配置兼容、失败零副作用、成功后玩家控制器可解析新技能。
+- 范围：`Pawn` 的运行时技能掌握 / 装配状态与方法、`PlayerController` 的已知技能判定接入、相关 unit / integration 测试；必要时补充只读 Build 汇总字段。
+- 非范围：功法战斗属性加成、被动技能重配、拖拽排序、技能存档、技能树、UI 面板绘制。
+- 依赖：`INC-PAWNS-020`；父 Increment `INC-CROSS-019`。
+- 检索证据：2026-09-25T20:47:54+08:00 执行 `git status --short` 与 `git grep` 检查；`INC-PAWNS-021` 未被 `agent-plan/` 占用。当前 `PlayerController._is_known_skill()` 直读 `pawn.data.get_active_skills()`，`Pawn` 只有 `PawnData` 技能列表与容量截取，没有独立的「已掌握 / 已装配」运行时层。
+- 风险：如果重配直接改写 `PawnData.active_skills`，多个 Pawn 实例与静态资源会互相污染；必须坚持运行时覆盖层。另一个风险是把“从未配置”和“显式空装配”混为一谈，需用明确的已配置标记区分。
+- 实现说明：待实现。
+- 变更文件：待实现。
+- 测试证据：待实现。
+- 验证状态：待验证
+- 验证时间：待验证
+- 已知问题：待实现。
+- 用户验收：待验收
+- 验收时间：待验收
+- Git：待提交
+- 备注：本 Increment 只提供机制，奖励解锁与 Build 预设界面分别由 `INC-WORLD-007`、`INC-UI-018` 接入。
