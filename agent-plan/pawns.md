@@ -1,6 +1,6 @@
 # Pawns 主题计划
 
-> 最后修改：2026-09-25T14:16:35+08:00
+> 最后修改：2026-09-25T14:17:55+08:00
 > 主题：pawns  
 > 规则来源：`../AGENTS.md`
 
@@ -99,7 +99,7 @@
 
 - 状态：accepted
 - 创建时间：2026-09-25T13:54:28+08:00
-- 最后修改：2026-09-25T14:16:35+08:00
+- 最后修改：2026-09-25T14:17:55+08:00
 - 主题：pawns
 - 目标：把 Pawn 内的生命/护盾运行时数值与变化信号抽取为独立 `HealthComponent`，作为多生命层（护体灵力/真元/气血/元神）以及治疗、护盾、持续伤害等状态效果的单一数据源，补齐 `docs/血条ui需求.txt` 的 MVP 步骤①。
 - 验收标准：
@@ -138,10 +138,11 @@
   - 主场景冒烟：`godot --headless --path . --quit-after 600` → 退出码 0，无脚本错误或节点缺失。
   - 视觉回归（真实窗口渲染，`test/tools/capture_health_bar_evidence.gd`）：`HIDE_ELAPSED_MS=1963`、`PAUSED_BAR_VISIBLE=true`、`RESUME_HIDE_ELAPSED_MS=2038`；16:9（1152x648）/ 16:10（1152x720）/ 窄屏（800x720 → 逻辑视口 1152x1036）三档 `BAR_RECT=(834,356,72,16)`、居中/在头顶/在视口内全为 true。
   - 像素核验（与重构前对比，逐项一致）：idle 0 px、玩家受击 621 px（bbox `(834,362)-(902,370)`）、延迟后 0 px、暂停 513 px、三档分辨率 504 / 504 / 222 px。证据报告 `.mcp/godot-runtime/screenshots/health_bar_evidence_report.txt`。
+- 提交前复跑（2026-09-25T14:17:55+08:00）：3 个 `--check-only`、55 项组件断言、38 项血条回归与主场景冒烟均退出码 0；Godot 引擎输出 `user://logs/godot.log` 无法写入的环境级告警，不影响脚本断言与退出码。
 - 验证状态：验证通过
 - 验证时间：2026-09-25T14:15:55+08:00
 - 已知问题：归零后不接受治疗/加盾（复活机制非范围）；`heal()` / `grant_shield()` 只有组件级验证，尚未接入任何技能或 UI；分层生命与状态效果仍未实现；`Pawn.current_health` / `current_shield` 由可写字段收紧为只读代理，已在验收标准中声明。
 - 用户验收：已验收
 - 验收时间：2026-09-25T14:16:35+08:00
-- Git：分支 main，commit 待创建后回写
+- Git：分支 main，commit a873c3f（提交时间 2026-09-25T14:17:49+08:00；refactor(pawns): extract HealthComponent as single health source [INC-PAWNS-003]）
 - 备注：来源为 `docs/血条ui需求.txt` 的“① HealthComponent”；`INC-CROSS-002` 已实现该文档的“②③④⑤”与规则 1-4，本 Increment 补齐①。用户已于 2026-09-25T14:16:35+08:00 验收通过；按流程提交。

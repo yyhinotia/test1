@@ -4,7 +4,7 @@
 > 项目定位：修仙 RPG + 宗门经营 + 秘境探索 + 暂停式实时战术战斗  
 > 设计源：`docs/project_summary.md`  
 > 引擎版本：Godot `4.7.2.stable`  
-> 文档最后修改：`2026-09-25T14:16:35+08:00`
+> 文档最后修改：`2026-09-25T14:17:55+08:00`
 
 ## 0. 指令优先级
 
@@ -487,7 +487,7 @@ res://
 - `agent-plan/` 已建立 `_index.md`、`_template.md`、`pawns.md`、`combat.md`、`ui.md`、`core.md` 和 `tools.md`。
 - 首个 Pawn MVP（`INC-CROSS-001` 及 `INC-PAWNS-001/COMBAT-001/UI-001/CORE-001`）已通过用户验收，并在 `main` 上提交为 `d7c2e1e`。
 - 2026-09-25T13:52:23+08:00 已按用户授权完成首次 push：`origin/main` = `567b6e7`；`INC-TOOLS-001`、`INC-TOOLS-002` 已登记验收。
-- `docs/血条ui需求.txt` 是用户提供的血条 UI 需求输入（“变化时显示 + 延迟自动隐藏”），对应父 Increment `INC-CROSS-002`；需求文档中的“① HealthComponent”登记为 `INC-PAWNS-003`（已验收 2026-09-25T14:16:35+08:00，commit 待回写）。
+- `docs/血条ui需求.txt` 是用户提供的血条 UI 需求输入（“变化时显示 + 延迟自动隐藏”），对应父 Increment `INC-CROSS-002`；需求文档中的“① HealthComponent”登记为 `INC-PAWNS-003`（已验收 2026-09-25T14:16:35+08:00，已提交为 `a873c3f`）。
 - 2026-09-25T13:55 起本会话 Godot MCP 工具调用返回 unsupported，改用 Godot CLI headless 与 `test/headless/` 自建脚本验证；MCP 恢复后应优先回到 MCP。
 - Pawn 场景结构自 `INC-PAWNS-002` 起为 `Pawn/HealthBarAnchor(Node2D, y = -46)/HealthBar`（`game/ui/pawn_health_bar.tscn` 实例）；血条默认隐藏，只在生命状态变化时显示，最后一次变化 2 秒后隐藏。
 - 生命/护盾运行时数值自 `INC-PAWNS-003` 起由 `Pawn/HealthComponent`（`game/pawns/health_component.gd`）持有，`Pawn.current_health` / `current_shield` 是只读代理属性；Pawn 仍向外转发 `health_changed` / `shield_changed`（参数与顺序不变），血条由组件的 `health_state_changed` 驱动。
