@@ -235,3 +235,42 @@ func test_cultivation_line_handles_terminal_and_missing_data() -> void:
 	assert_str(PawnInfoModel.cultivation_line(missing_snapshot)).is_empty()
 	assert_float(PawnInfoModel.cultivation_ratio(missing_snapshot)).is_zero()
 
+
+## INC-UI-017：运行时境界必须覆盖静态 PawnData.realm，突破后的身份读模型不等待资源重载。
+func test_runtime_realm_overrides_static_realm() -> void:
+	var foundation: RealmDefinition = load("res://game/cultivation/data/realms/foundation_establishment.tres") as RealmDefinition
+	var snapshot: Dictionary = PawnInfoModel.build_snapshot(_player_data(), {"realm": foundation})
+	var identity: Dictionary = snapshot["identity"]
+	assert_bool(bool(identity["has_realm"])).is_true()
+	assert_str(String(identity["realm"])).is_equal("筑基")
+	assert_str(PawnInfoModel.identity_lines(snapshot)[1]).is_equal("筑基 · 三层")
+
+
+## INC-UI-017：突破后容量预览只从下一境界 RealmDefinition 的容量 API 派生。
+func test_breakthrough_preview_uses_next_realm_capacity() -> void:
+	var foundation: RealmDefinition = load("res://game/cultivation/data/realms/foundation_establishment.tres") as RealmDefinition
+	var snapshot: Dictionary = PawnInfoModel.build_snapshot(_player_data(), {
+		"cultivation": {
+			"realm_name": "炼气",
+			"next_realm_name": "筑基",
+			"next_realm": foundation,
+			"current_exp": 0.0,
+			"required_exp": 100.0,
+			"has_next_realm": true,
+			"ready": false,
+		},
+	})
+	assert_str(PawnInfoModel.cultivation_line(snapshot)).is_equal("修为  0%  0 / 100  → 筑基")
+	assert_str(PawnInfoModel.breakthrough_preview_line(snapshot)).is_equal("突破后容量：功法 2 / 武器 1 / 主动 3 / 被动 2")
+
+	var terminal_snapshot: Dictionary = PawnInfoModel.build_snapshot(_player_data(), {
+		"cultivation": {
+			"realm_name": "化神",
+			"next_realm_name": "",
+			"current_exp": 0.0,
+			"required_exp": 0.0,
+			"has_next_realm": false,
+			"ready": false,
+		},
+	})
+	assert_str(PawnInfoModel.breakthrough_preview_line(terminal_snapshot)).is_empty()

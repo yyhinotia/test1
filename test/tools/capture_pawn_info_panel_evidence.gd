@@ -45,6 +45,13 @@ const BUILD_LABEL_PATH: String = "Margin/Panel/Content/BuildSection/BuildLabel"
 const CULTIVATION_SECTION_PATH: String = "Margin/Panel/Content/CultivationSection"
 const CULTIVATION_LABEL_PATH: String = "Margin/Panel/Content/CultivationSection/CultivationLabel"
 const CULTIVATION_PROGRESS_PATH: String = "Margin/Panel/Content/CultivationSection/CultivationProgress"
+const BREAKTHROUGH_ROW_PATH: String = "Margin/Panel/Content/CultivationSection/BreakthroughRow"
+const BREAKTHROUGH_PREVIEW_PATH: String = "Margin/Panel/Content/CultivationSection/BreakthroughRow/BreakthroughPreviewLabel"
+const BREAKTHROUGH_BUTTON_PATH: String = "Margin/Panel/Content/CultivationSection/BreakthroughRow/BreakthroughButton"
+## 取证主体是信息卡 + SkillBar；宗门 / 遭遇 / 秘境面板由真实流程按状态切换，
+## 同时可见会把 Dock 最小宽度撑到 1248 > 1152 逻辑视口（既有 HUD 布局债务），
+## 因此与 capture_sect_panel_evidence.gd 一致，量测前先隔离非主体面板。
+const ISOLATED_SIBLING_PANELS: Array[String] = ["EncounterPanel", "DungeonPanel", "SectPanel"]
 const APPROX: float = 0.5
 
 var _main: Node2D
@@ -68,6 +75,7 @@ func _initialize() -> void:
 	enemy.global_position = Vector2(-4000.0, -4000.0)
 	_dock = _main.get_node(DOCK_PATH) as HBoxContainer
 	_panel = _main.get_node(PANEL_PATH) as PawnInfoPanel
+	_hide_sibling_panels()
 	_skill_bar = _main.get_node(SKILL_BAR_PATH) as SkillBar
 	_main.call("_set_selected_pawn", _player)
 	for _i: int in 4:
@@ -75,6 +83,7 @@ func _initialize() -> void:
 
 	await _sweep_capacities()
 	await _sweep_resolutions()
+	await _check_breakthrough_ready_state()
 	await _check_pause_overlay()
 
 	_write_report()
@@ -82,13 +91,23 @@ func _initialize() -> void:
 	quit(1 if not _failures.is_empty() else 0)
 
 
+## 隐藏非主体面板，让 Dock 只包含信息卡与 SkillBar，量测结果只反映本 Increment 的改动。
+func _hide_sibling_panels() -> void:
+	for child_name: String in ISOLATED_SIBLING_PANELS:
+		var sibling: Control = _dock.get_node_or_null(child_name) as Control
+		if sibling != null:
+			sibling.visible = false
+
 ## 境界容量是槽位数量唯一来源：构造 2~6 容量，确认 SkillBar 自动排列 64px 方形槽位。
 func _sweep_capacities() -> void:
+	var progress: CultivationProgressComponent = _player.get_cultivation_progress()
 	var original_realm: RealmDefinition = _player.get_realm()
+	var original_exp: float = float(_player.get_cultivation_snapshot().get("current_exp", 0.0))
 	for capacity: int in range(2, 7):
 		var realm: RealmDefinition = (load(QI_REFINING_REALM_PATH) as RealmDefinition).duplicate(true) as RealmDefinition
 		realm.active_skill_slots = capacity
-		_player.data.realm = realm
+		# INC-PAWNS-019 之后运行时境界是容量的唯一来源，改写静态 data.realm 不再影响槽位。
+		progress.configure(realm, 0.0)
 		_skill_bar.bind_pawn(_player)
 		for _i: int in 3:
 			await process_frame
@@ -109,8 +128,9 @@ func _sweep_capacities() -> void:
 		if not inside:
 			_fail("境界容量 %d：SkillBar 越出逻辑视口 %s" % [capacity, bar_rect])
 
-	_player.data.realm = original_realm
+	progress.configure(original_realm, original_exp)
 	_skill_bar.bind_pawn(_player)
+	_panel.refresh()
 	for _i: int in 2:
 		await process_frame
 
@@ -165,6 +185,10 @@ func _measure(mode: String, window_size: Vector2i) -> void:
 	var vital_visible: bool = (_panel.get_node(VITAL_SECTION_PATH) as Control).is_visible_in_tree()
 	var cultivation_visible: bool = (_panel.get_node(CULTIVATION_SECTION_PATH) as Control).is_visible_in_tree()
 	var cultivation_label: Label = _panel.get_node(CULTIVATION_LABEL_PATH)
+	var breakthrough_row: Control = _panel.get_node(BREAKTHROUGH_ROW_PATH)
+	var breakthrough_preview: Label = _panel.get_node(BREAKTHROUGH_PREVIEW_PATH)
+	var breakthrough_button: Button = _panel.get_node(BREAKTHROUGH_BUTTON_PATH)
+	var breakthrough_visible: bool = breakthrough_row.is_visible_in_tree()
 
 	_report("MODE=%s WINDOW=%s VIEWPORT=%s DOCK=%s PANEL=%s BAR=%s HUD=%s PAUSE_LABEL=%s" % [
 		mode, window_size, viewport_rect, dock_rect, panel_rect, bar_rect, hud_rect, pause_label_rect,
@@ -221,7 +245,50 @@ func _measure(mode: String, window_size: Vector2i) -> void:
 		])
 	if expect_full and cultivation_label.text.is_empty():
 		_fail("%s %s：完整模式修为文案不得为空" % [mode, window_size])
+	_report("MODE=%s BREAKTHROUGH_VISIBLE=%s BUTTON=%s DISABLED=%s PREVIEW=%s ROW=%s LABEL=%s LINES=%d" % [
+		mode, breakthrough_visible, breakthrough_button.text, breakthrough_button.disabled, breakthrough_preview.text,
+		breakthrough_row.size, breakthrough_preview.size, breakthrough_preview.get_line_count(),
+	])
+	if breakthrough_visible != expect_full:
+		_fail("%s %s：突破入口显隐与模式不匹配 BREAKTHROUGH_VISIBLE=%s" % [mode, window_size, breakthrough_visible])
+	if expect_full:
+		if breakthrough_row.size.y > 40.0:
+			_fail("%s %s：突破行高度异常 ROW=%s（文本被压成窄列时会撑到 200px 以上）" % [mode, window_size, breakthrough_row.size])
+		if breakthrough_preview.size.x < 200.0:
+			_fail("%s %s：突破预览文本宽度不足 LABEL=%s（完整文本约需 201px）" % [mode, window_size, breakthrough_preview.size])
+		if breakthrough_button.text != "突破":
+			_fail("%s %s：突破按钮文案应为「突破」，实际 %s" % [mode, window_size, breakthrough_button.text])
+		if breakthrough_preview.text.is_empty() or not breakthrough_preview.text.contains("突破后容量"):
+			_fail("%s %s：完整模式应显示「突破后容量」预览，实际 %s" % [mode, window_size, breakthrough_preview.text])
+		var snapshot: Dictionary = _panel.get("_snapshot") as Dictionary
+		var cultivation: Dictionary = snapshot.get("cultivation", {}) as Dictionary
+		var button_expected_enabled: bool = bool(cultivation.get("available", false)) and bool(cultivation.get("has_next_realm", false)) and bool(cultivation.get("ready", false))
+		if breakthrough_button.disabled == button_expected_enabled:
+			_fail("%s %s：突破按钮可用性与修为状态不一致 DISABLED=%s READY=%s HAS_NEXT=%s" % [
+				mode, window_size, breakthrough_button.disabled, cultivation.get("ready", false), cultivation.get("has_next_realm", false),
+			])
 
+
+## 突破入口必须跟随修为状态：修为满时按钮可用且容量预览可见，恢复后重新禁用。
+func _check_breakthrough_ready_state() -> void:
+	var start_snapshot: Dictionary = _player.get_cultivation_snapshot()
+	var required_exp: float = float(start_snapshot.get("required_exp", 0.0))
+	var original_exp: float = float(start_snapshot.get("current_exp", 0.0))
+	var has_next: bool = start_snapshot.get("next_realm") is RealmDefinition
+	var preview: Label = _panel.get_node(BREAKTHROUGH_PREVIEW_PATH)
+	var button: Button = _panel.get_node(BREAKTHROUGH_BUTTON_PATH)
+	_player.set_cultivation_exp(required_exp)
+	for _i: int in 4:
+		await process_frame
+	_report("BREAKTHROUGH_READY REQUIRED=%s HAS_NEXT=%s DISABLED=%s PREVIEW=%s" % [required_exp, has_next, button.disabled, preview.text])
+	if has_next and (button.disabled or preview.text.is_empty()):
+		_fail("修为满时应启用突破按钮并显示容量预览 DISABLED=%s PREVIEW=%s" % [button.disabled, preview.text])
+	_player.set_cultivation_exp(original_exp)
+	for _i: int in 4:
+		await process_frame
+	_report("BREAKTHROUGH_RESTORED EXP=%s DISABLED=%s" % [original_exp, button.disabled])
+	if not button.disabled:
+		_fail("修为未满时突破按钮应保持禁用 DISABLED=%s" % button.disabled)
 
 ## 暂停遮罩必须仍绘制在 Dock 之上，否则暂停时信息卡或技能栏会盖住遮罩。
 func _check_pause_overlay() -> void:

@@ -1,14 +1,46 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://game/ui/pawn_info_panel.gd" id="1_info_panel"]
 [ext_resource type="PackedScene" path="res://game/ui/resource_bar.tscn" id="2_resource_bar"]
 [ext_resource type="Script" path="res://game/ui/resource_bar.gd" id="3_resource_bar_script"]
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_breakthrough"]
+content_margin_left = 4.0
+content_margin_top = 1.0
+content_margin_right = 4.0
+content_margin_bottom = 1.0
+bg_color = Color(0.16, 0.22, 0.32, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.36, 0.5, 0.68, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_breakthrough_disabled"]
+content_margin_left = 4.0
+content_margin_top = 1.0
+content_margin_right = 4.0
+content_margin_bottom = 1.0
+bg_color = Color(0.13, 0.15, 0.19, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.28, 0.32, 0.4, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
 [node name="PawnInfoPanel" type="Control"]
 visible = false
-custom_minimum_size = Vector2(356, 354)
+custom_minimum_size = Vector2(356, 366)
 offset_right = 356.0
-offset_bottom = 354.0
+offset_bottom = 366.0
 script = ExtResource("1_info_panel")
 
 [node name="Margin" type="MarginContainer" parent="."]
@@ -161,9 +193,33 @@ text = "—"
 autowrap_mode = 2
 
 [node name="CultivationProgress" type="ProgressBar" parent="Margin/Panel/Content/CultivationSection"]
-custom_minimum_size = Vector2(0, 8)
+custom_minimum_size = Vector2(0, 6)
 layout_mode = 2
 mouse_filter = 2
 show_percentage = false
 max_value = 1.0
 step = 0.001
+[node name="BreakthroughRow" type="HBoxContainer" parent="Margin/Panel/Content/CultivationSection"]
+custom_minimum_size = Vector2(0, 16)
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="BreakthroughPreviewLabel" type="Label" parent="Margin/Panel/Content/CultivationSection/BreakthroughRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_font_sizes/font_size = 10
+text = "—"
+text_overrun_behavior = 3
+
+[node name="BreakthroughButton" type="Button" parent="Margin/Panel/Content/CultivationSection/BreakthroughRow"]
+custom_minimum_size = Vector2(52, 16)
+layout_mode = 2
+theme_override_font_sizes/font_size = 10
+theme_override_styles/normal = SubResource("StyleBoxFlat_breakthrough")
+theme_override_styles/hover = SubResource("StyleBoxFlat_breakthrough")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_breakthrough")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_breakthrough_disabled")
+disabled = true
+text = "突破"

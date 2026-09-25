@@ -12,6 +12,8 @@ const BUILD_SECTION_PATH: String = "Margin/Panel/Content/BuildSection"
 const CULTIVATION_SECTION_PATH: String = "Margin/Panel/Content/CultivationSection"
 const CULTIVATION_LABEL_PATH: String = "Margin/Panel/Content/CultivationSection/CultivationLabel"
 const CULTIVATION_PROGRESS_PATH: String = "Margin/Panel/Content/CultivationSection/CultivationProgress"
+const BREAKTHROUGH_PREVIEW_PATH: String = "Margin/Panel/Content/CultivationSection/BreakthroughRow/BreakthroughPreviewLabel"
+const BREAKTHROUGH_BUTTON_PATH: String = "Margin/Panel/Content/CultivationSection/BreakthroughRow/BreakthroughButton"
 const VITAL_SECTION_PATH: String = "Margin/Panel/Content/VitalSection"
 const SPIRIT_ROW_PATH: String = "Margin/Panel/Content/VitalSection/SpiritRow"
 const HEALTH_LABEL_PATH: String = "Margin/Panel/Content/VitalSection/HealthRow/ValueLabel"
@@ -246,3 +248,38 @@ func test_binding_null_pawn_unbinds() -> void:
 	panel.bind_pawn(null)
 	assert_bool(panel.is_bound()).is_false()
 	assert_bool(panel.visible).is_false()
+
+## INC-UI-017：按钮只表达意图；未就绪点击不发出请求，就绪后发出一次，真正推进仍由 Pawn 裁决。
+func test_breakthrough_button_and_capacity_preview() -> void:
+	var panel: PawnInfoPanel = _spawn_panel()
+	var pawn: Pawn = _spawn_pawn(PLAYER_PAWN_SCENE_PATH)
+	await await_idle_frame()
+	panel.bind_pawn(pawn)
+
+	var preview_label: Label = panel.get_node(BREAKTHROUGH_PREVIEW_PATH)
+	var breakthrough_button: Button = panel.get_node(BREAKTHROUGH_BUTTON_PATH)
+	var requests: Array[Pawn] = []
+	panel.breakthrough_requested.connect(func(requested: Pawn) -> void: requests.append(requested))
+
+	assert_bool(breakthrough_button.disabled).is_true()
+	assert_str(preview_label.text).is_equal("突破后容量：功法 2 / 武器 1 / 主动 3 / 被动 2")
+	breakthrough_button.pressed.emit()
+	assert_int(requests.size()).is_zero()
+
+	assert_float(pawn.gain_cultivation_exp(100.0)).is_equal_approx(100.0, APPROX)
+	assert_bool(pawn.is_ready_for_breakthrough()).is_true()
+	assert_bool(breakthrough_button.disabled).is_false()
+	breakthrough_button.pressed.emit()
+	assert_int(requests.size()).is_equal(1)
+	assert_object(requests[0]).is_same(pawn)
+
+	assert_bool(pawn.try_breakthrough()).is_true()
+	var snapshot: Dictionary = panel.get_snapshot()
+	assert_str(String(snapshot["identity"]["realm"])).is_equal("筑基")
+	var build_label: Label = panel.get_node("Margin/Panel/Content/BuildSection/BuildLabel")
+	assert_bool(build_label.text.contains("功法  1 / 2")).is_true()
+	assert_bool(build_label.text.contains("武器  1 / 1")).is_true()
+	assert_bool(build_label.text.contains("主动  2 / 3")).is_true()
+	assert_bool(build_label.text.contains("被动  0 / 2")).is_true()
+	assert_str(preview_label.text).is_equal("突破后容量：功法 3 / 武器 1 / 主动 4 / 被动 3")
+	assert_bool(breakthrough_button.disabled).is_true()

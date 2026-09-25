@@ -8,6 +8,7 @@ extends Control
 signal pawn_bound(pawn: Pawn)
 signal pawn_unbound(pawn: Pawn)
 signal refreshed(snapshot: Dictionary)
+signal breakthrough_requested(pawn: Pawn)
 
 const HEALTH_RESOURCE_ID: StringName = HealthComponent.HEALTH_RESOURCE_ID
 const SHIELD_RESOURCE_ID: StringName = HealthComponent.SHIELD_RESOURCE_ID
@@ -32,6 +33,8 @@ const SPIRIT_RESOURCE_ID: StringName = Pawn.SPIRIT_RESOURCE_ID
 @onready var cultivation_section: VBoxContainer = $Margin/Panel/Content/CultivationSection
 @onready var cultivation_label: Label = $Margin/Panel/Content/CultivationSection/CultivationLabel
 @onready var cultivation_progress: ProgressBar = $Margin/Panel/Content/CultivationSection/CultivationProgress
+@onready var breakthrough_preview_label: Label = $Margin/Panel/Content/CultivationSection/BreakthroughRow/BreakthroughPreviewLabel
+@onready var breakthrough_button: Button = $Margin/Panel/Content/CultivationSection/BreakthroughRow/BreakthroughButton
 
 var _pawn: Pawn
 var _compact: bool = false
@@ -39,6 +42,8 @@ var _snapshot: Dictionary = {}
 
 func _ready() -> void:
 	visible = false
+	if not breakthrough_button.pressed.is_connected(_on_breakthrough_pressed):
+		breakthrough_button.pressed.connect(_on_breakthrough_pressed)
 	_clear_display()
 	_update_section_visibility()
 
@@ -109,6 +114,7 @@ func _read_runtime_values() -> Dictionary:
 		PawnInfoModel.SHIELD_KEY: _read_pool_values(SHIELD_RESOURCE_ID),
 		PawnInfoModel.SPIRIT_KEY: _read_pool_values(SPIRIT_RESOURCE_ID),
 	}
+	runtime["realm"] = _pawn.get_realm()
 	var loadout: BuildLoadout = _pawn.get_build_loadout()
 	runtime["technique_used"] = loadout.get_used_slots(RealmDefinition.KIND_TECHNIQUE)
 	runtime["technique_max"] = loadout.get_capacity(RealmDefinition.KIND_TECHNIQUE)
@@ -139,6 +145,8 @@ func _render(snapshot: Dictionary) -> void:
 	attribute_label.text = PawnInfoModel.attribute_line(snapshot)
 	build_label.text = _join_lines(PawnInfoModel.build_lines(snapshot), 0)
 	cultivation_label.text = PawnInfoModel.cultivation_line(snapshot)
+	breakthrough_preview_label.text = PawnInfoModel.breakthrough_preview_line(snapshot)
+	breakthrough_button.disabled = not _is_breakthrough_available(snapshot)
 	cultivation_progress.value = PawnInfoModel.cultivation_ratio(snapshot)
 	_render_vital(HEALTH_RESOURCE_ID, PawnInfoModel.HEALTH_KEY, health_row, health_label, health_bar)
 	_render_vital(SHIELD_RESOURCE_ID, PawnInfoModel.SHIELD_KEY, shield_row, shield_label, shield_bar)
@@ -170,6 +178,8 @@ func _clear_display() -> void:
 	attribute_label.text = ""
 	build_label.text = ""
 	cultivation_label.text = ""
+	breakthrough_preview_label.text = ""
+	breakthrough_button.disabled = true
 	cultivation_progress.value = 0.0
 	cultivation_section.visible = false
 	health_label.text = ""
@@ -191,6 +201,7 @@ func _connect_pawn_signals() -> void:
 	_connect_signal(_pawn.shield_changed, _on_vital_changed)
 	_connect_signal(_pawn.spirit_changed, _on_vital_changed)
 	_connect_signal(_pawn.cultivation_changed, _on_cultivation_changed)
+	_connect_signal(_pawn.realm_changed, _on_pawn_realm_changed)
 	_connect_signal(_pawn.state_changed, _on_state_changed)
 	_connect_signal(_pawn.died, _on_died)
 	if _pawn.data != null:
@@ -206,6 +217,7 @@ func _disconnect_pawn_signals() -> void:
 	_disconnect_signal(_pawn.shield_changed, _on_vital_changed)
 	_disconnect_signal(_pawn.spirit_changed, _on_vital_changed)
 	_disconnect_signal(_pawn.cultivation_changed, _on_cultivation_changed)
+	_disconnect_signal(_pawn.realm_changed, _on_pawn_realm_changed)
 	_disconnect_signal(_pawn.state_changed, _on_state_changed)
 	_disconnect_signal(_pawn.died, _on_died)
 	if _pawn.data != null:
@@ -229,6 +241,9 @@ func _on_vital_changed(_changed_pawn: Pawn, _current_value: float, _max_value: f
 func _on_cultivation_changed(_changed_pawn: Pawn, _current_exp: float, _required_exp: float) -> void:
 	refresh()
 
+func _on_pawn_realm_changed(_changed_pawn: Pawn, _previous_realm: RealmDefinition, _current_realm: RealmDefinition) -> void:
+	refresh()
+
 func _on_state_changed(_changed_pawn: Pawn, _new_state: int) -> void:
 	refresh()
 
@@ -237,6 +252,18 @@ func _on_died(_changed_pawn: Pawn) -> void:
 
 func _on_data_changed(_data: PawnData) -> void:
 	refresh()
+
+## UI 只表达玩家意图；真正的突破由主场景调用 Pawn.try_breakthrough()。
+func _on_breakthrough_pressed() -> void:
+	if not is_bound():
+		return
+	if not _is_breakthrough_available(_snapshot):
+		return
+	breakthrough_requested.emit(_pawn)
+
+func _is_breakthrough_available(snapshot: Dictionary) -> bool:
+	var cultivation: Dictionary = snapshot.get("cultivation", {})
+	return bool(cultivation.get("available", false)) and bool(cultivation.get("has_next_realm", false)) and bool(cultivation.get("ready", false))
 
 func _join_lines(lines: Array[String], from_index: int) -> String:
 	var parts: Array[String] = []

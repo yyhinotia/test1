@@ -82,6 +82,11 @@ static func build_snapshot(data: PawnData, runtime: Dictionary = {}) -> Dictiona
 		attack_interval = data.attack_interval
 		move_speed = data.move_speed
 
+	# 运行时境界覆盖静态档案：突破后的身份名与容量预览都必须看到同一个 Pawn 运行时状态。
+	var runtime_realm: Variant = runtime.get("realm")
+	if runtime_realm is RealmDefinition and (runtime_realm as RealmDefinition).is_configured():
+		realm = runtime_realm as RealmDefinition
+
 	var has_realm: bool = realm != null and realm.is_configured()
 	var vitals: Dictionary = {}
 	for key: String in RESOURCE_KEYS:
@@ -215,6 +220,24 @@ static func cultivation_line(snapshot: Dictionary) -> String:
 	return text
 
 
+## 突破后容量预览行；没有下一境界或容量数据时返回空串，由面板隐藏该行。
+static func breakthrough_preview_line(snapshot: Dictionary) -> String:
+	var cultivation: Dictionary = snapshot.get("cultivation", {})
+	if not bool(cultivation.get("available", false)):
+		return ""
+	if not bool(cultivation.get("has_next_realm", false)):
+		return ""
+	var preview: Dictionary = cultivation.get("capacity_preview", {})
+	if preview.is_empty():
+		return ""
+	return "突破后容量：功法 %d / 武器 %d / 主动 %d / 被动 %d" % [
+		int(preview.get("technique", 0)),
+		int(preview.get("weapon", 0)),
+		int(preview.get("active_skill", 0)),
+		int(preview.get("passive_skill", 0)),
+	]
+
+
 ## 进度条值域固定为 0..1；终点或缺失数据返回 0。
 static func cultivation_ratio(snapshot: Dictionary) -> float:
 	var cultivation: Dictionary = snapshot.get("cultivation", {})
@@ -222,27 +245,61 @@ static func cultivation_ratio(snapshot: Dictionary) -> float:
 		return 0.0
 	return clampf(float(cultivation.get("ratio", 0.0)), 0.0, 1.0)
 static func _read_cultivation(runtime: Dictionary) -> Dictionary:
+	var empty: Dictionary = {
+		"available": false,
+		"terminal": false,
+		"has_next_realm": false,
+		"capacity_preview": {},
+		"current_exp": 0.0,
+		"required_exp": 0.0,
+		"ratio": 0.0,
+	}
 	var raw: Variant = runtime.get("cultivation")
 	if not (raw is Dictionary):
-		return {"available": false, "terminal": false, "current_exp": 0.0, "required_exp": 0.0, "ratio": 0.0}
+		return empty
 	var values: Dictionary = raw
 	var realm_name: String = String(values.get("realm_name", "")).strip_edges()
 	if realm_name.is_empty():
-		return {"available": false, "terminal": false, "current_exp": 0.0, "required_exp": 0.0, "ratio": 0.0}
+		return empty
 	var has_next: bool = bool(values.get("has_next_realm", false))
 	if not has_next:
-		return {"available": true, "terminal": true, "current_exp": 0.0, "required_exp": 0.0, "ratio": 0.0}
+		return {
+			"available": true,
+			"terminal": true,
+			"has_next_realm": false,
+			"capacity_preview": {},
+			"current_exp": 0.0,
+			"required_exp": 0.0,
+			"ratio": 0.0,
+		}
 	var required_exp: float = maxf(float(values.get("required_exp", 0.0)), 0.0)
 	var current_exp: float = clampf(float(values.get("current_exp", 0.0)), 0.0, required_exp)
+	var next_realm: RealmDefinition = null
+	var raw_next_realm: Variant = values.get("next_realm")
+	if raw_next_realm is RealmDefinition and (raw_next_realm as RealmDefinition).is_configured():
+		next_realm = raw_next_realm as RealmDefinition
 	return {
 		"available": true,
 		"terminal": false,
+		"has_next_realm": next_realm != null,
+		"capacity_preview": _read_capacity_preview(next_realm),
 		"realm": realm_name,
 		"next_realm": _text_or_unknown(String(values.get("next_realm_name", ""))),
 		"current_exp": current_exp,
 		"required_exp": required_exp,
 		"ratio": (current_exp / required_exp) if required_exp > 0.0 else 0.0,
 		"ready": bool(values.get("ready", false)) and required_exp > 0.0 and current_exp >= required_exp,
+	}
+
+## 下一境界容量预览：数字只来自 RealmDefinition，本读模型不维护境界容量表。
+static func _read_capacity_preview(realm: RealmDefinition) -> Dictionary:
+	if realm == null or not realm.is_configured():
+		return {}
+	return {
+		"technique": realm.get_slot_capacity(RealmDefinition.KIND_TECHNIQUE),
+		"weapon": realm.get_slot_capacity(RealmDefinition.KIND_WEAPON),
+		"active_skill": realm.get_slot_capacity(RealmDefinition.KIND_ACTIVE_SKILL),
+		"passive_skill": realm.get_slot_capacity(RealmDefinition.KIND_PASSIVE_SKILL),
 	}
 
 static func _read_vital(runtime: Dictionary, key: String) -> Variant:
