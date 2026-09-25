@@ -57,7 +57,7 @@
 
 - 状态：accepted
 - 创建时间：2026-09-25T13:54:22+08:00
-- 最后修改：2026-09-25T14:09:39+08:00
+- 最后修改：2026-09-25T14:10:35+08:00
 - 主题：ui
 - 目标：按 `docs/血条ui需求.txt` 的方案，把 Pawn 头顶血条由“常驻显示”改成“生命状态变化时立即显示、最后一次变化后 2 秒无变化再隐藏”，减少战场 UI 噪音（当前 2 个单位，目标战斗规模为 4v4 / 4-8 单位）。
 - 验收标准：
@@ -102,5 +102,5 @@
 - 已知问题：渐隐动画未实现（非范围）；`auto_hide_delay <= 0` 的常驻模式未编写用例；MCP 不可用期间的截图由自建脚本产出，不是 MCP 截图；“① HealthComponent”未在本 Increment 实现，已登记 `INC-PAWNS-003`。
 - 用户验收：已验收
 - 验收时间：2026-09-25T14:09:39+08:00
-- Git：分支 main，commit 待本次提交后回写（见后续 docs(plan) 提交）
+- Git：分支 main，commit `e233120`（feat(ui): show pawn health bar on health change and auto-hide [INC-CROSS-002]）
 - 备注：父 Increment 为 `INC-CROSS-002`；本 Increment 取代 `INC-UI-001` 中“每个 Pawn 常驻显示生命条”的表现约定，数值刷新与选中 HUD 行为保持不变。

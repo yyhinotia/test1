@@ -61,7 +61,7 @@
 
 - 状态：accepted
 - 创建时间：2026-09-25T13:54:28+08:00
-- 最后修改：2026-09-25T14:09:39+08:00
+- 最后修改：2026-09-25T14:10:35+08:00
 - 主题：pawns
 - 目标：让 Pawn 提供唯一的“生命状态变化”入口，使血条显示与伤害、护盾、死亡解耦，并把血条改为“独立场景 + 头顶锚点”的可复用结构。
 - 验收标准：
@@ -92,7 +92,7 @@
 - 已知问题：Pawn 仍直接持有 `current_health` / `current_shield`，尚未抽取为独立组件；该工作登记为 `INC-PAWNS-003`。
 - 用户验收：已验收
 - 验收时间：2026-09-25T14:09:39+08:00
-- Git：分支 main，commit 待本次提交后回写（见后续 docs(plan) 提交）
+- Git：分支 main，commit `e233120`（feat(ui): show pawn health bar on health change and auto-hide [INC-CROSS-002]）
 - 备注：父 Increment 为 `INC-CROSS-002`。
 
 ## INC-PAWNS-003：抽取 HealthComponent（计划中）
