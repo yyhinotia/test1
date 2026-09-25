@@ -12,6 +12,8 @@ signal skill_cast(pawn: Pawn, skill: ActiveSkillDefinition, target: Pawn)
 signal skill_cooldown_changed(pawn: Pawn, skill_id: StringName, remaining: float)
 signal died(pawn: Pawn)
 signal stun_changed(pawn: Pawn, remaining: float, active: bool)
+## Build 变更广播：运行时领悟功法或强化武器后由 Pawn 自己发出，不冒充 PawnData 的通知。
+signal build_changed(pawn: Pawn)
 
 enum State {
 	IDLE,
@@ -29,6 +31,11 @@ const SPIRIT_POOL_NAME: StringName = &"Spirit"
 
 ## 主动技能容量无界哨兵：无有效境界的原生单位不参与 Build 容量截断。
 const ACTIVE_SKILL_CAPACITY_UNBOUNDED: int = -1
+
+## 武器强化（运行时覆盖层）：每级提供的攻击加成与强化等级上限。
+## 这两个常量只服务本代修士的运行时状态，不写回 `PawnData` 或 `WeaponDefinition`。
+const FORGE_ATTACK_BONUS_PER_LEVEL: float = 6.0
+const MAX_FORGE_LEVEL: int = 3
 
 @export var data: PawnData
 
@@ -76,6 +83,11 @@ var _skill_cooldowns: Dictionary = {}
 
 ## 眩晕只封锁行动：持续期间不能移动、普通攻击或施放技能，不修改生命与其它资源。
 var _stun_remaining: float = 0.0
+
+## 运行时 Build 覆盖层（INC-PAWNS-018）：宗门参悟得到的新功法与炼器房强化等级。
+## 这两份状态只属于本代修士的运行时，绝不写回 `PawnData` / `WeaponDefinition` 静态资源。
+var _learned_techniques: Array[TechniqueDefinition] = []
+var _forge_level: int = 0
 
 var state: int:
 	get:
@@ -164,7 +176,11 @@ func get_build_loadout() -> BuildLoadout:
 	if data == null:
 		return loadout
 	loadout.realm = data.realm
+	# 功法 = 静态预设（保持原顺序）+ 运行时领悟（按领悟顺序追加）。
+	# 运行时覆盖层只改变本单位的读模型，不改写 `PawnData.techniques`。
 	loadout.techniques.assign(data.techniques)
+	for technique: TechniqueDefinition in _learned_techniques:
+		loadout.techniques.append(technique)
 	if data.weapon != null:
 		loadout.weapons.append(data.weapon)
 	if not data.active_skills.is_empty():
@@ -177,6 +193,77 @@ func get_build_loadout() -> BuildLoadout:
 ## Build 校验结果：只做规则判定，不装备、不卸载、不修改任何资源池或冷却。
 func get_build_validation() -> BuildValidationResult:
 	return BuildValidator.validate(get_build_loadout())
+
+## 运行时领悟功法（INC-PAWNS-018）：去重（含静态预设）、忽略无效资源，成功返回 true 并广播 `build_changed`。
+## 本方法只追加运行时列表，`PawnData.techniques` 与 `TechniqueDefinition` 资源在任何情况下都不被改写。
+func learn_technique(technique: TechniqueDefinition) -> bool:
+	if technique == null or not technique.is_configured():
+		return false
+	if has_technique(technique.id):
+		return false
+	_learned_techniques.append(technique)
+	build_changed.emit(self)
+	return true
+
+
+## 运行时领悟的功法列表（不含静态预设）；返回副本，调用方不能就地改写内部状态。
+func get_learned_techniques() -> Array[TechniqueDefinition]:
+	return _learned_techniques.duplicate()
+
+
+## 是否在运行时领悟过该 id；静态预设不算「领悟」，因此参悟同一功法不会重复入列。
+func has_learned_technique(technique_id: StringName) -> bool:
+	for technique: TechniqueDefinition in _learned_techniques:
+		if technique.id == technique_id:
+			return true
+	return false
+
+
+## 当前 Build 是否已包含该功法：静态预设 + 运行时领悟合并判定，供「参悟前查重」使用。
+func has_technique(technique_id: StringName) -> bool:
+	if has_learned_technique(technique_id):
+		return true
+	if data == null:
+		return false
+	for technique: TechniqueDefinition in data.techniques:
+		if technique != null and technique.id == technique_id:
+			return true
+	return false
+
+
+## 是否配置了可用主武器：Build 读模型与武器强化都以它为唯一前置。
+func has_weapon() -> bool:
+	return data != null and data.weapon != null and data.weapon.is_configured()
+
+
+## 当前主武器强化等级；未强化与没有主武器都返回 0。
+func get_forge_level() -> int:
+	return _forge_level
+
+
+## 是否可以继续强化：有主武器且未达 `MAX_FORGE_LEVEL`。
+func can_strengthen_weapon() -> bool:
+	return has_weapon() and _forge_level < MAX_FORGE_LEVEL
+
+
+## 强化主武器：每级提供 `FORGE_ATTACK_BONUS_PER_LEVEL` 攻击，返回强化后的等级并广播 `build_changed`。
+## 没有主武器时返回 0 且不改变任何状态；已达上限时返回当前等级且不再增长。
+func strengthen_weapon() -> int:
+	if not has_weapon():
+		return 0
+	if _forge_level >= MAX_FORGE_LEVEL:
+		return _forge_level
+	_forge_level += 1
+	build_changed.emit(self)
+	return _forge_level
+
+
+## 攻击数值的唯一出口：基础攻击 + 强化等级加成。`try_attack()` 通过它结算伤害，
+## 因此「炼器房强化」在真实伤害路径上生效，而不是只改显示。
+func get_attack_power() -> float:
+	if data == null:
+		return 0.0
+	return data.attack + float(_forge_level) * FORGE_ATTACK_BONUS_PER_LEVEL
 
 ## 当前 Build 的主动技能容量：无境界或无效境界返回 -1 表示无约束；
 ## 有效境界返回 RealmDefinition 的主动技能槽容量，容量 0 是有效结果而不是“未配置”。
@@ -364,7 +451,7 @@ func try_attack(target: Pawn) -> bool:
 	_attack_cooldown = data.attack_interval
 	_attack_state_remaining = minf(0.18, data.attack_interval * 0.5)
 	_set_state(State.ATTACKING)
-	target.take_damage(data.attack)
+	target.take_damage(get_attack_power())
 	attack_performed.emit(target)
 	_play_attack_pulse()
 	return true

@@ -1,6 +1,6 @@
 # Pawns 主题计划
 
-> 最后修改：2026-09-25T18:53:44+08:00
+> 最后修改：2026-09-25T19:38:16+08:00
 > 主题：pawns  
 > 规则来源：`../AGENTS.md`
 
@@ -343,7 +343,6 @@
 - Git：`main` / `5f39e5f`
 - 备注：父 Increment 为 `INC-CROSS-006`；只负责命令和接近/施放，不负责键盘映射或 HUD 文案。
 
-
 ## INC-PAWNS-008：Pawn 境界与 Build 汇总接口
 
 - 状态：accepted
@@ -556,7 +555,6 @@
 - Git：`main` / `200e822`
 - 备注：父 Increment 为 `INC-CROSS-011`；本 Increment 只提供数据与命令能力，不实现技能栏视觉。
 
-
 ## INC-PAWNS-014：三种战术主动技能与数据契约
 
 - 状态：accepted
@@ -615,7 +613,6 @@
 - Git：`main` / `a8e1ea1`
 - 备注：父 Increment 为 `INC-CROSS-013`。
 
-
 ## INC-PAWNS-016：敌人威胁档案预设（威胁轴数据基线）
 
 - 状态：accepted
@@ -673,3 +670,35 @@
 - 验收时间：2026-09-25T19:07:54+08:00
 - Git：`main` / `8fe713b`
 - 备注：父 Increment 为 `INC-CROSS-016`；本 Increment 只提供「更强的对手」，不提供新机制。
+
+## INC-PAWNS-018：运行时 Build 覆盖层（领悟功法 / 武器强化）
+
+- 状态：accepted
+- 创建时间：2026-09-25T19:22:00+08:00
+- 最后修改：2026-09-25T19:38:16+08:00
+- 主题：pawns
+- 目标：让「新领悟的功法」与「强化过的武器」成为修士自己的运行时状态，而不是改写共享静态资源；同时保证既有 Build 容量 / 互斥校验、技能容量投影与攻击结算继续以同一份读模型生效。
+- 验收标准：
+  - `Pawn` 新增运行时覆盖 API：`learn_technique(technique) -> bool`（忽略 null / 未配置 / 重复 id，成功返回 true）、`get_learned_techniques() -> Array[TechniqueDefinition]`、`has_learned_technique(id) -> bool`、`get_forge_level() -> int`、`strengthen_weapon() -> int`（无主武器时返回 0 且不改变等级）、`get_attack_power() -> float`。
+  - `get_build_loadout()` 的功法列表 = `PawnData.techniques`（原顺序）+ 运行时领悟功法（按领悟顺序追加），`data.techniques` 本身在任意调用后保持不变；武器强化以运行时等级体现，`WeaponDefinition` 资源字段保持不变。
+  - `get_attack_power()` 是攻击数值的唯一出口：等于 `data.attack + 强化等级 × FORGE_ATTACK_BONUS_PER_LEVEL`；`try_attack()` 改用 `get_attack_power()`，因此强化在真实伤害路径上生效（不是只显示）。
+  - 强化等级上限由 `MAX_FORGE_LEVEL` 常量约束（本 Increment 取 3），`strengthen_weapon()` 到达上限后返回当前等级且不再增长。
+  - 领悟功法 / 强化武器后，`PawnData.build_changed` 通知路径保持唯一：`Pawn` 只在状态真的改变时发出一次自身信号（可由主场景订阅刷新信息卡），不修改 `PawnData` 触发伪造通知。
+  - 新增单元 / 集成用例断言：重复领悟不产生第二个槽位、超容量领悟后 `get_build_validation()` 报 `over_capacity`、互斥功法领悟后报 `technique_conflict`、强化后真实伤害增加、静态资源零污染（按 `resource_path` 读取真实 `player_pawn.tres` 与 `qingfeng_sword.tres` 断言字段未变）。
+- 范围：`game/pawns/pawn.gd`（新增运行时覆盖层与攻击出口）、`test/unit/pawn_runtime_build_override_test.gd`（新增）、`test/integration/pawn_runtime_build_test.gd`（新增）。
+- 非范围：Build 编辑界面与拖拽换装、装备槽卸下 / 替换、功法授予技能、五行与属性要求、强化材料与失败率、存档序列化（运行时覆盖层当前不落盘）。
+- 依赖：`INC-PAWNS-012`（武器字段与 Build 汇总，已验收）、`INC-PAWNS-015`（技能容量运行时投影，已验收）；被 `INC-SECT-003` 依赖。
+- 检索证据：Git Diff 优先检索结论同 `INC-SECT-001`；`git grep -n -E "learn_technique|forge_level|get_attack_power|strengthen_weapon" -- game/ test/` 无匹配；`game/pawns/pawn.gd:162` 的 `get_build_loadout()` 当前直接 `assign(data.techniques)` 并追加 `data.weapon`，`try_attack()` 当前直接使用 `data.attack`，确认运行时覆盖层与攻击出口均不存在，本 Increment 是这两处的唯一新增写入者。
+- 风险：最大风险是「运行时覆盖层」被当成存档数据源或 Build 编辑入口，导致职责再次扩散；因此本 Increment 只提供最小读写 API，明确不落盘、不做 UI。第二风险是攻击加成写死在 `try_attack()` 里，因此加成常量只保留在 `Pawn` 内并有单元断言锁定。
+- 实现说明：在 `Pawn` 内新增只属于本代修士的运行时覆盖层：`_learned_techniques` 按领悟顺序追加到 `get_build_loadout().techniques`，`_forge_level` 参与 `get_attack_power()`，并由 `try_attack()` 统一走该攻击出口。`learn_technique()` 对 null、未配置与静态 / 运行时重复 id 均拒绝；`strengthen_weapon()` 以 `MAX_FORGE_LEVEL` 封顶，无主武器时零副作用。状态真正变化时只发出 `Pawn.build_changed`，不调用 `PawnData.notify_build_changed()`，避免把运行时状态伪装成静态资源变更。
+- 变更文件：`game/pawns/pawn.gd`、`test/unit/pawn_runtime_build_override_test.gd`（新增，含 `.uid`）、`test/integration/pawn_runtime_build_test.gd`（新增，含 `.uid`）。
+- 测试证据：
+  - `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer unit` → `RESULT: PASS`，退出码 0；`GdUnit4 unit 125 cases / 0 failures`（本 Increment 前为 119 cases），新增 6 个用例覆盖顺序追加、拒绝无效 / 重复、容量与互斥投影、强化封顶与无武器无副作用、攻击出口不污染静态资源、`Pawn` / `PawnData` 信号所有权。
+  - `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer integration` → `RESULT: PASS`，退出码 0；`GdUnit4 integration 122 cases / 0 failures`（本 Increment 前为 119 cases），新增 3 个用例覆盖真实 Player Pawn 场景、真实 `player_pawn.tres` / `qingfeng_sword.tres` 零污染，以及强化后真实攻击伤害从 25 提升到 31（差值 = 6）。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T19:29:44+08:00
+- 已知问题：运行时覆盖层当前只存在于内存，退出游戏不保留（存档属于 save 主题）；炼器房强化尚不扣灵石、也没有失败率，消耗规则由 `INC-SECT-003` 实现；主场景尚未订阅 `build_changed()` 刷新信息卡，接线由 `INC-CORE-010` 完成。
+- 用户验收：已验收（依据用户 2026-09-25 指令「验收通过，分increment提交」与「推送」）
+- 验收时间：2026-09-25T19:38:16+08:00
+- Git：
+- 备注：父 Increment 为 `INC-CROSS-017`；本 Increment 是「宗门产出能落到修士身上」的运行时前提。
