@@ -25,6 +25,8 @@ enum State {
 
 ## 目标高亮是纯表现层：合法目标才显示，非法目标不显示“可确认”状态。
 const TARGET_HIGHLIGHT_LEGAL_COLOR: Color = Color(0.35, 0.95, 1.0, 1.0)
+## 危险窗口高亮：只改变视觉染色，不改变碰撞、仇恨或伤害规则。
+const DANGER_HIGHLIGHT_COLOR: Color = Color(1.0, 0.5, 0.35, 1.0)
 
 const SPIRIT_RESOURCE_ID: StringName = &"spirit"
 const SPIRIT_DISPLAY_NAME: String = "灵力"
@@ -809,6 +811,18 @@ func set_target_highlight(value: bool, legal: bool = true) -> void:
 		return
 	target_indicator.visible = _target_highlight_visible
 	target_indicator.default_color = TARGET_HIGHLIGHT_LEGAL_COLOR
+
+
+## 危险窗口表现：开启时染警示色，关闭时恢复该单位档案的显示色。
+## 死亡单位直接忽略恢复，避免把 die() 设置的死亡配色改回存活配色。
+func set_danger_highlight(active: bool) -> void:
+	if is_dead() or visual == null:
+		return
+	if active:
+		visual.modulate = DANGER_HIGHLIGHT_COLOR
+		return
+	if data != null:
+		visual.modulate = data.display_color
 
 
 func is_target_highlight_visible() -> bool:

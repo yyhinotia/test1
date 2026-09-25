@@ -1,6 +1,7 @@
 [gd_resource type="Resource" script_class="PawnData" format=3]
 
 [ext_resource type="Script" uid="uid://ewp2akokimur" path="res://game/shared/resources/pawn_data.gd" id="1_pawn_data"]
+[ext_resource type="Resource" path="res://game/pawns/data/skills/enemy_boss_cleave.tres" id="2_danger_skill"]
 
 [resource]
 script = ExtResource("1_pawn_data")
@@ -14,4 +15,7 @@ defense = 8.0
 move_speed = 68.0
 attack_range = 72.0
 attack_interval = 1.8
+dangerous_skill = ExtResource("2_danger_skill")
+danger_window_interval = 8.0
+danger_window_duration = 2.0
 display_color = Color(0.62, 0.2, 0.72, 1)

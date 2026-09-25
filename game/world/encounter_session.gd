@@ -8,8 +8,8 @@ extends Node
 ## 上层（Main / UI / 测试）只通过信号与 getter 取引用，不直接操作容器里的节点。
 ##
 ## 多人边界：本 Increment 只把「一支队伍」变成真实单位集合与按成员 id 的快照。
-## 团队胜负（敌方全灭才胜利、队友阵亡不终局）与 AI 目标重选属于 INC-COMBAT-009，
-## 玩家多选与命令路由属于 INC-CORE-012。
+## INC-COMBAT-009 已接线「敌方全灭才胜利、玩家单位全部死亡即失败」与轻量 CombatEvent；
+## AI 目标重选仍保持既有实现，玩家多选与命令路由属于 INC-CORE-012。
 
 ## 起局广播：上层必须在此刷新缓存的单位与控制器引用（旧单位已经退场）。
 ## 多人对局下 player / enemy 是各自队伍的主单位，完整队伍用 get_player_units() / get_enemy_units()。
@@ -60,6 +60,10 @@ var _enemy_units: Array[Pawn] = []
 ## 本会话创建的单位。退场只动自己创建的单位与两个固定名的场景默认单位，
 ## 不清理容器里其它单位（例如测试临时加入的友军）。
 var _owned_units: Array[Pawn] = []
+## 本场轻量战斗事件记录；每局 begin_with_state() 时重置，不跨局污染（INC-COMBAT-009）。
+var _combat_event_log: CombatEventLog = CombatEventLog.new()
+## 危险窗口调度器（每个配置了 dangerous_skill 的敌人一个）；RefCounted，不进入场景树。
+var _danger_schedulers: Array[DangerWindowScheduler] = []
 
 
 ## 结算状态的唯一文案来源：上层只做转发，不在 UI 里重新解释结算结果。
@@ -196,7 +200,8 @@ func begin_with_state(encounter: EncounterDefinition, state: PawnResourceSnapsho
 	_enemy = enemies[0]
 	_encounter = encounter
 	_bind_controllers()
-	_connect_death_signals()
+	_connect_combat_signals()
+	_setup_combat_events()
 	if state != null:
 		# 必须在入树且 _ready() 初始化资源池之后写回，否则会被档案初始值覆盖。
 		# 单人资源快照只作用于主玩家单位；队伍级资源延续由 SquadResourceSnapshot 负责（INC-WORLD-007 接线）。
@@ -423,22 +428,110 @@ func _bind_controllers() -> void:
 			ai_controller.set_target(_player)
 
 
-func _connect_death_signals() -> void:
+func _connect_combat_signals() -> void:
 	for unit: Pawn in _player_units + _enemy_units:
 		if not unit.died.is_connected(_on_unit_died):
 			unit.died.connect(_on_unit_died)
+		if not unit.skill_cast.is_connected(_on_pawn_skill_cast):
+			unit.skill_cast.connect(_on_pawn_skill_cast)
+
+
+## 每局开局清空事件记录，并为每个拥有危险窗口的敌人创建独立调度器。
+## 调度器只由本会话持有并按物理帧推进；旧调度器随数组清空自然释放。
+func _setup_combat_events() -> void:
+	_combat_event_log.reset()
+	_danger_schedulers.clear()
+	for enemy: Pawn in _enemy_units:
+		if enemy == null or not is_instance_valid(enemy) or enemy.data == null:
+			continue
+		if not enemy.data.has_danger_window():
+			continue
+		var scheduler: DangerWindowScheduler = DangerWindowScheduler.new(enemy, _player)
+		scheduler.danger_window_opened.connect(_on_danger_window_opened)
+		scheduler.danger_window_cancelled_by_stun.connect(_on_danger_window_cancelled_by_stun)
+		scheduler.dangerous_skill_released.connect(_on_dangerous_skill_released)
+		_danger_schedulers.append(scheduler)
+
+
+## 事件与危险窗口只在对局 RUNNING 时推进；暂停由场景树的 process_mode 统一冻结。
+func _physics_process(delta: float) -> void:
+	if _state != State.RUNNING:
+		return
+	_combat_event_log.advance(delta)
+	for scheduler: DangerWindowScheduler in _danger_schedulers:
+		if scheduler != null:
+			scheduler.advance(delta)
+
+
+## 供测试与 INC-TESTING-011 取证使用；返回的是活日志对象，不复制到另一套记录系统。
+func get_combat_event_log() -> CombatEventLog:
+	return _combat_event_log
+
+
+func _on_pawn_skill_cast(pawn: Pawn, skill: ActiveSkillDefinition, target: Pawn) -> void:
+	var actor_id: StringName = _unit_id(pawn)
+	var target_id: StringName = _unit_id(target)
+	var skill_id: StringName = skill.id if skill != null else &""
+	_combat_event_log.record(CombatEvent.SKILL_CAST, actor_id, target_id, skill_id)
+	if skill != null and skill.effect_type == ActiveSkillDefinition.SkillEffectType.STUN:
+		_combat_event_log.record(CombatEvent.SKILL_STUNNED, actor_id, target_id, skill_id)
+
+
+func _on_danger_window_opened(caster: Pawn, skill: ActiveSkillDefinition, target: Pawn) -> void:
+	var skill_id: StringName = skill.id if skill != null else &""
+	_combat_event_log.record(
+		CombatEvent.DANGER_WINDOW_OPENED, _unit_id(caster), _unit_id(target), skill_id
+	)
+
+
+func _on_danger_window_cancelled_by_stun(caster: Pawn, skill: ActiveSkillDefinition, target: Pawn) -> void:
+	var skill_id: StringName = skill.id if skill != null else &""
+	_combat_event_log.record(
+		CombatEvent.SKILL_CANCELLED, _unit_id(caster), _unit_id(target), skill_id
+	)
+
+
+func _on_dangerous_skill_released(
+		caster: Pawn,
+		skill: ActiveSkillDefinition,
+		target: Pawn,
+		blocked: bool
+	) -> void:
+	var actor_id: StringName = _unit_id(caster)
+	var target_id: StringName = _unit_id(target)
+	var skill_id: StringName = skill.id if skill != null else &""
+	_combat_event_log.record(CombatEvent.SKILL_CAST, actor_id, target_id, skill_id)
+	var impact_event: StringName = CombatEvent.SKILL_BLOCKED if blocked else CombatEvent.SKILL_HIT
+	_combat_event_log.record(impact_event, actor_id, target_id, skill_id)
 
 
 ## 终局判定：只在 RUNNING 状态结算一次，之后重复死亡信号一律忽略。
-## 本 Increment 保持既有语义——主玩家阵亡失败、主敌人阵亡胜利；
-## 队友与副敌人的阵亡不提前终局，「敌方全灭才胜利」由 INC-COMBAT-009 接线。
+## INC-COMBAT-009 语义：主玩家死亡立即失败（1v1 / 1vN 的玩家侧只有 1 个单位）；
+## 敌方单位全部死亡才胜利，副敌人在 1v2 / 1v3 中单独死亡不得提前终局。
 func _on_unit_died(pawn: Pawn) -> void:
 	if _state != State.RUNNING:
 		return
-	if pawn == _enemy:
-		_state = State.PLAYER_WIN
-	elif pawn == _player:
+	_combat_event_log.record(CombatEvent.UNIT_DIED, _unit_id(pawn))
+	if pawn == _player or _all_units_dead(_player_units):
 		_state = State.ENEMY_WIN
+	elif _all_units_dead(_enemy_units):
+		_state = State.PLAYER_WIN
 	else:
 		return
+	_combat_event_log.record(CombatEvent.COMBAT_END, &"session")
 	encounter_finished.emit(_encounter, _state)
+
+
+func _all_units_dead(units: Array[Pawn]) -> bool:
+	if units.is_empty():
+		return false
+	for unit: Pawn in units:
+		if unit != null and is_instance_valid(unit) and unit.is_alive():
+			return false
+	return true
+
+
+func _unit_id(unit: Pawn) -> StringName:
+	if unit == null or not is_instance_valid(unit) or unit.data == null:
+		return &""
+	return unit.data.id

@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ActiveSkillDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://d4crksxfpy623" path="res://game/shared/resources/active_skill_definition.gd" id="1_skill"]
+
+[resource]
+script = ExtResource("1_skill")
+id = &"boss_cleave"
+display_name = "镇狱裂岳斩"
+description = "Boss 周期性蓄力的危险技能；未被打断时造成高额单次伤害。"
+spirit_cost = 0.0
+cooldown = 8.0
+cast_range = 0.0
+damage_multiplier = 2.5
+target_type = 2
+effect_type = 0
+effect_value = 2.5
+effect_duration = 0.0

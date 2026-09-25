@@ -28,6 +28,11 @@ signal build_changed(data: PawnData)
 @export var active_skill: ActiveSkillDefinition
 ## 有序主动技能列表；非空时它是唯一权威来源，空列表才回退到旧的 `active_skill`。
 @export var active_skills: Array[ActiveSkillDefinition] = []
+## 危险技能窗口（INC-COMBAT-009）：敌人周期性蓄力、无法被普通手段阻止的技能。
+## 该字段独立于 active_skills，不会进入普通技能栏，也不会被 AIController 当作普通技能施放。
+@export var dangerous_skill: ActiveSkillDefinition
+@export_range(0.0, 1000.0, 0.1, "or_greater") var danger_window_interval: float = 0.0
+@export_range(0.0, 100.0, 0.1, "or_greater") var danger_window_duration: float = 0.0
 ## 可选的主武器配置；null 表示该单位没有武器，Build 校验与信息卡按“无武器”处理。
 @export var weapon: WeaponDefinition
 ## 可选的境界配置；null 表示该单位没有修炼体系（例如傀儡），Build 校验会返回 missing_realm。
@@ -56,6 +61,16 @@ func notify_realm_changed() -> void:
 
 func notify_build_changed() -> void:
 	build_changed.emit(self)
+
+## 是否配置了完整的危险窗口：技能有效且窗口间隔 / 时长都为正数。
+func has_danger_window() -> bool:
+	return (
+		dangerous_skill != null
+		and dangerous_skill.is_configured()
+		and danger_window_interval > 0.0
+		and danger_window_duration > 0.0
+	)
+
 
 ## 返回当前生效的有序主动技能列表。
 ## 新列表非空时不再读取旧字段；同一 id 只返回一次，避免新旧字段同时配置造成重复槽位。

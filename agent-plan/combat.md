@@ -348,9 +348,9 @@
 
 ## INC-COMBAT-009：1v1 战斗问题窗口与轻量 CombatEvent
 
-- 状态：planned
+- 状态：awaiting_acceptance
 - 创建时间：2026-09-25T20:47:54+08:00
-- 最后修改：2026-09-25T21:50:38+08:00
+- 最后修改：2026-09-25T22:05:26+08:00
 - 主题：combat
 - 重定义说明：本 Increment 原定义「四方战队遭遇、团队胜负与 AI 目标重选」于 2026-09-25T21:45:00+08:00 按用户 objective 重定义为「1v1 战斗问题窗口与轻量 CombatEvent」；原定义原文保留在 Git 历史 `b36e9c0`（`develop`）。重定义原因：父 Increment `INC-CROSS-019` 从 4v4 Vertical Slice 改为 1v1 → 1vN Build 玩法验证，4v4 专用范围冻结。
 - 调整说明（2026-09-25T21:50:38+08:00）：按外部设计评审意见（对 4v4 版 `INC-CROSS-019` 的评审第 8 节「Gate A：战斗技术成立」中的「敌方全灭胜利 / 主角死亡失败」条目），把本 Increment 的终局判定从「敌人死亡即胜利」修正为 1vN「敌方全灭才判胜」。修正原因：Stage 2 的 1v2 / 1v3 若沿用单点判胜，会在第一名敌人死亡时提前结束对局，Stage 2 无法成立。`agent-plan/pawns.md` 的 `INC-PAWNS-020` 已注明「主角死亡或敌方全灭的终局判定留给 `INC-COMBAT-009` 接线」，`game/world/encounter_session.gd` 头部注释写了同一约定，本次直接对齐该约定，不新增 Increment。
@@ -369,13 +369,23 @@
 - 依赖：父 Increment `INC-CROSS-019`；设计基线 `docs/build-gameplay-validation.md`。无前置子 Increment。
 - 检索证据：2026-09-25T21:50:38+08:00 执行 `git status --short`（工作区干净）、`git diff --unified=0 -- agent-plan/`（空）、`git diff --cached --unified=0 -- agent-plan/`（空）、`git log --oneline -- agent-plan/`（HEAD `0f8fb41`）与 `git grep -n -E "INC-(COMBAT-009|WORLD-007|TESTING-011)" -- agent-plan/`；结论：三个 Increment 均为 `planned`、未实现，可安全调整；`game/world/encounter_session.gd` 头部注释与 `_on_unit_died()` 仍为单点终局（敌人死亡即 PLAYER_WIN），证明 1vN 全灭判胜确实未实现。历史记录（2026-09-25T21:45:00+08:00） `git status --short`（工作区为 `INC-PAWNS-021` 实现与本批 plan 调整）、`git diff --unified=0 -- agent-plan/`（读取本批重定义内容）、`git diff --cached --unified=0 -- agent-plan/`（空）、`git log --oneline -5 -- agent-plan/`（最新 `1dbdba5`）与 `git grep -n "INC-COMBAT-009"`；`INC-COMBAT-009` 仍为 `planned`、未实现，可安全重定义。现有 `Pawn` 已有 `stun` 状态与 `skill_cast` / `skill_blocked` 等信号，但没有危险窗口调度，也没有统一的 CombatEvent 记录层。
 - 风险：危险窗口如果只造成数值压力而不改变可选解法，Gate A（玩家能描述具体问题）会直接失败，必须让「无法干预」在第一次战斗里被玩家亲身体感到。第二个风险是事件记录扩散成通用战斗日志系统，必须保持轻量字段与 `event_type` 白名单。
-- 实现说明：待实现。
-- 变更文件：待实现。
-- 测试证据：待实现。
-- 验证状态：待验证
-- 验证时间：待验证
-- 已知问题：待实现。
+- 实现说明：按计划落地「1v1 危险技能窗口 + 轻量 CombatEvent」两层：
+  1. `CombatEvent`（`game/combat/events/combat_event.gd`）：`RefCounted`，固定字段 `timestamp` / `actor_id` / `target_id` / `event_type` / `skill_id`，内置 8 个白名单常量（`danger_window_opened`、`skill_cast`、`skill_hit`、`skill_blocked`、`skill_stunned`、`skill_cancelled`、`unit_died`、`combat_end`），提供 `create()` / `get_known_event_types()` / `is_known_event_type()` / `to_dictionary()` / `format_line()`，导出格式为 `%.2f %s -> %s %s %s`。
+  2. `CombatEventLog`（`game/combat/events/combat_event_log.gd`）：自带单调时钟（`advance(delta)`），`record()` 对非白名单 `event_type` 直接返回 `null` 且不写入，提供 `reset()` / `get_events()` / `get_event_count()` / `get_event_types()` / `has_event_type()` / `get_index_of_event_type()` / `count_events_of_type()` / `get_first_event_of_type()` / `describe()`，保证事件按时间顺序可导出、可复核。
+  3. `DangerWindowScheduler`（`game/combat/danger/danger_window_scheduler.gd`）：按 `danger_window_interval` / `danger_window_duration` 周期开窗，开窗广播 `danger_window_opened`；每帧判定顺序为「先判定 stun、再推进计时」，因此控制优先于释放；窗口内被 `apply_stun()` 覆盖时广播 `danger_window_cancelled_by_stun` 并丢弃该次危险技能（零伤害）；未被打断则广播 `dangerous_skill_released` 后调用既有 `SkillEffectResolver.apply_effect()`，事件顺序固定为 `skill_cast` → `skill_hit` / `skill_blocked` → 伤害结算 → `unit_died`。`_is_expected_blocked()` 复用既有伤害公式预判护盾是否完全吸收，用于区分 hit / blocked。
+  4. 数据层：`PawnData` 新增 `dangerous_skill` / `danger_window_interval` / `danger_window_duration` 三个字段与 `has_danger_window()`；`enemy_dungeon_boss.tres` 追加危险技能（`game/pawns/data/skills/enemy_boss_cleave.tres`，「镇狱裂岳斩」，`effect_value=2.5`、`damage_multiplier=2.5`、`cooldown=8.0`）与 8 秒间隔 / 2 秒窗口；既有数值字段未改动，`dungeon_boss_profile_test` 的既有基线断言保持成立。
+  5. 表现层：`Pawn` 新增 `DANGER_HIGHLIGHT_COLOR` 与 `set_danger_highlight(active)`，死亡时直接返回、不覆盖死亡配色，让危险窗口在单位身上可见。
+  6. 接线：`EncounterSession` 的 `_connect_death_signals()` 改名 `_connect_combat_signals()` 并同时接 `skill_cast`；新增 `_combat_event_log` / `_danger_schedulers` 与 `_setup_combat_events()` / `_physics_process(delta)` / `get_combat_event_log()`，`_on_pawn_skill_cast()` 在 STUN 技能成功施放时补记 `skill_stunned`，并接 `danger_window_opened` / `danger_window_cancelled_by_stun` / `dangerous_skill_released` 三个信号；`_on_unit_died()` 改为 1vN 语义——玩家单位全灭立即判负、只有敌方单位全灭才判胜，与 `game/world/encounter_session.gd` 头部既有约定及 `INC-PAWNS-020` 的声明对齐；`restart()` 会 `reset()` 事件日志与调度器，保证不跨局污染。
+- 变更文件：
+  - 新增：`game/combat/events/combat_event.gd`（+ `.uid`）、`game/combat/events/combat_event_log.gd`（+ `.uid`）、`game/combat/danger/danger_window_scheduler.gd`（+ `.uid`）、`game/pawns/data/skills/enemy_boss_cleave.tres`
+  - 修改：`game/shared/resources/pawn_data.gd`、`game/pawns/pawn.gd`、`game/pawns/data/enemies/enemy_dungeon_boss.tres`、`game/world/encounter_session.gd`
+  - 新增测试：`test/unit/combat_event_test.gd`（+ `.uid`）、`test/integration/danger_window_combat_event_test.gd`（+ `.uid`）
+  - 计划：`agent-plan/combat.md`、`agent-plan/_index.md`
+- 测试证据：单套件 `test/unit/combat_event_test.gd` → `4 test cases | 0 errors | 0 failures | PASSED`；单套件 `test/integration/danger_window_combat_event_test.gd` → `5 test cases | 0 errors | 0 failures | PASSED`（覆盖危险窗口周期与无控制承伤、定身打断与零伤害、敌方全灭才判胜、玩家死亡判负、重开重置日志与调度器）；统一门禁 `test/run_tests.ps1 -Layer all` → `GdUnit4 : 377 cases, 0 failures`、`headless : 10 suites, 549 assertions, 0 failing suites`、`RESULT: PASS`（exit 0）。首轮全量门禁曾暴露 `squad_session_test.gd::test_primary_player_death_still_loses_the_encounter` 回归（期望 `[3]` 实得空），已按「玩家单位死亡即失败」修正后复跑通过。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T22:05:26+08:00
+- 已知问题：`integration` / `gameplay` 层在统一门禁输出里仍打印 `FAIL` 标签（既有噪音，实际 `0 errors / 0 failures`，以 `RESULT: PASS` 为准）；既有测试债务 `test/gameplay/main_scene_sect_test.gd` 324 orphans、`test/integration/sect_panel_test.gd` 288 orphans 未清理。危险窗口目前只有 Boss 一个数据实例，1v2 / 1v3 的阵容数据留给 `INC-WORLD-007`。
 - 用户验收：待验收
 - 验收时间：待验收
 - Git：待提交
-- 备注：本 Increment 是 `INC-CROSS-019` 开发顺序的第 1 步，只负责「制造一个可被 Build 改变的问题」；Build 重构机制由 `INC-PAWNS-021` 提供，实验场景与首通奖励由 `INC-WORLD-007` 提供。
+- 备注：本 Increment 是 `INC-CROSS-019` 开发顺序的第 1 步，只负责「制造一个可被 Build 改变的问题」；Build 重构机制由 `INC-PAWNS-021` 提供，实验场景与首通奖励由 `INC-WORLD-007` 提供。用户 2026-09-25 指令「进行incre调整并推送到dev分支」要求把本 Increment 成果推送到开发分支 `develop`；本 Increment 的代码进入 `develop`、未进入 `main`，仍在等待用户对验收标准的明确结论。
