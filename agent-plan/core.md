@@ -346,7 +346,7 @@
 
 - 状态：accepted
 - 创建时间：2026-09-25T19:22:00+08:00
-- 最后修改：2026-09-25T19:53:40+08:00
+- 最后修改：2026-09-25T19:52:42+08:00
 - 主题：core
 - 目标：把宗门接入真实主场景，补上「秘境收益 → 宗门库存」这条唯一缺口，并让宗门面板的七个玩家动作路由到 `SectState`；`main.gd` 继续只做信号转发与引用刷新，不新增宗门业务规则。
 - 验收标准：
@@ -364,9 +364,9 @@
 - 变更文件：`game/main/main.gd`（修改，+65）、`game/main/main.tscn`（修改，+21，挂载宗门节点并注入资源）、`game/ui/sect_panel.gd`（修改，+2 / -1，动态行延迟释放）、`test/gameplay/main_scene_sect_test.gd`（新增，6 个 gameplay 用例）、`test/gameplay/main_scene_sect_test.gd.uid`（随资源新增）、`agent-plan/core.md` 与 `agent-plan/_index.md`（计划回填）。
 - 测试证据：`mcp__godot::validate` 对 `game/main/main.gd`、`game/main/main.tscn`、`test/gameplay/main_scene_sect_test.gd` 三个目标全部 `valid: true`；`pwsh -File test/run_tests.ps1 -Godot <godot> -Layer gameplay` → PASS（GdUnit4 gameplay 58 cases / 0 errors / 0 failures，退出码 0）；`pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` → PASS（GdUnit4 320 cases / 0 failures：unit 125、integration 137、gameplay 58；headless 10 suites / 549 assertions / 0 failing suites，退出码 0）。新增用例覆盖：启动绑定与三功法目录、清房后只在终局入账一次、深入换房后修士引用刷新且宗门状态不重置、七个面板动作全部走真实 `main.tscn` 路由、真实收益升级灵田并打坐涨修为、战败入账 0。
 - 验证状态：验证通过
-- 验证时间：2026-09-25T19:53:40+08:00
+- 验证时间：2026-09-25T19:52:42+08:00
 - 已知问题：主场景已真实挂载宗门面板，`INC-UI-016` 的窄窗口布局取证是在动态追加面板时完成的；接入后的 800×720 Dock 宽度需要在 `INC-TESTING-009` 重跑三档分辨率证据确认，必要时只调整布局，不改变面板语义。
 - 用户验收：已验收（依据用户 2026-09-25 指令「分批increment单独推送后继续开发」；本项验证通过后按该授权逐项提交、推送）
-- 验收时间：2026-09-25T19:53:40+08:00
-- Git：
+- 验收时间：2026-09-25T19:52:42+08:00
+- Git：`main` / `224b7f6`
 - 备注：父 Increment 为 `INC-CROSS-017`；本 Increment 是父级唯一允许修改 `main.gd` / `main.tscn` 的接线项。
