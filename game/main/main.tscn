@@ -4,6 +4,7 @@
 [ext_resource type="Script" uid="uid://m8gwn5pmdc8h" path="res://game/main/main.gd" id="1_yil3p"]
 [ext_resource type="Script" uid="uid://dy1qqrpvay2d4" path="res://game/ui/arena_backdrop.gd" id="2_8y833"]
 [ext_resource type="PackedScene" path="res://game/pawns/enemy_pawn.tscn" id="2_enemy_pawn"]
+[ext_resource type="PackedScene" path="res://game/ui/pawn_info_panel.tscn" id="3_info_panel"]
 
 [node name="Main" type="Node2D" unique_id=539579646]
 process_mode = 3
@@ -37,7 +38,7 @@ anchor_right = 1.0
 offset_left = 16.0
 offset_top = 16.0
 offset_right = -16.0
-offset_bottom = 158.0
+offset_bottom = 222.0
 mouse_filter = 2
 
 [node name="HudPanel" type="PanelContainer" parent="HUD/HudMargin" unique_id=1927505442]
@@ -53,7 +54,7 @@ theme_override_constants/separation = 6
 layout_mode = 2
 theme_override_colors/font_color = Color(0.86, 0.95, 0.92, 1)
 theme_override_font_sizes/font_size = 18
-text = "左键：选择玩家 Pawn    右键：移动/攻击目标    空格：暂停/恢复"
+text = "左键：选择玩家 Pawn    右键：移动/攻击目标    Q：主动技能    空格：暂停/恢复"
 autowrap_mode = 2
 
 [node name="SelectedLabel" type="Label" parent="HUD/HudMargin/HudPanel/HudContent" unique_id=1891443701]
@@ -65,6 +66,16 @@ text = "未选中单位"
 layout_mode = 2
 theme_override_font_sizes/font_size = 16
 text = "指令：-"
+
+[node name="SkillLabel" type="Label" parent="HUD/HudMargin/HudPanel/HudContent" unique_id=421337001]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "技能：-"
+
+[node name="BuildLabel" type="Label" parent="HUD/HudMargin/HudPanel/HudContent" unique_id=1368441023]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Build：-"
 
 [node name="PauseStateLabel" type="Label" parent="HUD" unique_id=1887259999]
 anchors_preset = 1
@@ -78,6 +89,9 @@ theme_override_colors/font_color = Color(0.8, 0.95, 0.86, 1)
 theme_override_font_sizes/font_size = 18
 text = "实时运行中"
 horizontal_alignment = 2
+
+[node name="PawnInfoPanel" parent="HUD" unique_id=1365103856 instance=ExtResource("3_info_panel")]
+layout_mode = 3
 
 [node name="PauseOverlay" type="Control" parent="HUD" unique_id=535022588]
 visible = false
@@ -117,5 +131,8 @@ horizontal_alignment = 1
 [connection signal="died" from="Pawns/PlayerPawn" to="." method="_on_pawn_died"]
 [connection signal="health_changed" from="Pawns/PlayerPawn" to="." method="_on_health_changed"]
 [connection signal="shield_changed" from="Pawns/PlayerPawn" to="." method="_on_shield_changed"]
+[connection signal="skill_cast" from="Pawns/PlayerPawn" to="." method="_on_player_skill_cast"]
+[connection signal="skill_cooldown_changed" from="Pawns/PlayerPawn" to="." method="_on_player_skill_cooldown_changed"]
+[connection signal="spirit_changed" from="Pawns/PlayerPawn" to="." method="_on_spirit_changed"]
 [connection signal="state_changed" from="Pawns/PlayerPawn" to="." method="_on_player_state_changed"]
 [connection signal="died" from="Pawns/EnemyPawn" to="." method="_on_pawn_died"]

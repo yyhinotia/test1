@@ -61,11 +61,11 @@ func _initialize() -> void:
 	for _i: int in 2:
 		await process_frame
 	await _capture("health_bar_05_paused_still_visible")
-	var paused_snapshot: bool = _player.health_bar.visible
+	var paused_snapshot: bool = _player.status_bars.visible
 
 	_main.call("_set_paused", false)
 	var resume_started: int = Time.get_ticks_msec()
-	while _player.health_bar.visible and Time.get_ticks_msec() - resume_started < 6000:
+	while _player.status_bars.visible and Time.get_ticks_msec() - resume_started < 6000:
 		await process_frame
 	await _capture("health_bar_06_hidden_after_resume")
 
@@ -93,7 +93,7 @@ func _sweep_resolutions() -> void:
 
 		var window_size: Vector2i = DisplayServer.window_get_size()
 		var viewport_rect: Rect2 = root.get_visible_rect()
-		var bar_rect: Rect2 = _player.health_bar.get_global_rect()
+		var bar_rect: Rect2 = _player.status_bars.get_global_rect()
 		var pawn_position: Vector2 = _player.global_position
 		var bar_center: Vector2 = bar_rect.get_center()
 		var centered: bool = absf(bar_center.x - pawn_position.x) <= 0.5
@@ -102,12 +102,12 @@ func _sweep_resolutions() -> void:
 		_report(
 			"RES %dx%d WINDOW=%s RESIZE_OK=%s DPI_SCALE=%.2f VIEWPORT=%s BAR_RECT=%s BAR_CENTER=%s PAWN=%s CENTERED=%s ABOVE_HEAD=%s INSIDE_VIEWPORT=%s BAR_VISIBLE=%s" % [
 				size.x, size.y, window_size, applied, DisplayServer.screen_get_scale(), viewport_rect, bar_rect, bar_center, pawn_position,
-				centered, above_head, inside_viewport, _player.health_bar.visible,
+				centered, above_head, inside_viewport, _player.status_bars.visible,
 			]
 		)
 		await _capture("health_bar_res_%dx%d" % [size.x, size.y])
 
-		_player.health_bar.hide_now()
+		_player.status_bars.hide_now()
 		for _i: int in 1:
 			await process_frame
 
@@ -125,7 +125,7 @@ func _apply_window_size(size: Vector2i) -> bool:
 	return false
 
 func _bars_visible() -> bool:
-	return _player.health_bar.visible or _enemy.health_bar.visible
+	return _player.status_bars.visible or _enemy.status_bars.visible
 
 ## 同时打印并登记一行证据；Windows GUI 子系统的 Godot 收不回 stdout，因此报告文件才是权威证据。
 func _report(line: String) -> void:
@@ -148,4 +148,4 @@ func _capture(shot_name: String) -> void:
 	var image: Image = root.get_texture().get_image()
 	var path: String = "%s/%s.png" % [OUTPUT_DIR, shot_name]
 	var err: int = image.save_png(path)
-	print("CAPTURE ", path, " err=", err, " size=", image.get_size(), " player_bar=", _player.health_bar.visible, " enemy_bar=", _enemy.health_bar.visible)
+	print("CAPTURE ", path, " err=", err, " size=", image.get_size(), " player_bar=", _player.status_bars.visible, " enemy_bar=", _enemy.status_bars.visible)

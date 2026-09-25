@@ -167,7 +167,7 @@ func _test_pawn_delegates_to_component() -> void:
 		_check(is_equal_approx(pawn.current_shield, component.current_shield), "Pawn.current_shield 应是组件的只读代理")
 	_check(is_equal_approx(pawn.current_health, pawn.data.max_health), "实例化后生命应等于上限")
 	_check(is_equal_approx(pawn.current_shield, pawn.data.max_shield), "实例化后护盾应等于上限")
-	_check(pawn.health_bar.visible == false, "实例化完成后血条仍应初始隐藏")
+	_check(pawn.status_bars.visible == false, "实例化完成后血条仍应初始隐藏")
 	pawn.queue_free()
 
 func _test_pawn_signal_contract() -> void:
@@ -182,7 +182,7 @@ func _test_pawn_signal_contract() -> void:
 	_check(is_equal_approx(pawn.current_health, pawn.data.max_health), "护盾吸收时生命不应变化")
 	var absorbed_expected: Array[String] = ["pawn_shield_changed:%d/%d" % [roundi(shield_after), roundi(pawn.data.max_shield)]]
 	_check(_emissions == absorbed_expected, "护盾吸收时 Pawn 只应转发 shield_changed，实际 %s" % str(_emissions))
-	_check(pawn.health_bar.visible, "生命状态变化后血条应显示（沿用 INC-UI-002 行为）")
+	_check(pawn.status_bars.visible, "生命状态变化后血条应显示（沿用 INC-UI-002 行为）")
 
 	_emissions.clear()
 	var overflow_damage: float = 100.0
@@ -207,7 +207,7 @@ func _test_pawn_death_contract() -> void:
 	_check(pawn.is_dead(), "致命伤害后 Pawn 应进入死亡状态")
 	_check(pawn.health.is_depleted(), "致命伤害后组件应标记为归零")
 	_check(is_equal_approx(pawn.current_health, 0.0), "死亡后生命应为 0，实际 %.1f" % pawn.current_health)
-	_check(pawn.health_bar.visible, "死亡时血条应显示（沿用 INC-UI-002 行为）")
+	_check(pawn.status_bars.visible, "死亡时血条应显示（沿用 INC-UI-002 行为）")
 	_check(_emissions.count("pawn_died") == 1, "died 信号应只发一次，实际 %s" % str(_emissions))
 	_check(pawn.collision_layer == 0, "死亡后应清除碰撞层")
 
