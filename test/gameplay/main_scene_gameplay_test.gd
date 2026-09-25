@@ -59,6 +59,31 @@ func _make_two_skill_data() -> PawnData:
 	return data
 
 
+## 生成指定主动技能容量与配置数量的测试 Build；用于验证“全部可见、超容量禁用”。
+func _make_capacity_data(capacity: int, skill_count: int) -> PawnData:
+	var data: PawnData = (load(PLAYER_DATA_PATH) as PawnData).duplicate(true) as PawnData
+	var realm: RealmDefinition = (data.realm as RealmDefinition).duplicate(true) as RealmDefinition
+	realm.active_skill_slots = capacity
+	data.realm = realm
+	var skills: Array[ActiveSkillDefinition] = []
+	for index: int in range(1, skill_count + 1):
+		var skill: ActiveSkillDefinition = ActiveSkillDefinition.new()
+		skill.id = StringName("capacity_skill_%d" % index)
+		skill.display_name = "容量技能%d" % index
+		skill.target_type = ActiveSkillDefinition.SkillTargetType.ENEMY
+		skill.effect_type = ActiveSkillDefinition.SkillEffectType.DAMAGE
+		skill.effect_value = 1.0
+		skill.spirit_cost = 10.0
+		skill.cooldown = 1.0
+		skill.cast_range = 200.0
+		skills.append(skill)
+	data.active_skill = skills[0] if not skills.is_empty() else null
+	data.active_skills = skills
+	data.max_spirit = 100.0
+	data.initial_spirit_ratio = 1.0
+	return data
+
+
 ## 把敌人移到视口外，避免 AI 在断言期间改变玩家数值，保证用例可重复。
 func _park_enemy(main: Node2D) -> Pawn:
 	var enemy: Pawn = main.get_node("Pawns/EnemyPawn")
@@ -630,3 +655,76 @@ func test_info_panel_unbinds_when_selected_pawn_dies() -> void:
 	assert_bool(player.is_dead()).is_true()
 	assert_bool(panel.is_bound()).is_false()
 	assert_bool(panel.visible).is_false()
+
+## 容量 0：Q 主技能也属于超容量条目，HUD 必须解释禁用原因，Q/数字键完全无副作用。
+func test_capacity_zero_disables_primary_hud_and_hotkeys() -> void:
+	var main: Node2D = _spawn_main_with_player_data(_make_capacity_data(0, 2))
+	var enemy: Pawn = _park_enemy(main)
+	(enemy.get_controller() as PawnController).set_physics_process(false)
+	await await_idle_frame()
+
+	var player: Pawn = main.get_node("Pawns/PlayerPawn")
+	var bar: SkillBar = main.get_node("HUD/BottomLeftDock/SkillBar")
+	var skill_label: Label = main.get_node(SKILL_LABEL_PATH)
+	var order_label: Label = main.get_node(ORDER_LABEL_PATH)
+	var skill: ActiveSkillDefinition = player.data.get_active_skills()[0]
+	main.call("_set_selected_pawn", player)
+	await await_idle_frame()
+
+	assert_int(bar.get_slot_count()).is_equal(2)
+	for slot: SkillSlot in bar.get_slots():
+		var snapshot: Dictionary = slot.get_snapshot()
+		assert_str(String(snapshot["state_name"])).is_equal("DISABLED")
+		assert_bool(snapshot["build_enabled"]).is_false()
+	assert_bool(skill_label.text.contains("Build 禁用：超出主动技能容量")).is_true()
+
+	var spirit_before: float = player.current_spirit
+	_press_key(main, KEY_Q)
+	_press_key(main, KEY_1)
+	await await_idle_frame()
+
+	assert_bool(bar.is_targeting()).is_false()
+	assert_float(player.current_spirit).is_equal_approx(spirit_before, APPROX)
+	assert_float(player.get_skill_cooldown_remaining(skill.id)).is_zero()
+	assert_bool(order_label.text.contains("施放技能")).is_false()
+
+
+## 容量 2 / 4 技能：后两个槽位可见但禁用；启用数字键仍可进入 TARGETING，禁用数字键不得替换它。
+func test_over_capacity_slots_are_disabled_without_replacing_targeting() -> void:
+	var main: Node2D = _spawn_main_with_player_data(_make_capacity_data(2, 4))
+	var player: Pawn = main.get_node("Pawns/PlayerPawn")
+	var enemy: Pawn = main.get_node("Pawns/EnemyPawn")
+	enemy.global_position = player.global_position + Vector2(300.0, 0.0)
+	(enemy.get_controller() as PawnController).set_physics_process(false)
+	await await_idle_frame()
+
+	var bar: SkillBar = main.get_node("HUD/BottomLeftDock/SkillBar")
+	main.call("_set_selected_pawn", player)
+	await await_idle_frame()
+
+	assert_int(bar.get_slot_count()).is_equal(4)
+	assert_str(String(bar.get_slots()[2].get_snapshot()["state_name"])).is_equal("DISABLED")
+	assert_str(String(bar.get_slots()[3].get_snapshot()["state_name"])).is_equal("DISABLED")
+
+	var first: ActiveSkillDefinition = player.data.get_active_skills()[0]
+	var second: ActiveSkillDefinition = player.data.get_active_skills()[1]
+	var third: ActiveSkillDefinition = player.data.get_active_skills()[2]
+	var spirit_before: float = player.current_spirit
+
+	_press_key(main, KEY_1)
+	await await_idle_frame()
+	assert_bool(bar.is_targeting()).is_true()
+	assert_object(bar.get_targeting_skill()).is_same(first)
+
+	_press_key(main, KEY_3)
+	await await_idle_frame()
+	assert_bool(bar.is_targeting()).is_true()
+	assert_object(bar.get_targeting_skill()).is_same(first)
+	assert_float(player.current_spirit).is_equal_approx(spirit_before, APPROX)
+	assert_float(player.get_skill_cooldown_remaining(third.id)).is_zero()
+
+	bar.cancel_targeting()
+	_press_key(main, KEY_2)
+	await await_idle_frame()
+	assert_bool(bar.is_targeting()).is_true()
+	assert_object(bar.get_targeting_skill()).is_same(second)

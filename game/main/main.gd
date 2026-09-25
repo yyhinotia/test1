@@ -118,6 +118,10 @@ func _request_selected_skill(skill: ActiveSkillDefinition) -> void:
 		return
 	if skill == null:
 		return
+	# Q/数字键与技能栏共用 Pawn 的容量投影；超容量技能在输入层保持零副作用。
+	if not player_pawn.is_active_skill_enabled(skill):
+		_update_hud()
+		return
 	skill_bar.request_skill(skill)
 	_update_hud()
 
@@ -298,6 +302,8 @@ func _describe_active_skill(pawn: Pawn) -> String:
 
 	var cost: float = skill.get_normalized_spirit_cost()
 	var header: String = "技能：[Q] %s    消耗 %.0f 灵力" % [skill.display_name, cost]
+	if not pawn.is_active_skill_enabled(skill):
+		return "%s    Build 禁用：超出主动技能容量" % header
 	var remaining: float = pawn.get_skill_cooldown_remaining(skill.id)
 	if remaining > 0.0:
 		return "%s    冷却中 %.1fs" % [header, remaining]
