@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="RealmDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://game/shared/resources/realm_definition.gd" id="1_realm"]
+[ext_resource type="Resource" path="res://game/cultivation/data/realms/foundation_establishment.tres" id="2_next"]
+
+[resource]
+script = ExtResource("1_realm")
+id = &"qi_refining"
+next_realm = ExtResource("2_next")
+breakthrough_exp = 100.0
+display_name = "炼气"
+tier = 1
+technique_slots = 1
+weapon_slots = 1
+active_skill_slots = 2
+passive_skill_slots = 1

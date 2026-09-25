@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="RealmDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://game/shared/resources/realm_definition.gd" id="1_realm"]
+[ext_resource type="Resource" path="res://game/cultivation/data/realms/nascent_soul.tres" id="2_next"]
+
+[resource]
+script = ExtResource("1_realm")
+id = &"golden_core"
+next_realm = ExtResource("2_next")
+breakthrough_exp = 100.0
+display_name = "金丹"
+tier = 3
+technique_slots = 3
+weapon_slots = 1
+active_skill_slots = 4
+passive_skill_slots = 3

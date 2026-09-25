@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="TechniqueDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/shared/resources/technique_definition.gd" id="1_technique"]
+
+[resource]
+script = ExtResource("1_technique")
+id = &"thunder_cultivation"
+display_name = "雷修"
+school = &"thunder"
+description = "引雷入体，爆发极高，需筑基后方可修习。"
+required_realm_tier = 2

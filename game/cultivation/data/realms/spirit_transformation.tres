@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="RealmDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/shared/resources/realm_definition.gd" id="1_realm"]
+
+[resource]
+script = ExtResource("1_realm")
+id = &"spirit_transformation"
+breakthrough_exp = 0.0
+display_name = "化神"
+tier = 5
+technique_slots = 5
+weapon_slots = 1
+active_skill_slots = 6
+passive_skill_slots = 5

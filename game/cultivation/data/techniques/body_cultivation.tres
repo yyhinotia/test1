@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="TechniqueDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/shared/resources/technique_definition.gd" id="1_technique"]
+
+[resource]
+script = ExtResource("1_technique")
+id = &"body_cultivation"
+display_name = "体修"
+school = &"body"
+description = "炼体为主，以身为炉；与剑修的运气路数相冲。"
+required_realm_tier = 1
+conflict_tags = Array[StringName]([&"sword_body_conflict"])
