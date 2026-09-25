@@ -8,6 +8,9 @@ extends GdUnitTestSuite
 ## 做法：只通过「面板按钮按下 = 玩家点击」这一条入口驱动主场景，
 ## 用固定 60fps 时间步推进真实 Pawn / PlayerController / AIController 到终局。
 ## 敌人档案全部来自 game/world/data/encounters/ 的正式遭遇资源，用例不复制任何伤害或胜负公式。
+##
+## INC-CORE-009 起主场景开机即进入秘境第 1 间房：只要秘境还在进行（`DungeonRun.is_active()`），
+## 单场遭遇入口（换敌 / 重新挑战）就保持锁定，本文件的换敌用例先「见好就收」结束本局再换。
 
 const MAIN_SCENE_PATH: String = "res://game/main/main.tscn"
 const DELTA: float = 1.0 / 60.0
@@ -23,6 +26,8 @@ const PAWNS_PATH: String = "Pawns"
 const ENEMY_PAWN_PATH: String = "Pawns/EnemyPawn"
 
 const ENCOUNTER_DIR: String = "res://game/world/data/encounters/"
+const DUNGEON_RUN_PATH: String = "DungeonRun"
+const DUNGEON_PANEL_PATH: String = "HUD/BottomLeftDock/DungeonPanel"
 
 
 ## 安全护栏：真实主场景会改全局暂停状态，任何用例后都必须恢复。
@@ -45,6 +50,27 @@ func _session(main: Node2D) -> EncounterSession:
 
 func _panel(main: Node2D) -> EncounterPanel:
 	return main.get_node(PANEL_PATH) as EncounterPanel
+
+
+func _dungeon_run(main: Node2D) -> DungeonRun:
+	return main.get_node(DUNGEON_RUN_PATH) as DungeonRun
+
+
+func _dungeon_panel(main: Node2D) -> DungeonPanel:
+	return main.get_node(DUNGEON_PANEL_PATH) as DungeonPanel
+
+
+func _restart_button(panel: EncounterPanel) -> Button:
+	return panel.get_node("RestartButton") as Button
+
+
+## 程序化按下秘境面板按钮：面板自身的兜底与遭遇面板同构，非法状态不转发。
+func _press_dungeon_button(main: Node2D, button_name: String) -> bool:
+	var button: Button = _dungeon_panel(main).get_node_or_null(NodePath(button_name)) as Button
+	if button == null:
+		return false
+	button.pressed.emit()
+	return true
 
 
 ## 唯一换遭遇入口：按按钮文案找到面板按钮并按下，测试不直接调用 EncounterSession.begin。
@@ -140,13 +166,28 @@ func test_pressing_button_swaps_enemy_and_keeps_all_references_on_new_units() ->
 	# 手动选中玩家，等价于玩家左键点自己：这样换遭遇后才有「选中态跟着新单位走」可验证。
 	main.call("_set_selected_pawn", old_player)
 
-	# 战斗进行中面板禁止换敌：先结束当前对局（击败敌人，玩家存活），再改选其它遭遇。
+	# 秘境语义（INC-CORE-009）：清空一间房只是本局的一步，单场入口必须继续锁着，
+	# 否则玩家能绕过 DungeonRun 直接换敌，把累积的损耗洗掉。
+	var run: DungeonRun = _dungeon_run(main)
 	var enemy: Pawn = session.get_enemy_pawn()
 	enemy.take_damage(_lethal_damage(enemy))
 	assert_int(session.get_state()).is_equal(EncounterSession.State.PLAYER_WIN)
-	assert_bool(panel.is_running()).is_false()
-	var target_encounter: EncounterDefinition = panel.encounters[1]
+	assert_bool(run.is_awaiting_decision()).is_true()
+	assert_bool(panel.is_running()).is_true()
+	assert_bool(_restart_button(panel).disabled).is_true()
 
+	var blocked_encounter: EncounterDefinition = panel.encounters[1]
+	assert_bool(_press_encounter_button(main, blocked_encounter.display_name)).is_true()
+	# 锁定不靠 disabled：程序化触发同样不换敌，敌人仍是本间的那一个。
+	assert_str(String(main.get_node(ENEMY_PAWN_PATH).data.id)).is_equal(String(old_enemy.data.id))
+
+	# 见好就收结束本局 → 单场入口与重新挑战恢复可用，此时换敌才真的发生。
+	assert_bool(_press_dungeon_button(main, "RetreatButton")).is_true()
+	assert_bool(run.is_finished()).is_true()
+	assert_bool(panel.is_running()).is_false()
+	assert_bool(_restart_button(panel).disabled).is_false()
+
+	var target_encounter: EncounterDefinition = panel.encounters[1]
 	assert_bool(_press_encounter_button(main, target_encounter.display_name)).is_true()
 	await await_idle_frame()
 
@@ -188,16 +229,19 @@ func test_settlement_matches_panel_status_and_repeats_once() -> void:
 	assert_int(session.get_state()).is_equal(outcome)
 	assert_str(status_text).contains(EncounterSession.get_outcome_label(outcome))
 	assert_str(status_text).contains(session.get_active_encounter().display_name)
-	# 结算后回到可选状态，重新挑战可用。
-	assert_bool(panel.is_running()).is_false()
-	for button: Button in panel.get_encounter_buttons():
-		assert_bool(button.disabled).is_false()
+	# 秘境语义：一间房结算不等于本局结算——本局还在进行时单场入口保持锁定，结束才恢复。
+	var run: DungeonRun = _dungeon_run(main)
+	assert_bool(panel.is_running()).is_equal(run.is_active())
 
-	# 重复死亡信号不得二次结算，也不得改写面板结论。
+	# 重复死亡信号不得二次结算：单场状态、面板文案、秘境状态与收益都不许被改写。
+	var dungeon_state: int = run.get_state()
+	var earned: int = run.get_earned_spirit_stones()
 	var enemy: Pawn = session.get_enemy_pawn()
 	enemy.died.emit(enemy)
 	assert_int(session.get_state()).is_equal(outcome)
 	assert_str(panel.get_status_text()).is_equal(status_text)
+	assert_int(run.get_state()).is_equal(dungeon_state)
+	assert_int(run.get_earned_spirit_stones()).is_equal(earned)
 	await await_idle_frame()
 
 

@@ -27,6 +27,9 @@ enum State {
 	RETREATED,
 }
 
+## 会话节点名：未显式注入时按此名在父节点下解析（与 EncounterSession 的容器解析同构）。
+const ENCOUNTER_SESSION_NAME: String = "EncounterSession"
+
 ## 单间对局的唯一执行者；由主场景 / 测试注入。
 @export var encounter_session: EncounterSession
 ## 开机默认秘境；由主场景在初始化时读取，main.gd 不硬编码资源路径。
@@ -165,12 +168,26 @@ func is_finished() -> bool:
 	return _state == State.CLEARED or _state == State.DEFEATED or _state == State.RETREATED
 
 
+## 会话引用：优先用导出引用，否则在父节点下按固定名解析。
+## `.tscn` 中以 NodePath 声明的脚本类型导出在实例化时不会自动解析，
+## 因此这里与 `EncounterSession.resolve_pawns_container()` 采用同一种惰性解析写法。
+func resolve_encounter_session() -> EncounterSession:
+	if encounter_session != null and is_instance_valid(encounter_session):
+		return encounter_session
+	var parent_node: Node = get_parent()
+	if parent_node == null:
+		return null
+	encounter_session = parent_node.get_node_or_null(NodePath(ENCOUNTER_SESSION_NAME)) as EncounterSession
+	return encounter_session
+
+
 ## 与 EncounterSession 的终局信号接线；重复调用安全。
 func _bind_encounter_session() -> bool:
-	if encounter_session == null or not is_instance_valid(encounter_session):
+	var session: EncounterSession = resolve_encounter_session()
+	if session == null:
 		return false
-	if not encounter_session.encounter_finished.is_connected(_on_encounter_finished):
-		encounter_session.encounter_finished.connect(_on_encounter_finished)
+	if not session.encounter_finished.is_connected(_on_encounter_finished):
+		session.encounter_finished.connect(_on_encounter_finished)
 	return true
 
 
@@ -179,7 +196,7 @@ func _is_ready() -> bool:
 		return false
 	if _room_index < 0 or _room_index >= _dungeon.get_room_count():
 		return false
-	return encounter_session != null and is_instance_valid(encounter_session)
+	return resolve_encounter_session() != null
 
 
 ## 只负责按当前层开局；推进规则（还有没有下一间）不在这里。

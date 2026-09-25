@@ -6,12 +6,16 @@
 [ext_resource type="PackedScene" path="res://game/pawns/enemy_pawn.tscn" id="2_enemy_pawn"]
 [ext_resource type="PackedScene" path="res://game/ui/pawn_info_panel.tscn" id="3_info_panel"]
 [ext_resource type="PackedScene" path="res://game/ui/skill_bar.tscn" id="4_skill_bar"]
-[ext_resource type="Script" path="res://game/world/encounter_session.gd" id="5_encounter_session"]
+[ext_resource type="Script" uid="uid://cry1ao4io00in" path="res://game/world/encounter_session.gd" id="5_encounter_session"]
 [ext_resource type="Resource" path="res://game/world/data/encounters/encounter_trial_puppet.tres" id="6_encounter_trial"]
 [ext_resource type="Resource" path="res://game/world/data/encounters/encounter_iron_guard.tres" id="7_encounter_iron_guard"]
 [ext_resource type="Resource" path="res://game/world/data/encounters/encounter_blood_blade.tres" id="8_encounter_blood_blade"]
 [ext_resource type="PackedScene" path="res://game/ui/encounter_panel.tscn" id="9_encounter_panel"]
-[ext_resource type="Resource" path="res://game/pawns/data/player_pawn.tres" id="10_player_data"]
+[ext_resource type="Resource" uid="uid://d62b5f401rjx" path="res://game/pawns/data/player_pawn.tres" id="10_player_data"]
+[ext_resource type="Script" uid="uid://ms821o3x51t2" path="res://game/shared/resources/encounter_definition.gd" id="11_encdef"]
+[ext_resource type="Script" uid="uid://vqgb4afkgfdu" path="res://game/world/dungeon_run.gd" id="12_dungeon_run"]
+[ext_resource type="PackedScene" path="res://game/ui/dungeon_panel.tscn" id="13_dungeon_panel"]
+[ext_resource type="Resource" path="res://game/world/data/dungeons/trial_dungeon.tres" id="14_trial_dungeon"]
 
 [node name="Main" type="Node2D" unique_id=539579646]
 process_mode = 3
@@ -30,17 +34,22 @@ script = ExtResource("2_8y833")
 
 [node name="Pawns" type="Node2D" parent="." unique_id=569280582]
 
-[node name="EncounterSession" type="Node" parent="."]
-script = ExtResource("5_encounter_session")
-pawns_container = NodePath("../Pawns")
-player_data = ExtResource("10_player_data")
-initial_encounter = ExtResource("6_encounter_trial")
-
 [node name="PlayerPawn" parent="Pawns" unique_id=1821916831 instance=ExtResource("1_player_pawn")]
 position = Vector2(870, 410)
 
 [node name="EnemyPawn" parent="Pawns" unique_id=699654266 instance=ExtResource("2_enemy_pawn")]
 position = Vector2(300, 250)
+
+[node name="EncounterSession" type="Node" parent="." unique_id=1935841093]
+script = ExtResource("5_encounter_session")
+pawns_container = NodePath("../Pawns")
+player_data = ExtResource("10_player_data")
+initial_encounter = ExtResource("6_encounter_trial")
+
+[node name="DungeonRun" type="Node" parent="."]
+script = ExtResource("12_dungeon_run")
+encounter_session = NodePath("../EncounterSession")
+default_dungeon = ExtResource("14_trial_dungeon")
 
 [node name="HUD" type="CanvasLayer" parent="." unique_id=1870880984]
 layer = 10
@@ -120,9 +129,12 @@ layout_mode = 2
 [node name="SkillBar" parent="HUD/BottomLeftDock" unique_id=672815287 instance=ExtResource("4_skill_bar")]
 layout_mode = 2
 
-[node name="EncounterPanel" parent="HUD/BottomLeftDock" instance=ExtResource("9_encounter_panel")]
+[node name="EncounterPanel" parent="HUD/BottomLeftDock" unique_id=1559428995 instance=ExtResource("9_encounter_panel")]
 layout_mode = 2
-encounters = Array[EncounterDefinition]([ExtResource("6_encounter_trial"), ExtResource("7_encounter_iron_guard"), ExtResource("8_encounter_blood_blade")])
+encounters = Array[ExtResource("11_encdef")]([ExtResource("6_encounter_trial"), ExtResource("7_encounter_iron_guard"), ExtResource("8_encounter_blood_blade")])
+
+[node name="DungeonPanel" parent="HUD/BottomLeftDock" instance=ExtResource("13_dungeon_panel")]
+layout_mode = 2
 
 [node name="PauseOverlay" type="Control" parent="HUD" unique_id=535022588]
 visible = false

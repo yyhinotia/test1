@@ -1,6 +1,6 @@
 # Core 主题计划
 
-> 最后修改：2026-09-25T18:52:41+08:00
+> 最后修改：2026-09-25T18:53:57+08:00
 > 主题：core  
 > 规则来源：`../AGENTS.md`
 
@@ -310,3 +310,35 @@
 - 验收时间：2026-09-25T18:52:41+08:00
 - Git：`main` / `6f15121`（+ `INC-CROSS-015` 计划回写提交）
 - 备注：父 Increment 为 `INC-CROSS-015`；本 Increment 是父级唯一允许修改 `main.gd` 的接线项。验收依据：用户 2026-09-25 指令「推送，保持本地远端一致」，按 `AGENTS.md` §4.1 与本仓库 `INC-CROSS-011`~ `INC-CROSS-014` 的既有约定记录为明确验收。
+
+## INC-CORE-009：主场景秘境接线（开始 → 深入 / 撤退 → 结算）
+
+- 状态：accepted
+- 创建时间：2026-09-25T18:53:57+08:00
+- 最后修改：2026-09-25T19:15:13+08:00
+- 主题：core
+- 目标：把 `DungeonRun`、既有 `EncounterSession` 与 `DungeonPanel` 接到主场景，形成玩家可见的完整秘境闭环；`main.gd` 只做信号转发与引用刷新，不新增秘境或战斗业务逻辑。
+- 验收标准：
+  - `game/main/main.tscn` 新增 `DungeonRun` 节点（引用既有 `EncounterSession`）与 `HUD/BottomLeftDock` 下的 `DungeonPanel`，并配置默认秘境（`trial_dungeon.tres`）。
+  - `main.gd` 新增代码只包含：连接 `DungeonPanel` 的 `advance_requested` / `retreat_requested` / `restart_requested` 到 `DungeonRun`（重启只传入当前秘境定义）、连接 `DungeonRun` 的 `run_started` / `room_cleared` / `run_finished` 到面板与既有 HUD 刷新、以及把「开始一次秘境」暴露为阻塞态遭遇按钮之外的入口。秘境进行中（`DungeonRun.is_active()`）锁住 `EncounterPanel` 的单场遭遇与重新挑战入口，结算后恢复；这属于路由 / 展示守卫，不引入按房间类型 / 深度 / Boss 的判断分支。
+  - 开机行为：主场景起局后进入秘境第 1 间房，等价于既有「进入场景即可开打」，既有 gameplay 用例语义不被破坏。
+  - 秘境结算后：面板显示 `已通关` / `已撤退` / `已阵亡` 与最终灵石收益；玩家可以通过 `DungeonPanel.RestartButton` 重新开始一次秘境，或通过恢复可用的 `EncounterPanel` 回到单场遭遇选择。
+  - 既有暂停、Q、1~6、右键命令、目标选择、信息卡、技能栏行为不变。
+  - Godot MCP `validate` 无解析 / 加载错误；统一门禁 `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` 全绿。
+- 范围：`game/main/main.gd`（接线）、`game/main/main.tscn`（挂载节点）、`test/gameplay/main_scene_dungeon_test.gd`（新增）。
+- 非范围：秘境地图 / 房间选择 UI、随机事件、商店、存档、掉落入库、4v4、技能与数值改动、UI 美化。
+- 依赖：`INC-WORLD-003`、`INC-WORLD-004`、`INC-UI-015`。
+- 检索证据：同一轮检索（工作区干净、无 pending Increment）；`main.gd` 在 `INC-CORE-008` 后约 430 行、已是高冲突文件，因此本 Increment 必须把新增逻辑压缩到「信号转发 + 引用刷新」；`main.tscn` 已有 `EncounterSession` 节点与 `HUD/BottomLeftDock` 容器，可直接挂载而不改布局层级。
+- 风险：`main.gd` 已有 400+ 行，本 Increment 是它第二次扩容，最容易发生的是把「深度判断」「奖励累加」写进主场景；必须全部留在 `DungeonRun`。另一风险是 `DungeonRun` 与 `EncounterSession` 同时监听 `encounter_finished` 造成双重推进（会话判定胜负、运行决定是否还有下一间），必须明确只有 `DungeonRun` 决定推进。
+- 实现说明：`main.tscn` 新增 `DungeonRun` 节点（引用既有 `EncounterSession`、默认秘境 `trial_dungeon.tres`）与 `HUD/BottomLeftDock/DungeonPanel`，不改变既有布局层级；该文件由 Godot 重新序列化（补 `uid` / `unique_id`，`EncounterPanel` 的类型数组改用脚本 UID 形式），内容与手工改动等价。`main.gd` 只新增信号转发与引用刷新：三个面板信号接到 `DungeonRun.advance()` / `retreat()` / `start()`，`run_started` / `room_cleared` / `run_finished` 接到面板刷新；开机入口改为 `dungeon_run.start_default_dungeon()`，未配置秘境时回落到 `encounter_session.start_initial_encounter()`；`_on_encounter_finished()` 用 `dungeon_run.is_active()` 决定单场入口是否解锁，并在秘境进行中拒绝单场「重新挑战」。深度 / 收益 / 结局文案都由 `DungeonRun` 提供，主场景只拼接状态词与房间名。
+- 变更文件：`game/main/main.tscn`、`game/main/main.gd`、`game/world/dungeon_run.gd`（惰性解析会话引用）、`game/ui/encounter_panel.gd`（新增重启外部锁）、`test/gameplay/main_scene_dungeon_test.gd`（新增，与 `INC-TESTING-008` 合并为一个文件）、`test/gameplay/main_scene_encounter_test.gd`（适配秘境锁定语义）。
+- 测试证据：`pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` → PASS（GdUnit4 unit 112 / integration 108 / gameplay 52（含与本 Increment 合并为同一文件的 `INC-TESTING-008` 用例），共 272 cases / 0 failures；headless 10 suites / 549 assertions / 0 failing suites；退出码 0）。Godot MCP `validate`：`game/main/main.gd`、`game/world/dungeon_run.gd`、`game/ui/encounter_panel.gd`、`game/ui/dungeon_panel.gd`、`test/gameplay/main_scene_dungeon_test.gd`、`game/main/main.tscn` 全部 `valid: true`，无解析 / 加载错误。既有 `INC-TESTING-007` 的 5 个主场景遭遇用例在适配锁定语义后继续通过（gameplay 46 → 52）。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T19:15:13+08:00
+- 已知问题：秘境进行中单场遭遇入口整体锁定（含「重新挑战」），玩家不能在秘境里用单场重开洗掉损耗——这是设计使然，单场遭遇模式本身的「战斗中可重开」语义未变。秘境面板与遭遇面板共处左下 Dock，空间紧张但未溢出（本 Increment 不改布局）。`main.gd` 已达 524 行，后续秘境功能应优先拆独立节点，不要在 `main.gd` 继续堆逻辑。
+- 用户验收：已验收（依据用户 2026-09-25 指令「分批incre单独推送后继续开发」：本批按 Increment 单独提交并推送）
+- 验收时间：2026-09-25T19:15:13+08:00
+- Git：
+- 计划修订（2026-09-25T19:01:58+08:00）：明确「重新开始秘境」由 `DungeonPanel.RestartButton` 承担，并要求秘境进行中锁住单场遭遇入口，避免绕过 `DungeonRun` 直接重开当前房间而重置损耗。
+- 计划修订（实施期，见「最后修改」）：范围扩大三项，都是接线必需的最小修正——(1) `game/world/dungeon_run.gd` 增加 `resolve_encounter_session()` 惰性解析：`.tscn` 中以 `NodePath` 声明的脚本类型导出在实例化时不会自动解析（实测 `encounter_session == null`，会让主场景静默回落到单场遭遇），因此按 `EncounterSession.resolve_pawns_container()` 的同构写法补齐；(2) `game/ui/encounter_panel.gd` 增加只增不改的 `set_restart_locked()` 外部锁与 `_on_restart_pressed()` 兜底，使「秘境进行中锁住重新挑战」在 UI 上也可见，而不是点得动却无反应；(3) 既有 `test/gameplay/main_scene_encounter_test.gd` 的两个换敌用例改为「先见好就收结束本局再换敌」，因为锁定是本次刻意引入的语义，旧断言不再成立。
+- 备注：父 Increment 为 `INC-CROSS-016`；本 Increment 是父级唯一允许修改 `main.gd` / `main.tscn` 的接线项。

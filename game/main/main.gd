@@ -11,6 +11,8 @@ var ai_controller: AIController
 
 @onready var encounter_session: EncounterSession = $EncounterSession
 @onready var encounter_panel: EncounterPanel = $HUD/BottomLeftDock/EncounterPanel
+@onready var dungeon_run: DungeonRun = $DungeonRun
+@onready var dungeon_panel: DungeonPanel = $HUD/BottomLeftDock/DungeonPanel
 @onready var instructions_label: Label = $HUD/HudMargin/HudPanel/HudContent/InstructionsLabel
 @onready var selected_label: Label = $HUD/HudMargin/HudPanel/HudContent/SelectedLabel
 @onready var order_label: Label = $HUD/HudMargin/HudPanel/HudContent/OrderLabel
@@ -27,6 +29,7 @@ var _targeting_highlighted_pawn: Pawn
 
 func _ready() -> void:
 	_connect_encounter_signals()
+	_connect_dungeon_signals()
 	if not skill_bar.skill_requested.is_connected(_on_skill_bar_skill_requested):
 		skill_bar.skill_requested.connect(_on_skill_bar_skill_requested)
 	if not skill_bar.targeting_started.is_connected(_on_skill_targeting_started):
@@ -34,9 +37,10 @@ func _ready() -> void:
 	if not skill_bar.targeting_cancelled.is_connected(_on_skill_targeting_cancelled):
 		skill_bar.targeting_cancelled.connect(_on_skill_targeting_cancelled)
 	_set_paused(false)
-	# 开机默认打谁由世界层数据（EncounterSession.initial_encounter）决定，
-	# main.gd 只负责发起并等 encounter_started 回来刷新引用。
-	encounter_session.start_initial_encounter()
+	# 开机默认打谁由世界层数据决定：优先进入秘境第 1 间房（DungeonRun.default_dungeon），
+	# 未配置秘境时回落到单场遭遇（EncounterSession.initial_encounter）；main.gd 只负责发起。
+	if not dungeon_run.start_default_dungeon():
+		encounter_session.start_initial_encounter()
 	_update_hud()
 
 
@@ -57,6 +61,9 @@ func _on_encounter_selected(encounter: EncounterDefinition) -> void:
 
 
 func _on_encounter_restart_requested() -> void:
+	# 秘境进行中不接受单场重开：否则会绕过 DungeonRun 直接重置当前房间的损耗。
+	if dungeon_run.is_active():
+		return
 	encounter_session.restart()
 
 
@@ -66,6 +73,8 @@ func _on_encounter_started(encounter: EncounterDefinition, _player: Pawn, _enemy
 	_refresh_pawn_references()
 	encounter_panel.set_active_encounter(encounter)
 	encounter_panel.set_running(true)
+	# 秘境进行中额外锁住「重新挑战」：单场重开会白送一次满状态，破坏损耗累积。
+	encounter_panel.set_restart_locked(dungeon_run.is_active())
 	encounter_panel.set_status(
 		"%s：%s" % [EncounterSession.get_outcome_label(EncounterSession.State.RUNNING), encounter.display_name]
 	)
@@ -73,9 +82,89 @@ func _on_encounter_started(encounter: EncounterDefinition, _player: Pawn, _enemy
 
 ## 结算只改面板文本：胜负由 EncounterSession 判定，主场景不复制状态机。
 func _on_encounter_finished(encounter: EncounterDefinition, outcome: int) -> void:
-	encounter_panel.set_running(false)
+	# 秘境进行中时单场入口保持锁定：清空一间房不等于本局结束。
+	encounter_panel.set_running(dungeon_run.is_active())
 	encounter_panel.set_status("%s：%s" % [EncounterSession.get_outcome_label(outcome), encounter.display_name])
 	_update_hud()
+
+
+## 秘境接线（INC-CORE-009）：只做信号转发与引用刷新，不新增房间 / 收益判定。
+func _connect_dungeon_signals() -> void:
+	if not dungeon_panel.advance_requested.is_connected(_on_dungeon_advance_requested):
+		dungeon_panel.advance_requested.connect(_on_dungeon_advance_requested)
+	if not dungeon_panel.retreat_requested.is_connected(_on_dungeon_retreat_requested):
+		dungeon_panel.retreat_requested.connect(_on_dungeon_retreat_requested)
+	if not dungeon_panel.restart_requested.is_connected(_on_dungeon_restart_requested):
+		dungeon_panel.restart_requested.connect(_on_dungeon_restart_requested)
+	if not dungeon_run.run_started.is_connected(_on_dungeon_run_started):
+		dungeon_run.run_started.connect(_on_dungeon_run_started)
+	if not dungeon_run.room_cleared.is_connected(_on_dungeon_room_cleared):
+		dungeon_run.room_cleared.connect(_on_dungeon_room_cleared)
+	if not dungeon_run.run_finished.is_connected(_on_dungeon_run_finished):
+		dungeon_run.run_finished.connect(_on_dungeon_run_finished)
+
+
+## 「继续深入」：面板只表示玩家想继续，能不能推进由 DungeonRun 判定。
+func _on_dungeon_advance_requested() -> void:
+	dungeon_run.advance()
+
+
+## 「见好就收」：收益是否保留由 DungeonRun 决定，主场景不复制结算规则。
+func _on_dungeon_retreat_requested() -> void:
+	dungeon_run.retreat()
+
+
+## 「重新开始秘境」：只把当前秘境定义交回 DungeonRun，进度与收益由它自己重置。
+func _on_dungeon_restart_requested() -> void:
+	var dungeon: DungeonDefinition = dungeon_run.get_active_dungeon()
+	if dungeon == null:
+		dungeon = dungeon_run.default_dungeon
+	dungeon_run.start(dungeon)
+
+
+## 进入一间房（含第一间与继续深入）：面板刷新为「本层进行中」，抉择入口先关掉。
+func _on_dungeon_run_started(_dungeon: DungeonDefinition, _room_index: int) -> void:
+	_refresh_dungeon_panel()
+	dungeon_panel.set_awaiting_decision(false)
+	dungeon_panel.set_can_restart(false)
+	dungeon_panel.set_status(_compose_dungeon_status(dungeon_run.get_state()))
+
+
+## 清空一间房：深度与累计收益刷新为 DungeonRun 的事实，非终局房打开「继续 / 撤退」。
+func _on_dungeon_room_cleared(_dungeon: DungeonDefinition, _room_index: int, _reward: int, _total: int) -> void:
+	_refresh_dungeon_panel()
+	dungeon_panel.set_awaiting_decision(dungeon_run.is_awaiting_decision())
+	dungeon_panel.set_status(_compose_dungeon_status(dungeon_run.get_state()))
+
+
+## 本局唯一一次终局：面板显示结局与最终灵石，重开入口打开，单场入口恢复可用。
+func _on_dungeon_run_finished(_dungeon: DungeonDefinition, outcome: int, earned_spirit_stones: int) -> void:
+	_refresh_dungeon_panel()
+	dungeon_panel.set_awaiting_decision(false)
+	dungeon_panel.set_can_restart(true)
+	dungeon_panel.set_status(
+		"%s：最终灵石 %d" % [DungeonRun.get_outcome_label(outcome), earned_spirit_stones]
+	)
+	encounter_panel.set_restart_locked(false)
+	encounter_panel.set_running(false)
+	_update_hud()
+
+
+## 面板刷新的唯一入口：秘境定义、深度、收益都从 DungeonRun 读，主场景不自己算。
+func _refresh_dungeon_panel() -> void:
+	var dungeon: DungeonDefinition = dungeon_run.get_active_dungeon()
+	if dungeon == null:
+		return
+	dungeon_panel.set_dungeon(dungeon)
+	dungeon_panel.set_depth(dungeon_run.get_depth(), dungeon_run.get_room_count())
+	dungeon_panel.set_reward(dungeon_run.get_earned_spirit_stones())
+
+
+## 秘境状态文案：状态词来自 DungeonRun，层名来自当前房间定义，主场景只拼接。
+func _compose_dungeon_status(outcome: int) -> String:
+	var room: DungeonRoom = dungeon_run.get_current_room()
+	var room_name: String = room.display_name if room != null else "-"
+	return "%s：%s" % [DungeonRun.get_outcome_label(outcome), room_name]
 
 
 ## 换遭遇后的唯一引用刷新点：单位 / 控制器 / HUD 信号 / 选中态一起更新，避免悬空引用。

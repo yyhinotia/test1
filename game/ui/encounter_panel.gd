@@ -22,6 +22,8 @@ const EMPTY_STATUS: String = "未选择遭遇"
 
 var _buttons: Array[Button] = []
 var _running: bool = false
+## 外部锁（INC-CORE-009）：秘境进行中由主场景锁住「重新挑战」，与运行态互不影响。
+var _restart_locked: bool = false
 var _active_encounter: EncounterDefinition
 ## set_status 可能在入树前被调用，先记住文本，_ready 时再落到 Label。
 var _status_text: String = EMPTY_STATUS
@@ -68,6 +70,13 @@ func set_status(text: String) -> void:
 		_status_label.text = text
 
 
+## 秘境进行中锁住「重新挑战」：单场重开会白送一次满状态，破坏跨房间的损耗累积。
+## 与 set_running 正交——单场遭遇模式下仍保留「战斗中可以重开」的既有语义。
+func set_restart_locked(value: bool) -> void:
+	_restart_locked = value
+	_apply_interaction_states()
+
+
 func set_active_encounter(encounter: EncounterDefinition) -> void:
 	_active_encounter = encounter
 	_refresh_title()
@@ -105,6 +114,9 @@ func _on_encounter_button_pressed(encounter: EncounterDefinition) -> void:
 
 
 func _on_restart_pressed() -> void:
+	# 外部锁由主场景决定（秘境进行中）；被锁定后即使程序化触发也不转发。
+	if _restart_locked:
+		return
 	restart_requested.emit()
 
 
@@ -115,7 +127,7 @@ func _apply_interaction_states() -> void:
 		if is_instance_valid(button):
 			button.disabled = _running
 	if is_instance_valid(_restart_button):
-		_restart_button.disabled = _active_encounter == null
+		_restart_button.disabled = _restart_locked or _active_encounter == null
 
 
 func _refresh_title() -> void:
