@@ -27,6 +27,9 @@ const SPIRIT_RESOURCE_ID: StringName = &"spirit"
 const SPIRIT_DISPLAY_NAME: String = "灵力"
 const SPIRIT_POOL_NAME: StringName = &"Spirit"
 
+## 主动技能容量无界哨兵：无有效境界的原生单位不参与 Build 容量截断。
+const ACTIVE_SKILL_CAPACITY_UNBOUNDED: int = -1
+
 @export var data: PawnData
 
 @onready var visual: Sprite2D = $Visual/Sprite2D
@@ -152,7 +155,9 @@ func get_realm() -> RealmDefinition:
 		return null
 	return data.realm
 
-## 只读 Build 汇总：境界 + 功法 + 主武器 + 当前生效的主动技能（被动尚无数据来源，保持为空）。
+## 只读 Build 汇总：境界 + 功法 + 主武器 + 原始主动技能配置（被动尚无数据来源，保持为空）。
+## 这里故意保留未去重 / 未过滤的原始条目，让 BuildValidator 能看到 duplicate_entry 与 unconfigured_entry；
+## 运行时可用列表请使用 get_enabled_active_skills()，它按容量投影并已去重。
 ## 每次调用返回新实例，调用方可以自由修改结果而不影响 PawnData 预设。
 func get_build_loadout() -> BuildLoadout:
 	var loadout: BuildLoadout = BuildLoadout.new()
@@ -162,13 +167,58 @@ func get_build_loadout() -> BuildLoadout:
 	loadout.techniques.assign(data.techniques)
 	if data.weapon != null:
 		loadout.weapons.append(data.weapon)
-	for skill: ActiveSkillDefinition in data.get_active_skills():
-		loadout.active_skills.append(skill)
+	if not data.active_skills.is_empty():
+		for skill: ActiveSkillDefinition in data.active_skills:
+			loadout.active_skills.append(skill)
+	elif data.active_skill != null:
+		loadout.active_skills.append(data.active_skill)
 	return loadout
 
 ## Build 校验结果：只做规则判定，不装备、不卸载、不修改任何资源池或冷却。
 func get_build_validation() -> BuildValidationResult:
 	return BuildValidator.validate(get_build_loadout())
+
+## 当前 Build 的主动技能容量：无境界或无效境界返回 -1 表示无约束；
+## 有效境界返回 RealmDefinition 的主动技能槽容量，容量 0 是有效结果而不是“未配置”。
+func get_active_skill_capacity() -> int:
+	var realm: RealmDefinition = get_realm()
+	if realm == null or not realm.is_configured():
+		return ACTIVE_SKILL_CAPACITY_UNBOUNDED
+	return realm.get_slot_capacity(RealmDefinition.KIND_ACTIVE_SKILL)
+
+
+## 当前 Build 实际可用的主动技能只读投影：按 PawnData 顺序返回前 N 个有效技能。
+## 无境界单位返回全部合法技能；完整列表仍由 get_build_loadout() 提供给 BuildValidator 报 over_capacity。
+func get_enabled_active_skills() -> Array[ActiveSkillDefinition]:
+	var result: Array[ActiveSkillDefinition] = []
+	if data == null:
+		return result
+	var skills: Array[ActiveSkillDefinition] = data.get_active_skills()
+	var capacity: int = get_active_skill_capacity()
+	if capacity < 0:
+		result.assign(skills)
+		return result
+	var limit: int = mini(capacity, skills.size())
+	for index: int in limit:
+		result.append(skills[index])
+	return result
+
+
+## 启用技能在容量投影中的稳定索引；超容量、未知、未配置或空技能统一返回 -1。
+## 采用实例身份比较，与 PlayerController._is_known_skill() 一致，避免用同 id 的伪资源绕过 Build。
+func get_active_skill_slot_index(skill: ActiveSkillDefinition) -> int:
+	if skill == null or not skill.is_configured():
+		return -1
+	var enabled: Array[ActiveSkillDefinition] = get_enabled_active_skills()
+	for index: int in enabled.size():
+		if enabled[index] == skill:
+			return index
+	return -1
+
+
+## UI、PlayerController、AIController 与 Pawn.can_cast_skill() 共用的容量事实查询。
+func is_active_skill_enabled(skill: ActiveSkillDefinition) -> bool:
+	return get_active_skill_slot_index(skill) >= 0
 
 ## 修为运行时接口：组件是唯一状态源，Pawn 只暴露只读查询与受控增加入口。
 func get_cultivation_progress() -> CultivationProgressComponent:
@@ -344,6 +394,8 @@ func restore_spirit(amount: float) -> float:
 ## 主动技能是否可以施放：所有条件必须先通过，失败路径不得产生任何副作用。
 func can_cast_skill(skill: ActiveSkillDefinition, target: Pawn) -> bool:
 	if skill == null or not skill.is_configured() or data == null:
+		return false
+	if not is_active_skill_enabled(skill):
 		return false
 	if not is_alive() or is_stunned():
 		return false

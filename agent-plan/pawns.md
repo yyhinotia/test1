@@ -588,9 +588,9 @@
 
 ## INC-PAWNS-015：主动技能容量的运行时投影
 
-- 状态：in_progress
+- 状态：accepted
 - 创建时间：2026-09-25T18:00:42+08:00
-- 最后修改：2026-09-25T18:00:42+08:00
+- 最后修改：2026-09-25T18:10:00+08:00
 - 主题：pawns
 - 目标：在 `Pawn` 上建立“当前 Build 实际可用主动技能”的只读投影，作为 UI、控制器与 AI 共同的容量事实来源，同时保留完整技能列表供 `BuildValidator` 报告超容量错误。
 - 验收标准：
@@ -605,12 +605,12 @@
 - 检索证据：已执行 `git status --short`（工作区干净，`main...origin/main`）、`git diff --unified=0 -- agent-plan/`（空）、`git diff --cached --unified=0 -- agent-plan/`（空）与 `git log --oneline -5 -- agent-plan/`（当前计划基线 `cbccdb8`）；全量检索确认现有最高主题编号为 PAWNS-014 / COMBAT-006 / UI-012 / CORE-006 / TESTING-004，CROSS-012 已验收，无未完成 planned Increment。 `git grep` 实测：`BuildValidator` 已能报告 `over_capacity`，但 `Pawn.can_cast_skill()` 不检查容量，`PlayerController.order_skill_instance()` 只检查 known skill，`AIController` 直接遍历 `data.get_active_skills()`，`SkillBar.refresh()` 用 `max(capacity, skills.size())` 显示全部技能却未把多余技能置为 DISABLED。因此“校验能发现错误”与“运行时实际禁止错误 Build”之间仍有缺口。
 - 风险：必须保持既有正常 Build（炼气 2/2）行为不变；不得让无境界的怪物/傀儡因缺少 Build 容量而失去天生技能；不得只修 UI 而留下控制器或 AI 旁路；不得静默截断技能列表。
 - 实现说明：新增只读容量投影 API；无境界使用 `-1` 表示“无 Build 容量约束”，有效境界才按容量截取“可用视图”。本 Increment 不修改任何资源值、冷却或控制器命令。
-- 变更文件：待实现回填。
-- 测试证据：待实现回填。
-- 验证状态：未验证
-- 验证时间：
-- 已知问题：待实现回填。
-- 用户验收：未验收
-- 验收时间：
-- Git：待验收后提交
+- 变更文件：`game/pawns/pawn.gd`、`test/unit/pawn_active_skill_capacity_test.gd`、`test/unit/pawn_active_skill_capacity_test.gd.uid`。
+- 测试证据：`pwsh -File test/run_tests.ps1 -Godot <godot> -Layer unit` 返回 PASS：94 cases / 0 failures；新增容量测试覆盖容量 0/1/2/4、重复技能去重投影、完整 loadout 仍报告 `over_capacity`、无境界无界兼容与查询无副作用。`pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` 返回 PASS：GdUnit4 207 cases / 0 failures（unit 94、integration 73、gameplay 40），headless 10 suites / 549 assertions / 0 failing suites。Godot MCP `validate` 对 13 个本次变更脚本/测试目标返回 `valid: true`、`errors: []`；`git diff --check` 无输出。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T18:10:00+08:00
+- 已知问题：无新增阻塞。无境界或无效境界单位保持无界兼容；完整原始 loadout 仍保留给 BuildValidator。
+- 用户验收：已验收
+- 验收时间：2026-09-25T18:10:00+08:00
+- Git：`main` / 待本轮分 Increment 提交后回写 hash
 - 备注：父 Increment 为 `INC-CROSS-013`。
