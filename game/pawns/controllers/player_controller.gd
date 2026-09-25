@@ -33,6 +33,9 @@ func order_skill(target: Pawn = null) -> bool:
 func order_skill_instance(skill: ActiveSkillDefinition, target: Pawn = null) -> bool:
 	if not _is_known_skill(skill):
 		return false
+	# 超容量技能与未知技能一样必须零副作用拒绝；不得改写既有攻击/移动/技能命令。
+	if not pawn.is_active_skill_enabled(skill):
+		return false
 	var resolved_target: Pawn = _resolve_skill_target(skill, target)
 	if resolved_target == null or pawn == null or not pawn.is_valid_skill_target(skill, resolved_target):
 		return false
@@ -67,6 +70,9 @@ func get_order_description() -> String:
 func update_controller(_delta: float) -> void:
 	if _attack_target != null and (not is_instance_valid(_attack_target) or not _attack_target.is_alive()):
 		_attack_target = null
+	# 容量变化后旧技能命令必须先失效，不能继续瞄准或替换成其它技能。
+	if _has_skill_order and (_ordered_skill == null or not pawn.is_active_skill_enabled(_ordered_skill)):
+		_clear_skill_order()
 	# 技能目标死亡、失效或切阵营时必须在产生任何副作用前失效，并回退到普通攻击。
 	if _has_skill_order and not _is_valid_skill_target(_skill_target, _get_ordered_skill()):
 		_clear_skill_order()
@@ -125,11 +131,12 @@ func _tick_move_order() -> void:
 func _get_active_skill() -> ActiveSkillDefinition:
 	if pawn == null or pawn.data == null:
 		return null
-	return pawn.data.get_primary_active_skill()
+	var enabled: Array[ActiveSkillDefinition] = pawn.get_enabled_active_skills()
+	return enabled[0] if not enabled.is_empty() else null
 
 ## 技能命令优先使用下达时记录的具体技能；若引用失效则回退到第一个技能。
 func _get_ordered_skill() -> ActiveSkillDefinition:
-	if _ordered_skill != null and _is_known_skill(_ordered_skill):
+	if _ordered_skill != null and _is_known_skill(_ordered_skill) and pawn != null and pawn.is_active_skill_enabled(_ordered_skill):
 		return _ordered_skill
 	return _get_active_skill()
 

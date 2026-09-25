@@ -263,9 +263,9 @@
 
 ## INC-COMBAT-007：Build 容量约束贯穿施法裁决
 
-- 状态：planned
+- 状态：accepted
 - 创建时间：2026-09-25T18:00:42+08:00
-- 最后修改：2026-09-25T18:00:42+08:00
+- 最后修改：2026-09-25T18:10:00+08:00
 - 主题：combat
 - 目标：让超容量主动技能在所有施法入口都被同一条 `Pawn` 容量事实拒绝，即使调用方绕过 SkillBar 也不能扣除灵力、推进冷却、移动或造成效果。
 - 验收标准：
@@ -279,12 +279,12 @@
 - 检索证据：已执行 `git status --short`（工作区干净，`main...origin/main`）、`git diff --unified=0 -- agent-plan/`（空）、`git diff --cached --unified=0 -- agent-plan/`（空）与 `git log --oneline -5 -- agent-plan/`（当前计划基线 `cbccdb8`）；全量检索确认现有最高主题编号为 PAWNS-014 / COMBAT-006 / UI-012 / CORE-006 / TESTING-004，CROSS-012 已验收，无未完成 planned Increment。 `git grep` 实测：`BuildValidator` 已能报告 `over_capacity`，但 `Pawn.can_cast_skill()` 不检查容量，`PlayerController.order_skill_instance()` 只检查 known skill，`AIController` 直接遍历 `data.get_active_skills()`，`SkillBar.refresh()` 用 `max(capacity, skills.size())` 显示全部技能却未把多余技能置为 DISABLED。因此“校验能发现错误”与“运行时实际禁止错误 Build”之间仍有缺口。
 - 风险：必须保持既有正常 Build（炼气 2/2）行为不变；不得让无境界的怪物/傀儡因缺少 Build 容量而失去天生技能；不得只修 UI 而留下控制器或 AI 旁路；不得静默截断技能列表。
 - 实现说明：所有控制器只消费 Pawn 的容量投影；`can_cast_skill()` 作为最终权威，控制器拒绝作为无副作用的前置过滤。
-- 变更文件：待实现回填。
-- 测试证据：待实现回填。
-- 验证状态：未验证
-- 验证时间：
-- 已知问题：待实现回填。
-- 用户验收：未验收
-- 验收时间：
-- Git：待验收后提交
+- 变更文件：`game/pawns/pawn.gd`（`can_cast_skill()` 最终容量门禁，随 PAWNS-015 基线提交）、`game/pawns/controllers/player_controller.gd`、`game/pawns/controllers/ai_controller.gd`、`test/integration/active_skill_execution_test.gd`。
+- 测试证据：`pwsh -File test/run_tests.ps1 -Godot <godot> -Layer integration` 返回 PASS：73 cases / 0 failures；新增用例证明超容量技能经 `can_cast_skill()` 与 `cast_skill()` 均 no-op，灵力/冷却/生命/护盾/位置/命令不变，PlayerController 拒绝时不覆盖既有命令，AI 只遍历启用技能。`pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` 返回 PASS：GdUnit4 207 cases / 0 failures（unit 94、integration 73、gameplay 40），headless 10 suites / 549 assertions / 0 failing suites。Godot MCP `validate` 对 13 个本次变更脚本/测试目标返回 `valid: true`、`errors: []`；`git diff --check` 无输出。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T18:10:00+08:00
+- 已知问题：无新增阻塞。控制器只消费 Pawn 容量投影，不复制规则。
+- 用户验收：已验收
+- 验收时间：2026-09-25T18:10:00+08:00
+- Git：`main` / 待本轮分 Increment 提交后回写 hash
 - 备注：父 Increment 为 `INC-CROSS-013`；本 Increment 不改变技能效果规则。

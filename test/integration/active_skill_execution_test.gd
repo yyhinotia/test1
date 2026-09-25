@@ -49,6 +49,18 @@ func _make_player_data(skill: ActiveSkillDefinition, max_spirit: float = -1.0) -
 	return data
 
 
+func _make_player_data_with_skills(
+		skills: Array[ActiveSkillDefinition],
+		max_spirit: float = 100.0
+	) -> PawnData:
+	var data: PawnData = (load(PLAYER_DATA_PATH) as PawnData).duplicate(true) as PawnData
+	data.active_skill = skills[0] if not skills.is_empty() else null
+	data.active_skills = skills
+	data.max_spirit = max_spirit
+	data.initial_spirit_ratio = 1.0
+	return data
+
+
 func _make_enemy_data(skill: ActiveSkillDefinition, max_spirit: float = 60.0) -> PawnData:
 	var data: PawnData = (load(ENEMY_DATA_PATH) as PawnData).duplicate(true) as PawnData
 	data.active_skill = skill
@@ -209,3 +221,108 @@ func test_ai_uses_configured_skill_after_activation_delay() -> void:
 	assert_float(enemy.current_spirit).is_equal_approx(spirit_before - skill.spirit_cost, APPROX)
 	assert_float(player_total_before - _total_effective_health(player)).is_equal_approx(expected_damage, APPROX)
 	assert_float(enemy.get_skill_cooldown_remaining(skill.id)).is_equal_approx(skill.cooldown, APPROX)
+
+func test_over_capacity_skill_rejects_without_side_effects() -> void:
+	var first: ActiveSkillDefinition = _make_skill(&"capacity_first", 10.0, 1.0, 120.0, 1.0)
+	var second: ActiveSkillDefinition = _make_skill(&"capacity_second", 10.0, 1.0, 120.0, 1.0)
+	var third: ActiveSkillDefinition = _make_skill(&"capacity_third", 10.0, 1.0, 120.0, 1.0)
+	var player: Pawn = _spawn_pawn(
+		PLAYER_PAWN_SCENE_PATH,
+		_make_player_data_with_skills([first, second, third])
+	)
+	var enemy: Pawn = _spawn_pawn(ENEMY_PAWN_SCENE_PATH)
+	player.global_position = Vector2.ZERO
+	enemy.global_position = Vector2(60.0, 0.0)
+	(player.get_controller() as PawnController).set_physics_process(false)
+	(enemy.get_controller() as PawnController).set_physics_process(false)
+
+	var cast_events: Array[String] = []
+	player.skill_cast.connect(func(_pawn: Pawn, _skill: ActiveSkillDefinition, _target: Pawn) -> void:
+		cast_events.append("cast")
+	)
+	var spirit_before: float = player.current_spirit
+	var enemy_total_before: float = _total_effective_health(enemy)
+
+	assert_int(player.get_active_skill_slot_index(third)).is_equal(-1)
+	assert_bool(player.can_cast_skill(third, enemy)).is_false()
+	assert_bool(player.cast_skill(third, enemy)).is_false()
+
+	assert_float(player.current_spirit).is_equal_approx(spirit_before, APPROX)
+	assert_float(player.get_skill_cooldown_remaining(third.id)).is_zero()
+	assert_float(_total_effective_health(enemy)).is_equal_approx(enemy_total_before, APPROX)
+	assert_array(cast_events).is_empty()
+
+	# 同一 Build 的容量内技能仍可正常施放，证明拒绝只针对超容量条目。
+	assert_bool(player.can_cast_skill(first, enemy)).is_true()
+	assert_bool(player.cast_skill(first, enemy)).is_true()
+	assert_array(cast_events).contains_exactly(["cast"])
+
+
+func test_player_controller_rejects_over_capacity_without_overwriting_orders() -> void:
+	var first: ActiveSkillDefinition = _make_skill(&"order_first", 10.0, 1.0, 120.0, 1.0)
+	var second: ActiveSkillDefinition = _make_skill(&"order_second", 10.0, 1.0, 120.0, 1.0)
+	var third: ActiveSkillDefinition = _make_skill(&"order_third", 10.0, 1.0, 120.0, 1.0)
+	var player: Pawn = _spawn_pawn(
+		PLAYER_PAWN_SCENE_PATH,
+		_make_player_data_with_skills([first, second, third])
+	)
+	var enemy: Pawn = _spawn_pawn(ENEMY_PAWN_SCENE_PATH)
+	player.global_position = Vector2.ZERO
+	enemy.global_position = Vector2(60.0, 0.0)
+
+	var controller: PlayerController = player.get_controller() as PlayerController
+	controller.set_physics_process(false)
+	controller.bind(player)
+	controller.order_attack(enemy)
+	var order_before: String = controller.get_order_description()
+	var spirit_before: float = player.current_spirit
+
+	assert_bool(controller.order_skill_instance(third, enemy)).is_false()
+	assert_str(controller.get_order_description()).is_equal(order_before)
+	assert_float(player.current_spirit).is_equal_approx(spirit_before, APPROX)
+	assert_float(player.get_skill_cooldown_remaining(third.id)).is_zero()
+
+	assert_bool(controller.order_skill_instance(first, enemy)).is_true()
+	assert_bool(controller.get_order_description().contains(first.display_name)).is_true()
+
+
+func test_ai_only_tries_enabled_active_skills() -> void:
+	var enabled_but_blocked: ActiveSkillDefinition = _make_skill(&"ai_enabled_blocked", 50.0, 1.0, 120.0, 1.0)
+	var over_capacity_ready: ActiveSkillDefinition = _make_skill(&"ai_over_capacity", 0.0, 1.0, 120.0, 2.0)
+	var data: PawnData = (load(ENEMY_DATA_PATH) as PawnData).duplicate(true) as PawnData
+	var realm: RealmDefinition = RealmDefinition.new()
+	realm.id = &"test_ai_realm"
+	realm.display_name = "测试AI境界"
+	realm.active_skill_slots = 1
+	data.realm = realm
+	data.active_skill = enabled_but_blocked
+	data.active_skills = [enabled_but_blocked, over_capacity_ready]
+	data.max_spirit = 10.0
+	data.initial_spirit_ratio = 1.0
+
+	var enemy: Pawn = _spawn_pawn(ENEMY_PAWN_SCENE_PATH, data)
+	var player: Pawn = _spawn_pawn(PLAYER_PAWN_SCENE_PATH)
+	enemy.global_position = Vector2.ZERO
+	player.global_position = Vector2(60.0, 0.0)
+	var ai: AIController = enemy.get_controller() as AIController
+	ai.set_physics_process(false)
+	ai.bind(enemy)
+	ai.set_target(player)
+
+	var spirit_before: float = enemy.current_spirit
+	var player_total_before: float = _total_effective_health(player)
+
+	assert_bool(ai._try_cast_active_skill(60.0)).is_false()
+	assert_float(enemy.current_spirit).is_equal_approx(spirit_before, APPROX)
+	assert_float(_total_effective_health(player)).is_equal_approx(player_total_before, APPROX)
+	assert_float(enemy.get_skill_cooldown_remaining(enabled_but_blocked.id)).is_zero()
+	assert_float(enemy.get_skill_cooldown_remaining(over_capacity_ready.id)).is_zero()
+
+	# 唯一启用技能变为可施放后，AI 只能选择它；超容量技能不得被消费。
+	enabled_but_blocked.spirit_cost = 0.0
+	assert_bool(ai._try_cast_active_skill(60.0)).is_true()
+	assert_float(enemy.get_skill_cooldown_remaining(enabled_but_blocked.id)).is_equal_approx(
+		enabled_but_blocked.cooldown, APPROX
+	)
+	assert_float(enemy.get_skill_cooldown_remaining(over_capacity_ready.id)).is_zero()
+	assert_bool(_total_effective_health(player) < player_total_before).is_true()

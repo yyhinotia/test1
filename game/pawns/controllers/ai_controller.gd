@@ -40,7 +40,7 @@ func _try_cast_active_skill(distance_to_target: float) -> bool:
 	if _target == null or not is_instance_valid(_target) or not _target.is_alive():
 		return false
 
-	for skill: ActiveSkillDefinition in pawn.data.get_active_skills():
+	for skill: ActiveSkillDefinition in pawn.get_enabled_active_skills():
 		var skill_target: Pawn = _target
 		if skill.target_type == ActiveSkillDefinition.SkillTargetType.SELF:
 			skill_target = pawn
