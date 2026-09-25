@@ -3,8 +3,13 @@ extends CharacterBody2D
 
 signal health_changed(pawn: Pawn, current_health: float, max_health: float)
 signal shield_changed(pawn: Pawn, current_shield: float, max_shield: float)
+signal spirit_changed(pawn: Pawn, current_spirit: float, max_spirit: float)
+signal cultivation_changed(pawn: Pawn, current_exp: float, required_exp: float)
+signal cultivation_ready(pawn: Pawn)
 signal state_changed(pawn: Pawn, new_state: int)
 signal attack_performed(target: Pawn)
+signal skill_cast(pawn: Pawn, skill: ActiveSkillDefinition, target: Pawn)
+signal skill_cooldown_changed(pawn: Pawn, skill_id: StringName, remaining: float)
 signal died(pawn: Pawn)
 
 enum State {
@@ -14,17 +19,28 @@ enum State {
 	DEAD,
 }
 
+const SPIRIT_RESOURCE_ID: StringName = &"spirit"
+const SPIRIT_DISPLAY_NAME: String = "灵力"
+const SPIRIT_POOL_NAME: StringName = &"Spirit"
+
 @export var data: PawnData
 
 @onready var visual: Sprite2D = $Visual/Sprite2D
 @onready var collision_shape: CollisionShape2D = $Collision/CollisionShape2D
+@onready var resources: ResourceSetComponent = $Resources
+@onready var health_pool: ResourcePoolComponent = $Resources/Health
+@onready var shield_pool: ResourcePoolComponent = $Resources/Shield
 @onready var health: HealthComponent = $HealthComponent
-@onready var health_bar: PawnHealthBar = $HealthBarAnchor/HealthBar
+@onready var cultivation_progress: CultivationProgressComponent = $CultivationProgress
+@onready var status_bars: PawnStatusBars = $HealthBarAnchor/StatusBars
 @onready var selection_indicator: CanvasItem = $SelectionIndicator
 @onready var controller: PawnController = $Controller
 
-## 运行时生命数值由 `HealthComponent` 持有；这里只保留只读代理，
-## 让 HUD、测试等既有调用方继续用 `pawn.current_health` 读取。
+## 灵力池只在 `max_spirit > 0` 时创建，因此没有灵力配置的单位这里为 null。
+var spirit_pool: ResourcePoolComponent
+
+## 运行时生命数值由 `Resources/Health` 资源池唯一持有，`Pawn.health` 只是兼容门面；
+## 这里只保留只读代理，让 HUD、测试等既有调用方继续用 `pawn.current_health` 读取。
 var current_health: float:
 	get:
 		return (health.current_health if health != null else 0.0)
@@ -33,39 +49,207 @@ var current_shield: float:
 	get:
 		return (health.current_shield if health != null else 0.0)
 
+## 灵力由 `Resources/Spirit` 资源池持有；没有配置灵力的单位恒为 0。
+var current_spirit: float:
+	get:
+		return (spirit_pool.current_value if spirit_pool != null else 0.0)
+
+var max_spirit: float:
+	get:
+		return (spirit_pool.max_value if spirit_pool != null else 0.0)
+
 var _state: int = State.IDLE
 var _attack_cooldown: float = 0.0
 var _attack_state_remaining: float = 0.0
 var _visual_tween: Tween
 var _selected: bool = false
+var _skill_cooldowns: Dictionary = {}
 
 var state: int:
 	get:
 		return _state
 
 func _ready() -> void:
+	# 资源池必须先注册并绑定到兼容门面，之后的数值只有一个数据源。
+	_register_resource_pools()
+	_setup_cultivation_progress()
+
 	if data == null:
 		push_error("Pawn requires a PawnData resource: %s" % get_path())
 		# 保持配置错误时的旧行为：没有 PawnData 的单位视为生命为 0（已死亡），
 		# 而不是把组件默认上限当成存活单位。
 		health.configure(0.0, 0.0)
+		_bind_status_bars()
 		return
 
-	health.health_changed.connect(_on_health_changed)
-	health.shield_changed.connect(_on_shield_changed)
-	health.health_state_changed.connect(_on_health_state_changed)
-	health.depleted.connect(_on_health_depleted)
-	# 静默初始化：出生时不触发血条显示。
+	# 资源池是运行时唯一数据源，Pawn 直接监听池事件，避免兼容门面成为生命周期单点。
+	_connect_resource_pool_signals()
+	# 静默初始化：出生时不触发资源条显示。
 	health.configure(data.max_health, data.max_shield)
+	# 必须在资源池配置完成后绑定，ResourceBar 才能读到正确的当前值与上限。
+	_bind_status_bars()
 
 	visual.modulate = data.display_color
-	health_bar.set_values(health.current_health, health.max_health, health.current_shield, health.max_shield)
 	set_selected(false)
 	_set_state(State.IDLE)
+
+## 注册本单位的资源池，并把 HealthComponent 绑定为它们的兼容门面。
+func _register_resource_pools() -> void:
+	if resources == null or health_pool == null or shield_pool == null:
+		push_error("Pawn 缺少 Resources/Health|Shield 资源池节点：%s" % get_path())
+		return
+
+	resources.register_pool(HealthComponent.HEALTH_RESOURCE_ID, health_pool)
+	resources.register_pool(HealthComponent.SHIELD_RESOURCE_ID, shield_pool)
+	health.bind_pools(health_pool, shield_pool)
+	_setup_spirit_pool()
+
+## 直接订阅真实资源池的事件，使生命周期和状态条不再依赖兼容门面的转发。
+## 配置阶段不会发出 value_changed，因此出生时不会误触发死亡或显示。
+func _connect_resource_pool_signals() -> void:
+	health_pool.value_changed.connect(_on_health_pool_value_changed)
+	health_pool.depleted.connect(_on_health_pool_depleted)
+	shield_pool.value_changed.connect(_on_shield_pool_value_changed)
+	if spirit_pool != null and not spirit_pool.value_changed.is_connected(_on_spirit_pool_value_changed):
+		spirit_pool.value_changed.connect(_on_spirit_pool_value_changed)
+
+## 把已配置的资源池绑定到 PawnStatusBars；UI 只读，不复制资源数值。
+func _bind_status_bars() -> void:
+	if status_bars == null:
+		push_error("Pawn 缺少 HealthBarAnchor/StatusBars 节点：%s" % get_path())
+		return
+	status_bars.bind_pool(HealthComponent.HEALTH_RESOURCE_ID, health_pool)
+	status_bars.bind_pool(HealthComponent.SHIELD_RESOURCE_ID, shield_pool)
+	if spirit_pool != null:
+		status_bars.bind_pool(SPIRIT_RESOURCE_ID, spirit_pool)
+
+## 按稳定资源 ID 只读查询资源池（供 UI、技能与测试使用）。
+func get_resource_pool(resource_id: StringName) -> ResourcePoolComponent:
+	if resources == null:
+		return null
+	return resources.get_pool(resource_id)
+
+func get_resource_ids() -> Array[StringName]:
+	var empty_ids: Array[StringName] = []
+	if resources == null:
+		return empty_ids
+	return resources.get_resource_ids()
+
+## 本单位的境界；没有配置修炼体系时返回 null，由调用方决定显示策略。
+func get_realm() -> RealmDefinition:
+	if data == null:
+		return null
+	return data.realm
+
+## 只读 Build 汇总：境界 + 功法 + 主武器 + 当前生效的主动技能（被动尚无数据来源，保持为空）。
+## 每次调用返回新实例，调用方可以自由修改结果而不影响 PawnData 预设。
+func get_build_loadout() -> BuildLoadout:
+	var loadout: BuildLoadout = BuildLoadout.new()
+	if data == null:
+		return loadout
+	loadout.realm = data.realm
+	loadout.techniques.assign(data.techniques)
+	if data.weapon != null:
+		loadout.weapons.append(data.weapon)
+	if data.active_skill != null:
+		loadout.active_skills.append(data.active_skill)
+	return loadout
+
+## Build 校验结果：只做规则判定，不装备、不卸载、不修改任何资源池或冷却。
+func get_build_validation() -> BuildValidationResult:
+	return BuildValidator.validate(get_build_loadout())
+
+## 修为运行时接口：组件是唯一状态源，Pawn 只暴露只读查询与受控增加入口。
+func get_cultivation_progress() -> CultivationProgressComponent:
+	return cultivation_progress
+
+func get_cultivation_snapshot() -> Dictionary:
+	if cultivation_progress == null:
+		return {
+			"realm": null,
+			"realm_id": &"",
+			"realm_name": "",
+			"next_realm": null,
+			"next_realm_id": &"",
+			"next_realm_name": "",
+			"current_exp": 0.0,
+			"required_exp": 0.0,
+			"ratio": 0.0,
+			"has_next_realm": false,
+			"ready": false,
+		}
+	return cultivation_progress.get_snapshot()
+
+func gain_cultivation_exp(amount: float, source: StringName = &"cultivation_gain") -> float:
+	if cultivation_progress == null:
+		return 0.0
+	return cultivation_progress.increase(amount, source)
+
+func set_cultivation_exp(value: float, source: StringName = &"set") -> float:
+	if cultivation_progress == null:
+		return 0.0
+	return cultivation_progress.set_current_exp(value, source)
+
+func get_next_realm() -> RealmDefinition:
+	if cultivation_progress == null:
+		return null
+	return cultivation_progress.get_next_realm()
+
+func is_ready_for_breakthrough() -> bool:
+	return cultivation_progress != null and cultivation_progress.is_ready_for_breakthrough()
+
+
+## 在场景就绪时静默配置修为组件；配置阶段不触发 UI 刷新或“可突破”信号。
+func _setup_cultivation_progress() -> void:
+	if cultivation_progress == null:
+		push_error("Pawn 缺少 CultivationProgress 节点：%s" % get_path())
+		return
+	if not cultivation_progress.progress_changed.is_connected(_on_cultivation_progress_changed):
+		cultivation_progress.progress_changed.connect(_on_cultivation_progress_changed)
+	if not cultivation_progress.became_ready.is_connected(_on_cultivation_became_ready):
+		cultivation_progress.became_ready.connect(_on_cultivation_became_ready)
+	var initial_exp: float = data.initial_cultivation_exp if data != null else 0.0
+	cultivation_progress.configure(get_realm(), initial_exp)
+
+
+func _on_cultivation_progress_changed(
+		_component: CultivationProgressComponent,
+		current_exp: float,
+		required_exp: float,
+		_delta: float,
+		_source: StringName
+	) -> void:
+	cultivation_changed.emit(self, current_exp, required_exp)
+
+
+func _on_cultivation_became_ready(_component: CultivationProgressComponent) -> void:
+	cultivation_ready.emit(self)
+
+
+## 灵力池只在 PawnData 配置了正上限时创建；默认 max_spirit = 0 的单位不创建池、也不显示灵力条。
+func _setup_spirit_pool() -> void:
+	if data == null or resources == null or data.max_spirit <= 0.0:
+		return
+
+	spirit_pool = ResourcePoolComponent.new()
+	spirit_pool.name = SPIRIT_POOL_NAME
+	resources.add_child(spirit_pool)
+	resources.register_pool(SPIRIT_RESOURCE_ID, spirit_pool)
+	spirit_pool.configure(_make_spirit_definition())
+	spirit_pool.value_changed.connect(_on_spirit_pool_value_changed)
+
+func _make_spirit_definition() -> ResourcePoolDefinition:
+	var definition: ResourcePoolDefinition = ResourcePoolDefinition.new()
+	definition.resource_id = SPIRIT_RESOURCE_ID
+	definition.display_name = SPIRIT_DISPLAY_NAME
+	definition.max_value = data.max_spirit
+	definition.initial_ratio = clampf(data.initial_spirit_ratio, 0.0, 1.0)
+	return definition
 
 func _physics_process(delta: float) -> void:
 	if is_dead():
 		return
+	_advance_skill_cooldowns(delta)
 
 	_attack_cooldown = maxf(_attack_cooldown - delta, 0.0)
 	if _attack_state_remaining > 0.0:
@@ -123,8 +307,8 @@ func try_attack(target: Pawn) -> bool:
 	_play_attack_pulse()
 	return true
 
-## 伤害入口：先按 `data.defense` 结算，再把剩余伤害交给 HealthComponent。
-## 组件负责“先护盾、后生命”的扣减与变化信号。
+## 伤害入口：先按 `data.defense` 结算，再把剩余伤害交给 HealthComponent 兼容门面。
+## 门面负责“先护盾、后生命”的路由，数值真实落在 `Resources/Health` 与 `Resources/Shield` 资源池。
 func take_damage(raw_attack: float) -> void:
 	if is_dead():
 		return
@@ -132,12 +316,84 @@ func take_damage(raw_attack: float) -> void:
 	var remaining_damage: float = maxf(1.0, raw_attack - data.defense)
 	health.apply_damage(remaining_damage)
 
-## 生命状态变化的统一入口：把组件里的最新数值转发给头顶血条。
-## 伤害、护盾、治疗、死亡都会经由 `HealthComponent` 的信号走到这里。
-func notify_health_state_changed() -> void:
-	if health_bar == null or health == null:
+## 灵力原子消耗：余额不足返回 false 且数值完全不变。
+## 本方法只做资源扣除，不做冷却、目标、施法条件或技能效果校验（属于后续技能系统）。
+func try_spend_spirit(amount: float) -> bool:
+	if spirit_pool == null:
+		return false
+	return spirit_pool.try_spend(amount, &"spirit_spend")
+
+## 灵力恢复：按上限截断，返回实际恢复量。基础池不自行再生，恢复时机由上层决定。
+func restore_spirit(amount: float) -> float:
+	if spirit_pool == null:
+		return 0.0
+	return spirit_pool.increase(amount, &"spirit_restore")
+
+## 主动技能是否可以施放：所有条件必须先通过，失败路径不得产生任何副作用。
+func can_cast_skill(skill: ActiveSkillDefinition, target: Pawn) -> bool:
+	if skill == null or not skill.is_configured() or data == null:
+		return false
+	if not is_alive():
+		return false
+	if target == null or not is_instance_valid(target) or target == self or not target.is_alive():
+		return false
+	if target.data == null or target.data.faction == data.faction:
+		return false
+	if global_position.distance_to(target.global_position) > skill.get_effective_cast_range(data.attack_range):
+		return false
+	if not is_skill_ready(skill):
+		return false
+	var cost: float = skill.get_normalized_spirit_cost()
+	if cost > 0.0 and (spirit_pool == null or spirit_pool.current_value < cost):
+		return false
+	return true
+
+## 执行一次主动技能。成功时依次扣除灵力、造成伤害、记录冷却并发出信号。
+func cast_skill(skill: ActiveSkillDefinition, target: Pawn) -> bool:
+	if not can_cast_skill(skill, target):
+		return false
+	var cost: float = skill.get_normalized_spirit_cost()
+	if cost > 0.0 and not try_spend_spirit(cost):
+		return false
+	var damage: float = maxf(1.0, data.attack * skill.get_normalized_damage_multiplier())
+	target.take_damage(damage)
+	var cooldown: float = skill.get_normalized_cooldown()
+	if cooldown > 0.0:
+		_skill_cooldowns[skill.id] = cooldown
+	skill_cast.emit(self, skill, target)
+	if cooldown > 0.0:
+		skill_cooldown_changed.emit(self, skill.id, cooldown)
+	return true
+
+func is_skill_ready(skill: ActiveSkillDefinition) -> bool:
+	if skill == null or not skill.is_configured():
+		return false
+	return get_skill_cooldown_remaining(skill.id) <= 0.0
+
+func get_skill_cooldown_remaining(skill_id: StringName) -> float:
+	if _skill_cooldowns.is_empty() or not _skill_cooldowns.has(skill_id):
+		return 0.0
+	return maxf(float(_skill_cooldowns[skill_id]), 0.0)
+
+## 冷却只由 `_physics_process` 推进；暂停时 Pawn 不处理物理帧，冷却自然冻结。
+func _advance_skill_cooldowns(delta: float) -> void:
+	if delta <= 0.0 or _skill_cooldowns.is_empty():
 		return
-	health_bar.notify_health_state_changed(health.current_health, health.max_health, health.current_shield, health.max_shield)
+	for skill_id in _skill_cooldowns.keys():
+		var remaining: float = float(_skill_cooldowns[skill_id])
+		if remaining <= 0.0:
+			continue
+		var next_remaining: float = maxf(remaining - delta, 0.0)
+		_skill_cooldowns[skill_id] = next_remaining
+		if next_remaining <= 0.0:
+			skill_cooldown_changed.emit(self, skill_id, 0.0)
+
+## 生命状态变化的统一入口：让头顶资源条立即显示并重置整组隐藏计时。
+## 数值本身仍由资源池持有，这里只触发表现层，不复制或回写任何资源数值。
+func notify_health_state_changed() -> void:
+	if status_bars == null:
+		return
+	status_bars.reveal()
 
 func die() -> void:
 	if _state == State.DEAD:
@@ -188,14 +444,18 @@ func _play_attack_pulse() -> void:
 	_visual_tween.tween_property(visual, "scale", Vector2.ONE, 0.14)
 
 ## 以下转发保持 `INC-CROSS-001` 已验收的对外信号签名与发射顺序（先护盾、后生命）。
-func _on_health_changed(current_value: float, max_value: float) -> void:
+func _on_health_pool_value_changed(current_value: float, max_value: float, _delta: float, _source: StringName) -> void:
 	health_changed.emit(self, current_value, max_value)
-
-func _on_shield_changed(current_value: float, max_value: float) -> void:
-	shield_changed.emit(self, current_value, max_value)
-
-func _on_health_state_changed(_component: HealthComponent) -> void:
 	notify_health_state_changed()
 
-func _on_health_depleted(_component: HealthComponent) -> void:
+func _on_shield_pool_value_changed(current_value: float, max_value: float, _delta: float, _source: StringName) -> void:
+	shield_changed.emit(self, current_value, max_value)
+	notify_health_state_changed()
+
+## 生命池归零边沿是死亡事实来源；无论变化来自 Pawn.take_damage() 还是直接操作资源池，都必须进入死亡流程。
+func _on_health_pool_depleted(_pool: ResourcePoolComponent) -> void:
 	die()
+
+## 灵力变化只转发 `spirit_changed`：灵力归零不会让 Pawn 死亡，也不冒充生命状态变化。
+func _on_spirit_pool_value_changed(current_value: float, max_value: float, _delta: float, _source: StringName) -> void:
+	spirit_changed.emit(self, current_value, max_value)

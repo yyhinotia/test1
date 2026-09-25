@@ -1,17 +1,28 @@
-[gd_resource type="Resource" script_class="PawnData" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="PawnData" format=3 uid="uid://d62b5f401rjx"]
 
-[ext_resource type="Script" path="res://game/shared/resources/pawn_data.gd" id="1_pawn_data"]
+[ext_resource type="Script" uid="uid://ewp2akokimur" path="res://game/shared/resources/pawn_data.gd" id="1_pawn_data"]
+[ext_resource type="Resource" path="res://game/pawns/data/player_sword_skill.tres" id="2_sword_skill"]
+[ext_resource type="Resource" path="res://game/cultivation/data/realms/qi_refining.tres" id="3_realm"]
+[ext_resource type="Resource" path="res://game/cultivation/data/techniques/sword_cultivation.tres" id="4_technique"]
+[ext_resource type="Resource" path="res://game/inventory/data/weapons/qingfeng_sword.tres" id="5_weapon"]
 
 [resource]
 script = ExtResource("1_pawn_data")
 id = &"player_001"
 display_name = "测试修士"
 faction = &"player"
+sub_realm = "三层"
+spirit_root = &"金灵根"
 max_health = 120.0
 max_shield = 40.0
+max_spirit = 100.0
+realm = ExtResource("3_realm")
+techniques = Array[TechniqueDefinition]([ExtResource("4_technique")])
+weapon = ExtResource("5_weapon")
+active_skill = ExtResource("2_sword_skill")
 attack = 28.0
 defense = 5.0
 move_speed = 145.0
 attack_range = 76.0
 attack_interval = 0.8
-display_color = Color(0.30, 0.72, 1.0, 1.0)
+display_color = Color(0.3, 0.72, 1, 1)

@@ -1,0 +1,12 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/ui/resource_bar.gd" id="1_0y08q"]
+
+[node name="ResourceBar" type="Control" unique_id=743229359]
+custom_minimum_size = Vector2(80, 16)
+layout_mode = 3
+anchors_preset = 0
+offset_right = 80.0
+offset_bottom = 16.0
+mouse_filter = 2
+script = ExtResource("1_0y08q")

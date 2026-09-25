@@ -1,0 +1,50 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://game/ui/resource_bar.tscn" id="1_a7v86"]
+[ext_resource type="Script" path="res://game/ui/pawn_status_bars.gd" id="1_bp3ea"]
+[ext_resource type="Script" path="res://game/ui/resource_bar.gd" id="2_bp3ea"]
+
+[node name="PawnStatusBars" type="Control" unique_id=2066511555]
+visible = false
+custom_minimum_size = Vector2(80, 52)
+layout_mode = 3
+anchors_preset = 0
+offset_left = -40.0
+offset_top = -60.0
+offset_right = 40.0
+offset_bottom = -8.0
+mouse_filter = 2
+script = ExtResource("1_bp3ea")
+
+[node name="Bars" type="VBoxContainer" parent="." unique_id=1789489385]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 2
+
+[node name="HealthBar" type="Control" parent="Bars" unique_id=743229359 instance=ExtResource("1_a7v86")]
+custom_minimum_size = Vector2(80, 16)
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+script = ExtResource("2_bp3ea")
+
+[node name="ShieldBar" type="Control" parent="Bars" unique_id=1909070557 instance=ExtResource("1_a7v86")]
+custom_minimum_size = Vector2(80, 16)
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+script = ExtResource("2_bp3ea")
+fill_color = Color(0.25, 0.78, 1, 1)
+
+[node name="SpiritBar" type="Control" parent="Bars" unique_id=1920395961 instance=ExtResource("1_a7v86")]
+custom_minimum_size = Vector2(80, 16)
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+script = ExtResource("2_bp3ea")
+fill_color = Color(0.55, 0.45, 1, 1)

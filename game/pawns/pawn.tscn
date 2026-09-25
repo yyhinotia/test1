@@ -2,10 +2,12 @@
 
 [ext_resource type="Script" path="res://game/pawns/pawn.gd" id="1_npvev"]
 [ext_resource type="Texture2D" path="res://game/pawns/art/pawn_placeholder.svg" id="1_qn51p"]
-
-[ext_resource type="PackedScene" path="res://game/ui/pawn_health_bar.tscn" id="3_jyj0u"]
+[ext_resource type="PackedScene" path="res://game/ui/pawn_status_bars.tscn" id="3_statusbars"]
 [ext_resource type="Script" path="res://game/pawns/controllers/pawn_controller.gd" id="4_aotyo"]
 [ext_resource type="Script" path="res://game/pawns/health_component.gd" id="5_health"]
+[ext_resource type="Script" path="res://game/shared/core/cultivation_progress_component.gd" id="9_cultivation"]
+[ext_resource type="Script" path="res://game/shared/core/resource_set_component.gd" id="7_ettci"]
+[ext_resource type="Script" path="res://game/shared/core/resource_pool_component.gd" id="8_bnn2l"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_npvev"]
 radius = 20.0
@@ -29,7 +31,12 @@ shape = SubResource("CircleShape2D_npvev")
 [node name="HealthBarAnchor" type="Node2D" parent="." unique_id=1016088576]
 position = Vector2(0, -46)
 
-[node name="HealthBar" type="Control" parent="HealthBarAnchor" unique_id=1454157651 instance=ExtResource("3_jyj0u")]
+[node name="StatusBars" parent="HealthBarAnchor" unique_id=1454157651 instance=ExtResource("3_statusbars")]
+visible = false
+offset_left = -40.0
+offset_top = -44.0
+offset_right = 40.0
+offset_bottom = 8.0
 
 [node name="SelectionIndicator" type="Line2D" parent="." unique_id=1539328049]
 visible = false
@@ -44,3 +51,15 @@ script = ExtResource("4_aotyo")
 
 [node name="HealthComponent" type="Node" parent="." unique_id=1704896231]
 script = ExtResource("5_health")
+
+[node name="CultivationProgress" type="Node" parent="."]
+script = ExtResource("9_cultivation")
+
+[node name="Resources" type="Node" parent="." unique_id=1750738197]
+script = ExtResource("7_ettci")
+
+[node name="Health" type="Node" parent="Resources" unique_id=1066941356]
+script = ExtResource("8_bnn2l")
+
+[node name="Shield" type="Node" parent="Resources" unique_id=767754512]
+script = ExtResource("8_bnn2l")
