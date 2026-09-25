@@ -97,3 +97,55 @@ func test_configure_is_silent_and_snapshot_is_read_only_copy() -> void:
 	assert_float(float(snapshot["ratio"])).is_equal_approx(0.25, APPROX)
 	assert_bool(bool(snapshot["has_next_realm"])).is_true()
 	assert_str(String(snapshot["next_realm_name"])).is_equal("筑基")
+
+func test_advance_realm_consumes_ready_progress_and_moves_to_next_realm() -> void:
+	var component: CultivationProgressComponent = _make_component()
+	var progress_events: Array[Dictionary] = []
+	var realm_events: Array[Dictionary] = []
+	component.progress_changed.connect(func(_component: CultivationProgressComponent, current_exp: float, required_exp: float, delta: float, source: StringName) -> void:
+		progress_events.append({"current": current_exp, "required": required_exp, "delta": delta, "source": source})
+	)
+	component.realm_advanced.connect(func(_component: CultivationProgressComponent, previous_realm: RealmDefinition, new_realm: RealmDefinition) -> void:
+		realm_events.append({"previous": previous_realm.id, "current": new_realm.id})
+	)
+	component.configure(_load_realm(QI_REFINING_PATH), 100.0)
+
+	assert_bool(component.advance_realm()).is_true()
+	assert_str(String(component.get_realm().id)).is_equal("foundation_establishment")
+	assert_str(String(component.get_next_realm().id)).is_equal("golden_core")
+	assert_float(component.get_current_exp()).is_zero()
+	assert_float(component.get_required_exp()).is_equal_approx(100.0, APPROX)
+	assert_bool(component.is_ready_for_breakthrough()).is_false()
+	assert_int(progress_events.size()).is_equal(1)
+	assert_float(float(progress_events[0]["delta"])).is_equal_approx(-100.0, APPROX)
+	assert_str(String(progress_events[0]["source"])).is_equal("breakthrough")
+	assert_int(realm_events.size()).is_equal(1)
+	assert_str(String(realm_events[0]["previous"])).is_equal("qi_refining")
+	assert_str(String(realm_events[0]["current"])).is_equal("foundation_establishment")
+
+	# 第二次突破必须从新境界自己的阈值重新累积，证明容量链与进度链同步推进。
+	component.set_current_exp(100.0, &"second_gain")
+	assert_bool(component.advance_realm()).is_true()
+	assert_str(String(component.get_realm().id)).is_equal("golden_core")
+	assert_str(String(component.get_next_realm().id)).is_equal("nascent_soul")
+
+
+func test_advance_realm_rejects_unready_invalid_and_terminal_states() -> void:
+	var component: CultivationProgressComponent = _make_component()
+	var realm_events: Array[Dictionary] = []
+	component.realm_advanced.connect(func(_component: CultivationProgressComponent, previous_realm: RealmDefinition, new_realm: RealmDefinition) -> void:
+		realm_events.append({"previous": previous_realm.id, "current": new_realm.id})
+	)
+
+	component.configure(_load_realm(QI_REFINING_PATH), 99.0)
+	assert_bool(component.advance_realm()).is_false()
+	assert_str(String(component.get_realm().id)).is_equal("qi_refining")
+	assert_float(component.get_current_exp()).is_equal_approx(99.0, APPROX)
+
+	component.configure(_load_realm(SPIRIT_TRANSFORMATION_PATH), 50.0)
+	assert_bool(component.advance_realm()).is_false()
+	assert_str(String(component.get_realm().id)).is_equal("spirit_transformation")
+
+	component.configure(null, 50.0)
+	assert_bool(component.advance_realm()).is_false()
+	assert_int(realm_events.size()).is_zero()

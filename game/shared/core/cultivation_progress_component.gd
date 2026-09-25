@@ -10,6 +10,7 @@ extends Node
 
 signal progress_changed(component: CultivationProgressComponent, current_exp: float, required_exp: float, delta: float, source: StringName)
 signal became_ready(component: CultivationProgressComponent)
+signal realm_advanced(component: CultivationProgressComponent, previous_realm: RealmDefinition, new_realm: RealmDefinition)
 
 var _realm: RealmDefinition
 var _current_exp: float = 0.0
@@ -54,6 +55,27 @@ func set_current_exp(value: float, source: StringName = &"set") -> float:
 		became_ready.emit(self)
 	return absf(delta)
 
+
+## 突破执行：仅在 `became_ready` 条件成立时消费全部当前修为，推进到下一境界。
+## 语义固定为“消耗而非结转”：新境界从 0 修为开始，避免与 set_current_exp 的阈值截断规则冲突。
+## 成功时先广播 progress_changed（delta 为负的已消费修为），再广播一次 realm_advanced。
+func advance_realm() -> bool:
+	if not is_ready_for_breakthrough():
+		return false
+	var advanced_realm: RealmDefinition = get_next_realm()
+	if advanced_realm == null:
+		return false
+
+	var previous_realm: RealmDefinition = _realm
+	var consumed_exp: float = _current_exp
+	_realm = advanced_realm
+	_required_exp = _realm.get_breakthrough_exp()
+	_current_exp = 0.0
+	_was_ready = false
+
+	progress_changed.emit(self, _current_exp, _required_exp, -consumed_exp, &"breakthrough")
+	realm_advanced.emit(self, previous_realm, advanced_realm)
+	return true
 
 func get_realm() -> RealmDefinition:
 	return _realm

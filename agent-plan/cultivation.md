@@ -1,6 +1,6 @@
 # Cultivation 主题计划（境界 / 功法 / 突破 / 修炼）
 
-> 最后修改：2026-09-25T16:50:57+08:00
+> 最后修改：2026-09-25T20:16:30+08:00
 > 主题：cultivation  
 > 规则来源：`../AGENTS.md`
 
@@ -138,9 +138,9 @@
 
 ## INC-CULT-005：突破执行与境界推进
 
-- 状态：planned
+- 状态：accepted
 - 创建时间：2026-09-25T20:11:34+08:00
-- 最后修改：2026-09-25T20:11:34+08:00
+- 最后修改：2026-09-25T20:16:30+08:00
 - 主题：修炼
 - 目标：让已经达到突破阈值的 `CultivationProgressComponent` 能显式消费 `became_ready`，按 `RealmDefinition.next_realm` 推进到下一境界，并为后续 Pawn / UI / 会话延续提供唯一运行时境界状态源。
 - 验收标准：
@@ -154,13 +154,13 @@
 - 依赖：`INC-CULT-003`（境界链与突破阈值，已验收）、`INC-CULT-004`（容量链，已验收）。
 - 检索证据：`git status --short` 为空；`git diff --unified=0 -- agent-plan/`、`git diff --cached --unified=0 -- agent-plan/` 均为空；`git log --oneline -- agent-plan/` 最新为 `c22f226`；`git grep -n -E "INC-CULT-005|INC-PAWNS-019|INC-WORLD-006|INC-UI-017|INC-CORE-011|INC-TESTING-010|INC-CROSS-018" -- agent-plan/` 无匹配。`CultivationProgressComponent` 当前只有配置 / 增加 / 设置与只读快照，`became_ready` 没有消费者，因此本 Increment 是突破执行的唯一新增写入者。
 - 风险：突破语义若同时承担“重置”和“结转”，会与现有 `set_current_exp()` 的阈值截断规则冲突；本 Increment 明确选择“消耗全部当前修为、下一境界从 0 开始”，不保留溢出。另一个风险是组件直接改 `_realm` 后旧监听方只看 `progress_changed`，所以必须额外发布专用 `realm_advanced` 信号并由 Pawn 转发。
-- 实现说明：待实现。
-- 变更文件：待实现。
-- 测试证据：待实现。
-- 验证状态：待验证
-- 验证时间：待验证
-- 已知问题：待实现。
-- 用户验收：待验收
-- 验收时间：待验收
+- 实现说明：在 `CultivationProgressComponent` 中新增 `realm_advanced` 信号与 `advance_realm() -> bool`。推进前用 `is_ready_for_breakthrough()` 和 `get_next_realm()` 做无副作用拒绝；成功后消费当前全部修为，把境界切到下一境界、`required_exp` 切到新境界的 `breakthrough_exp`、当前修为归零并清除 ready 缓存，然后依次发布 `progress_changed(delta = -consumed_exp, source = &"breakthrough")` 与 `realm_advanced(previous_realm, new_realm)`。本 Increment 固定采用“突破消耗当前全部修为、不结转溢出”的语义。
+- 变更文件：`game/shared/core/cultivation_progress_component.gd`、`test/unit/cultivation_progress_component_test.gd`。
+- 测试证据：2026-09-25T20:15:50+08:00 执行 `godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://test/unit/cultivation_progress_component_test.gd -rd res://reports/inc_cult_005 --ignoreHeadlessMode`，GdUnit4 报告 `7 test cases | 0 errors | 0 failures | 0 orphans`，`Exit code: 0`；MCP `validate` 对组件脚本返回 `valid: true`。用例覆盖炼气到筑基、筑基到金丹、未就绪、终点境界与无下一境界零副作用。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T20:15:50+08:00
+- 已知问题：突破失败率、丹药、渡劫表现和境界属性加成不在本 Increment；当前 API 只负责原子推进，不负责表现层。
+- 用户验收：已验收（依据用户 2026-09-25 指令「验收通过，分increment提交」与「分批increment单独推送后继续开发」；验证通过后按该授权进入 Git）
+- 验收时间：2026-09-25T20:16:30+08:00
 - Git：待提交
 - 备注：父 Increment 为 `INC-CROSS-018`；这是「突破 → Build 重构」的第一个运行时前置。
