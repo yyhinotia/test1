@@ -10,6 +10,7 @@ const SKILL_HIT: StringName = &"skill_hit"
 const SKILL_BLOCKED: StringName = &"skill_blocked"
 const SKILL_STUNNED: StringName = &"skill_stunned"
 const SKILL_CANCELLED: StringName = &"skill_cancelled"
+const SUMMONED: StringName = &"summoned"
 const UNIT_DIED: StringName = &"unit_died"
 const COMBAT_END: StringName = &"combat_end"
 
@@ -44,6 +45,7 @@ static func get_known_event_types() -> Array[StringName]:
 		SKILL_BLOCKED,
 		SKILL_STUNNED,
 		SKILL_CANCELLED,
+		SUMMONED,
 		UNIT_DIED,
 		COMBAT_END,
 	]

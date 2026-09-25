@@ -4,15 +4,15 @@
 
 [resource]
 script = ExtResource("1_pawn_data")
-id = &"enemy_iron_guard"
-display_name = "铁壁傀儡"
+id = &"enemy_summon_minion"
+display_name = "召魂傀"
 faction = &"enemy"
-max_health = 520.0
-max_shield = 80.0
-attack = 16.0
-defense = 6.0
-move_speed = 70.0
-attack_range = 66.0
-attack_interval = 1.6
-problem_tag = 4
-display_color = Color(0.55, 0.62, 0.74, 1)
+max_health = 60.0
+max_shield = 0.0
+attack = 8.0
+defense = 1.0
+move_speed = 120.0
+attack_range = 56.0
+attack_interval = 1.4
+problem_tag = 0
+display_color = Color(0.56, 0.45, 0.7, 1)

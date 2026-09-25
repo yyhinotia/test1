@@ -64,6 +64,8 @@ var _owned_units: Array[Pawn] = []
 var _combat_event_log: CombatEventLog = CombatEventLog.new()
 ## 危险窗口调度器（每个配置了 dangerous_skill 的敌人一个）；RefCounted，不进入场景树。
 var _danger_schedulers: Array[DangerWindowScheduler] = []
+## 召唤增援调度器（每个配置了 summon_* 的敌人一个，INC-COMBAT-011）；RefCounted，不进入场景树。
+var _summon_schedulers: Array[SummonScheduler] = []
 
 
 ## 结算状态的唯一文案来源：上层只做转发，不在 UI 里重新解释结算结果。
@@ -412,6 +414,7 @@ func _retire_units() -> void:
 	_enemy = null
 	_player_units.clear()
 	_enemy_units.clear()
+	_summon_schedulers.clear()
 
 
 ## 控制器绑定是会话职责：玩家队伍接 PlayerController，敌方队伍接 AIController。
@@ -441,16 +444,73 @@ func _connect_combat_signals() -> void:
 func _setup_combat_events() -> void:
 	_combat_event_log.reset()
 	_danger_schedulers.clear()
+	_summon_schedulers.clear()
 	for enemy: Pawn in _enemy_units:
 		if enemy == null or not is_instance_valid(enemy) or enemy.data == null:
 			continue
-		if not enemy.data.has_danger_window():
-			continue
-		var scheduler: DangerWindowScheduler = DangerWindowScheduler.new(enemy, _player)
-		scheduler.danger_window_opened.connect(_on_danger_window_opened)
-		scheduler.danger_window_cancelled_by_stun.connect(_on_danger_window_cancelled_by_stun)
-		scheduler.dangerous_skill_released.connect(_on_dangerous_skill_released)
-		_danger_schedulers.append(scheduler)
+		if enemy.data.has_danger_window():
+			var scheduler: DangerWindowScheduler = DangerWindowScheduler.new(enemy, _player)
+			scheduler.danger_window_opened.connect(_on_danger_window_opened)
+			scheduler.danger_window_cancelled_by_stun.connect(_on_danger_window_cancelled_by_stun)
+			scheduler.dangerous_skill_released.connect(_on_dangerous_skill_released)
+			_danger_schedulers.append(scheduler)
+		if enemy.data.can_summon():
+			var summon_scheduler: SummonScheduler = SummonScheduler.new(enemy, enemy.data.summon_minion)
+			summon_scheduler.summon_requested.connect(_on_summon_requested)
+			_summon_schedulers.append(summon_scheduler)
+
+
+## 增援请求（INC-COMBAT-011）：只负责把请求转成真实单位并写入事件日志；
+## 生成失败不伪造事件，也不改变对局状态。
+func _on_summon_requested(summoner: Pawn, minion_data: PawnData) -> void:
+	if _state != State.RUNNING:
+		return
+	if summoner == null or not is_instance_valid(summoner) or summoner.is_dead():
+		return
+	var minion: Pawn = _spawn_reinforcement(summoner, minion_data)
+	if minion == null:
+		return
+	_combat_event_log.record(CombatEvent.SUMMONED, _unit_id(summoner), _unit_id(minion))
+
+
+## 生成增援：加入 _enemy_units 后，终局判定自动要求「敌方全灭」，
+## 因此增援不是装饰物，玩家不处理就无法结束对局。生成物继承 AI 目标绑定与事件接线。
+func _spawn_reinforcement(summoner: Pawn, minion_data: PawnData) -> Pawn:
+	var container: Node2D = resolve_pawns_container()
+	if container == null or minion_data == null:
+		return null
+	var index: int = _count_units_with_id(minion_data.id)
+	var node_name: String = "%s_%d" % [String(minion_data.id), index + 1]
+	var spawn_position: Vector2 = summoner.global_position + _reinforcement_offset(index)
+	var minion: Pawn = _spawn_unit(container, ENEMY_SCENE_PATH, node_name, minion_data, spawn_position)
+	if minion == null:
+		return null
+	_enemy_units.append(minion)
+	if not minion.died.is_connected(_on_unit_died):
+		minion.died.connect(_on_unit_died)
+	if not minion.skill_cast.is_connected(_on_pawn_skill_cast):
+		minion.skill_cast.connect(_on_pawn_skill_cast)
+	var ai_controller: AIController = minion.get_controller() as AIController
+	if ai_controller != null:
+		ai_controller.bind(minion)
+		ai_controller.set_target(_player)
+	return minion
+
+
+## 统计当前敌方队伍中某个档案已存在的数量：节点名按此编号，避免同名节点被 Godot 自动改名。
+func _count_units_with_id(unit_id: StringName) -> int:
+	var count: int = 0
+	for unit: Pawn in _enemy_units:
+		if unit != null and is_instance_valid(unit) and unit.data != null and unit.data.id == unit_id:
+			count += 1
+	return count
+
+
+## 增援站位：围绕召唤者 70px 环形排布，使范围剑气（半径 90）能覆盖成组增援，
+## 又不会把增援直接叠在召唤者身上。
+static func _reinforcement_offset(index: int) -> Vector2:
+	var angle: float = TAU * float(index) / 6.0
+	return Vector2(cos(angle), sin(angle)) * 70.0
 
 
 ## 事件与危险窗口只在对局 RUNNING 时推进；暂停由场景树的 process_mode 统一冻结。
@@ -461,6 +521,9 @@ func _physics_process(delta: float) -> void:
 	for scheduler: DangerWindowScheduler in _danger_schedulers:
 		if scheduler != null:
 			scheduler.advance(delta)
+	for summon_scheduler: SummonScheduler in _summon_schedulers:
+		if summon_scheduler != null:
+			summon_scheduler.advance(delta)
 
 
 ## 供测试与 INC-TESTING-011 取证使用；返回的是活日志对象，不复制到另一套记录系统。

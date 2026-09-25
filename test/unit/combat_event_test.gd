@@ -28,6 +28,7 @@ func test_known_event_types_are_the_documented_whitelist() -> void:
 		&"skill_blocked",
 		&"skill_stunned",
 		&"skill_cancelled",
+		&"summoned",
 		&"unit_died",
 		&"combat_end",
 	])

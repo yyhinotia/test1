@@ -14,4 +14,5 @@ defense = 2.0
 move_speed = 140.0
 attack_range = 66.0
 attack_interval = 1.5
+problem_tag = 3
 display_color = Color(0.95, 0.3, 0.38, 1)

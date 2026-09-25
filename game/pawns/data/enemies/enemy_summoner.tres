@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="PawnData" format=3]
+
+[ext_resource type="Script" uid="uid://ewp2akokimur" path="res://game/shared/resources/pawn_data.gd" id="1_pawn_data"]
+[ext_resource type="Resource" path="res://game/pawns/data/enemies/enemy_summon_minion.tres" id="2_minion"]
+
+[resource]
+script = ExtResource("1_pawn_data")
+id = &"enemy_summoner"
+display_name = "聚魂邪修"
+faction = &"enemy"
+max_health = 240.0
+max_shield = 30.0
+attack = 14.0
+defense = 3.0
+move_speed = 82.0
+attack_range = 150.0
+attack_interval = 1.6
+problem_tag = 6
+summon_minion = ExtResource("2_minion")
+summon_initial_delay = 1.0
+summon_interval = 3.0
+summon_max_count = 4
+display_color = Color(0.46, 0.33, 0.72, 1)

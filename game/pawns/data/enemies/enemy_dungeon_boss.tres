@@ -15,6 +15,7 @@ defense = 8.0
 move_speed = 68.0
 attack_range = 72.0
 attack_interval = 1.8
+problem_tag = 5
 dangerous_skill = ExtResource("2_danger_skill")
 danger_window_interval = 8.0
 danger_window_duration = 2.0

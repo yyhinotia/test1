@@ -7,6 +7,11 @@ extends GdUnitTestSuite
 const BASELINE_PATH: String = "res://game/pawns/data/enemy_pawn.tres"
 const IRON_GUARD_PATH: String = "res://game/pawns/data/enemies/enemy_iron_guard.tres"
 const BLOOD_BLADE_PATH: String = "res://game/pawns/data/enemies/enemy_blood_blade.tres"
+const MELEE_RAIDER_PATH: String = "res://game/pawns/data/enemies/enemy_melee_raider.tres"
+const ARCHER_PATH: String = "res://game/pawns/data/enemies/enemy_spirit_archer.tres"
+const BOSS_PATH: String = "res://game/pawns/data/enemies/enemy_build_test_boss.tres"
+const SUMMONER_PATH: String = "res://game/pawns/data/enemies/enemy_summoner.tres"
+const SUMMON_MINION_PATH: String = "res://game/pawns/data/enemies/enemy_summon_minion.tres"
 
 
 func _load_profile(path: String) -> PawnData:
@@ -72,3 +77,65 @@ func test_long_line_and_burst_profiles_separate_on_threat_axes() -> void:
 	assert_float(baseline.max_health).is_equal_approx(180.0, 0.001)
 	assert_float(baseline.attack).is_equal_approx(12.0, 0.001)
 	assert_float(baseline.attack_interval).is_equal_approx(1.1, 0.001)
+
+
+## INC-COMBAT-011：六类问题型敌人必须互不重复，且各自映射到一个唯一的技能价值轴。
+## 这是「不同敌人让不同 Skill 的价值发生变化」在数据层的可查询前提，不靠文档描述。
+func test_problem_profiles_cover_six_distinct_skill_value_axes() -> void:
+	var paths: Array[String] = [
+		MELEE_RAIDER_PATH,
+		ARCHER_PATH,
+		BLOOD_BLADE_PATH,
+		IRON_GUARD_PATH,
+		BOSS_PATH,
+		SUMMONER_PATH,
+	]
+	var tags: Array[int] = []
+	var axes: Array[StringName] = []
+	for path: String in paths:
+		var data: PawnData = _load_profile(path)
+		assert_bool(data.problem_tag != PawnData.ProblemTag.NONE).is_true()
+		assert_bool(data.get_problem_tag_label() != "").is_true()
+		assert_bool(tags.has(data.problem_tag)).is_false()
+		assert_bool(axes.has(data.get_skill_value_axis())).is_false()
+		tags.append(data.problem_tag)
+		axes.append(data.get_skill_value_axis())
+	assert_int(tags.size()).is_equal(6)
+	assert_int(axes.size()).is_equal(6)
+
+
+## 召唤增援契约：召唤者必须带问题标签与合法增援档案；召唤物本身不是问题源，也不能再次召唤。
+func test_summoner_declares_reinforcement_contract() -> void:
+	var summoner: PawnData = _load_profile(SUMMONER_PATH)
+	assert_bool(summoner.problem_tag == PawnData.ProblemTag.SUMMON_REINFORCEMENT).is_true()
+	assert_bool(summoner.can_summon()).is_true()
+	assert_object(summoner.summon_minion).is_not_null()
+	assert_str(String(summoner.summon_minion.id)).is_equal("enemy_summon_minion")
+	assert_str(String(summoner.summon_minion.faction)).is_equal("enemy")
+	assert_bool(summoner.summon_initial_delay > 0.0).is_true()
+	assert_bool(summoner.summon_interval > 0.0).is_true()
+	assert_bool(summoner.summon_max_count > 0).is_true()
+
+	var minion: PawnData = _load_profile(SUMMON_MINION_PATH)
+	assert_bool(minion.problem_tag == PawnData.ProblemTag.NONE).is_true()
+	assert_bool(minion.can_summon()).is_false()
+
+
+## 蓄力可打断：危险窗口契约仍由 dangerous_skill + 两个时长字段表达，不因问题标签而改语义。
+func test_charge_interrupt_profiles_keep_danger_window_contract() -> void:
+	var boss: PawnData = _load_profile(BOSS_PATH)
+	assert_bool(boss.problem_tag == PawnData.ProblemTag.CHARGE_INTERRUPT).is_true()
+	assert_bool(boss.has_danger_window()).is_true()
+	assert_bool(boss.dangerous_skill != null).is_true()
+	assert_float(boss.danger_window_interval).is_equal_approx(8.0, 0.001)
+	assert_float(boss.danger_window_duration).is_equal_approx(2.0, 0.001)
+
+
+## 非问题源（例如基线敌人与召唤物）必须返回 none，避免被误编排成问题型遭遇。
+func test_non_problem_profiles_return_none_axis() -> void:
+	var baseline: PawnData = _load_profile(BASELINE_PATH)
+	var minion: PawnData = _load_profile(SUMMON_MINION_PATH)
+	assert_bool(baseline.problem_tag == PawnData.ProblemTag.NONE).is_true()
+	assert_str(String(baseline.get_skill_value_axis())).is_equal("none")
+	assert_str(String(minion.get_skill_value_axis())).is_equal("none")
+	assert_str(baseline.get_problem_tag_label()).is_equal("")

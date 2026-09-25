@@ -6,6 +6,18 @@ extends Resource
 ##
 ## 视图契约：静态数据变更时由修改方调用 `notify_*_changed()` 通知观察者（例如 Pawn 信息卡）。
 ## 这些信号只做变更通知，不承载也不存储运行时数值——生命/护盾/灵力的变更由 Pawn 的资源池信号负责。
+
+## 问题标签（INC-COMBAT-011）：敌人提出的战斗问题，与玩家技能价值轴一一对应。
+## NONE 表示该单位不是问题源（例如召唤物），不参与问题型遭遇编排。
+enum ProblemTag {
+	NONE,
+	SUSTAINED_MELEE,
+	RANGED_PRESSURE,
+	BURST_PRESSURE,
+	HIGH_DEFENSE,
+	CHARGE_INTERRUPT,
+	SUMMON_REINFORCEMENT,
+}
 signal identity_changed(data: PawnData)
 signal attributes_changed(data: PawnData)
 signal realm_changed(data: PawnData)
@@ -33,6 +45,15 @@ signal build_changed(data: PawnData)
 @export var dangerous_skill: ActiveSkillDefinition
 @export_range(0.0, 1000.0, 0.1, "or_greater") var danger_window_interval: float = 0.0
 @export_range(0.0, 100.0, 0.1, "or_greater") var danger_window_duration: float = 0.0
+## 敌人提出的战斗问题（数据可见，供遭遇编排与自动化断言使用）；NONE 表示不承担问题型角色。
+@export var problem_tag: ProblemTag = ProblemTag.NONE
+## 召唤增援契约（INC-COMBAT-011）：summon_minion 非空、间隔为正且数量上限为正时，
+## EncounterSession 按固定节奏生成增援；增援计入敌方队伍，因此胜利仍要求敌方全灭。
+@export var summon_minion: PawnData
+@export_range(0.0, 1000.0, 0.1, "or_greater") var summon_initial_delay: float = 0.0
+@export_range(0.0, 1000.0, 0.1, "or_greater") var summon_interval: float = 0.0
+@export_range(0, 20, 1, "or_greater") var summon_max_count: int = 0
+
 ## 可选的主武器配置；null 表示该单位没有武器，Build 校验与信息卡按“无武器”处理。
 @export var weapon: WeaponDefinition
 ## 可选的境界配置；null 表示该单位没有修炼体系（例如傀儡），Build 校验会返回 missing_realm。
@@ -74,6 +95,56 @@ func has_danger_window() -> bool:
 
 ## 返回当前生效的有序主动技能列表。
 ## 新列表非空时不再读取旧字段；同一 id 只返回一次，避免新旧字段同时配置造成重复槽位。
+
+
+## 是否配置了可用的召唤增援契约：问题标签、增援档案、间隔与数量上限缺一不可。
+func can_summon() -> bool:
+	return (
+		problem_tag == ProblemTag.SUMMON_REINFORCEMENT
+		and summon_minion != null
+		and summon_interval > 0.0
+		and summon_max_count > 0
+	)
+
+
+## 问题标签的中文短标签，供遭遇面板与日志使用；NONE 返回空串。
+func get_problem_tag_label() -> String:
+	match problem_tag:
+		ProblemTag.SUSTAINED_MELEE:
+			return "近战持续压力"
+		ProblemTag.RANGED_PRESSURE:
+			return "远程压制"
+		ProblemTag.BURST_PRESSURE:
+			return "高爆发"
+		ProblemTag.HIGH_DEFENSE:
+			return "高防御"
+		ProblemTag.CHARGE_INTERRUPT:
+			return "蓄力可打断"
+		ProblemTag.SUMMON_REINFORCEMENT:
+			return "召唤增援"
+		_:
+			return ""
+
+
+## 该问题对应的玩家技能价值轴（与六类技能效果一一对应）；NONE 返回 &"none"。
+func get_skill_value_axis() -> StringName:
+	match problem_tag:
+		ProblemTag.SUSTAINED_MELEE:
+			return &"single_target_damage"
+		ProblemTag.RANGED_PRESSURE:
+			return &"dash"
+		ProblemTag.BURST_PRESSURE:
+			return &"defense"
+		ProblemTag.HIGH_DEFENSE:
+			return &"lifesteal"
+		ProblemTag.CHARGE_INTERRUPT:
+			return &"control"
+		ProblemTag.SUMMON_REINFORCEMENT:
+			return &"area_damage"
+		_:
+			return &"none"
+
+
 func get_active_skills() -> Array[ActiveSkillDefinition]:
 	var result: Array[ActiveSkillDefinition] = []
 	var source: Array[ActiveSkillDefinition] = []
