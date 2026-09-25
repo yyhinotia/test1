@@ -475,5 +475,5 @@
 - 已知问题：`tests/` 与既有 `test/` 只差一个字母，已由 `tests/README.md`、`test/README.md` 与 `AGENTS.md` §5.1 / §12.6 三处显式划线，但仍是后续 Agent 最容易混用的地方。入口体检脚本需要真实窗口（`--headless` 下 dummy 窗口固定 64x64，不满足布局与窗口标题核对），因此未纳入 `run_tests.ps1`，属于提交前的手工步骤。测试入口在 `_ready()` 里改写 `default_dungeon`，只影响 `tests/` 场景内的运行实例，不写回 `.tres`。
 - 用户验收：待验收
 - 验收时间：待验收
-- Git：`develop` / 待回写
+- Git：`develop` / `fd3eda8`
 - 备注：父 Increment 为 `INC-CROSS-019`；本 Increment 只调整测试入口的组织方式，不改变玩法规则与战斗数值。
