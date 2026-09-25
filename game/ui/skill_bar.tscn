@@ -1,0 +1,11 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/ui/skill_bar.gd" id="1_skill_bar"]
+
+[node name="SkillBar" type="HBoxContainer"]
+custom_minimum_size = Vector2(0, 64)
+offset_right = 64.0
+offset_bottom = 64.0
+size_flags_vertical = 8
+theme_override_constants/separation = 6
+script = ExtResource("1_skill_bar")

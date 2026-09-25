@@ -31,7 +31,7 @@ const BUILD_LABEL_PATH: String = "Margin/Panel/Content/BuildSection/BuildLabel"
 ## 因此“信息卡不与顶部 HUD 重叠”必须以实测下沿为准，而不是以 Scene 里的 offset 为准。
 const TOP_HUD_BAND_BOTTOM: float = 262.0
 
-## 信息卡右/下边缘相对视口边缘的固定偏移（与 pawn_info_panel.tscn 的 anchors_preset=3 偏移一致）。
+## 左下角 Dock 的信息卡左边距/下边距；面板本身由主场景 Dock 负责定位，headless 测试复现该矩形。
 const VIEWPORT_MARGIN: float = 16.0
 ## 正式分辨率：项目默认窗口 1152x648，另加两种常见窗口高度。
 const RESOLUTIONS: Array[Vector2] = [Vector2(1152, 648), Vector2(1152, 720), Vector2(1152, 1036)]
@@ -61,9 +61,9 @@ func _initialize() -> void:
 	print("DESIGN_SIZE=", _host.size, " ROOT_SIZE=", root.size)
 
 	_check_initial_state()
-	_check_player_binding()
-	_check_compact_mode()
-	_check_enemy_without_spirit()
+	await _check_player_binding()
+	await _check_compact_mode()
+	await _check_enemy_without_spirit()
 	await _check_layout_at_resolutions()
 	_check_unbind()
 	_report()
@@ -94,6 +94,9 @@ func _check_initial_state() -> void:
 ## 绑定真实玩家单位：身份/资源/属性/Build 文本与矩形都要成立。
 func _check_player_binding() -> void:
 	_panel.bind_pawn(_player)
+	await _settle()
+	_layout_panel()
+	await _settle()
 	_check(_panel.is_bound(), "绑定后 is_bound() 应为 true")
 	_check(_panel.visible and _panel.is_visible_in_tree(), "绑定玩家后信息卡应可见")
 
@@ -130,14 +133,16 @@ func _check_player_binding() -> void:
 		"修为区应显示当前进度与下一境界，实际 %s" % cultivation_label.text)
 	_check(is_zero_approx(cultivation_progress.value), "初始修为进度条应为 0")
 
+	_layout_panel()
 	_check_inside_viewport("玩家绑定")
 	_check_clears_top_hud("玩家绑定")
-	_check_anchored_to_bottom_right("玩家绑定")
+	_check_anchored_to_bottom_left("玩家绑定")
 	_check_content_fits("玩家完整模式")
 
 
 ## 精简模式（战斗中）只保留身份与资源区；完整模式恢复属性区与 Build 区。
 func _check_compact_mode() -> void:
+	# 显隐变化需要容器重排后再测量内容矩形。
 	var header_section: VBoxContainer = _panel.get_node(HEADER_SECTION_PATH)
 	var vital_section: VBoxContainer = _panel.get_node(VITAL_SECTION_PATH)
 	var attribute_section: VBoxContainer = _panel.get_node(ATTRIBUTE_SECTION_PATH)
@@ -145,6 +150,7 @@ func _check_compact_mode() -> void:
 	var cultivation_section: VBoxContainer = _panel.get_node(CULTIVATION_SECTION_PATH)
 
 	_panel.set_compact(true)
+	await _settle()
 	_check(_panel.is_compact(), "set_compact(true) 后 is_compact() 应为 true")
 	_check(not attribute_section.visible, "精简模式应隐藏属性区")
 	_check(not build_section.visible, "精简模式应隐藏 Build 区")
@@ -154,6 +160,7 @@ func _check_compact_mode() -> void:
 	_check_content_fits("玩家精简模式")
 
 	_panel.set_compact(false)
+	await _settle()
 	_check(not _panel.is_compact(), "set_compact(false) 后 is_compact() 应为 false")
 	_check(attribute_section.visible, "完整模式应恢复属性区")
 	_check(build_section.visible, "完整模式应恢复 Build 区")
@@ -163,6 +170,9 @@ func _check_compact_mode() -> void:
 ## 无灵力池、无境界的单位：隐藏灵力行，Build 区只给“不适用”。
 func _check_enemy_without_spirit() -> void:
 	_panel.bind_pawn(_enemy)
+	await _settle()
+	_layout_panel()
+	await _settle()
 	_check(_panel.get_bound_pawn() == _enemy, "重新绑定后 get_bound_pawn() 应指向新单位")
 	_check(not (_panel.get_node(SPIRIT_ROW_PATH) as HBoxContainer).visible, "无灵力上限的单位不应显示灵力行")
 
@@ -186,10 +196,12 @@ func _check_layout_at_resolutions() -> void:
 	for resolution: Vector2 in RESOLUTIONS:
 		_host.size = resolution
 		await _settle()
+		_layout_panel()
+		await _settle()
 		var context: String = "%dx%d" % [int(resolution.x), int(resolution.y)]
 		_check_inside_viewport(context)
 		_check_clears_top_hud(context)
-		_check_anchored_to_bottom_right(context)
+		_check_anchored_to_bottom_left(context)
 		_check_content_fits(context)
 
 
@@ -198,6 +210,15 @@ func _check_unbind() -> void:
 	_panel.unbind()
 	_check(not _panel.is_bound(), "解绑后 is_bound() 应为 false")
 	_check(not _panel.visible, "解绑后信息卡应隐藏")
+
+
+
+## headless 下没有主场景 Dock；按主场景同等的左/下 16px 规则摆放面板，以验证组合后的可见矩形。
+func _layout_panel() -> void:
+	_panel.position = Vector2(
+		VIEWPORT_MARGIN,
+		maxf(TOP_HUD_BAND_BOTTOM, _host.size.y - VIEWPORT_MARGIN - _panel.size.y)
+	)
 
 
 func _check_inside_viewport(context: String) -> void:
@@ -215,10 +236,10 @@ func _check_clears_top_hud(context: String) -> void:
 		"%s：信息卡上边缘应避开顶部 HUD（y=%s < %s）" % [context, rect.position.y, TOP_HUD_BAND_BOTTOM])
 
 
-func _check_anchored_to_bottom_right(context: String) -> void:
+func _check_anchored_to_bottom_left(context: String) -> void:
 	var rect: Rect2 = _panel.get_global_rect()
-	_check(absf(rect.end.x - (_host.size.x - VIEWPORT_MARGIN)) <= 0.5,
-		"%s：信息卡右边缘应贴视口右侧（%s != %s）" % [context, rect.end.x, _host.size.x - VIEWPORT_MARGIN])
+	_check(absf(rect.position.x - VIEWPORT_MARGIN) <= 0.5,
+		"%s：信息卡左边缘应贴左下 Dock 起点（%s != %s）" % [context, rect.position.x, VIEWPORT_MARGIN])
 	_check(absf(rect.end.y - (_host.size.y - VIEWPORT_MARGIN)) <= 0.5,
 		"%s：信息卡下边缘应贴视口底部（%s != %s）" % [context, rect.end.y, _host.size.y - VIEWPORT_MARGIN])
 
