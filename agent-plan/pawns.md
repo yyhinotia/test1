@@ -1,6 +1,6 @@
 # Pawns 主题计划
 
-> 最后修改：2026-09-25T14:17:55+08:00
+> 最后修改：2026-09-25T16:50:57+08:00
 > 主题：pawns  
 > 规则来源：`../AGENTS.md`
 
@@ -146,3 +146,383 @@
 - 验收时间：2026-09-25T14:16:35+08:00
 - Git：分支 main，commit a873c3f（提交时间 2026-09-25T14:17:49+08:00；refactor(pawns): extract HealthComponent as single health source [INC-PAWNS-003]）
 - 备注：来源为 `docs/血条ui需求.txt` 的“① HealthComponent”；`INC-CROSS-002` 已实现该文档的“②③④⑤”与规则 1-4，本 Increment 补齐①。用户已于 2026-09-25T14:16:35+08:00 验收通过；按流程提交。
+
+## INC-PAWNS-004：将生命与护盾迁移到资源池并保持外部接口
+
+- 状态：accepted
+- 创建时间：2026-09-25T14:31:51+08:00
+- 最后修改：2026-09-25T15:06:40+08:00
+- 主题：pawns
+- 目标：把生命与护盾从 HealthComponent 内的专用实现迁移为 ResourcePoolComponent 组合，保留 Pawn 已验收的对外数值、信号和血条行为，为灵力等资源提供统一装配方式。
+- 验收标准：
+  - Pawn 场景新增资源集合与 Health、Shield 两个独立资源池；二者各自只有一个运行时数据源。
+  - `Pawn.current_health`、`Pawn.current_shield` 继续保持只读代理语义；`health_changed`、`shield_changed` 的参数、发射顺序和 HUD 连接不变。
+  - `Pawn.take_damage()` 继续执行 `max(1, attack - defense)`，并保持先护盾后生命的战斗规则；该规则由 Pawn 或独立资源路由器负责，不下沉到 ResourcePoolComponent。
+  - HealthComponent 保留为兼容门面或明确标记待退役适配层，直到 `Pawn.health` 的既有调用者完成迁移；不得让 HealthComponent 继续新增灵力等非生命职责。
+  - 现有 55 项 HealthComponent 断言与 38 项血条断言继续通过，或仅因内部节点路径变化逐项更新并记录，行为结果不得回归。
+  - 本 Increment 不新增灵力行为、不接技能、不改战斗数值平衡。
+- 范围：`game/pawns/pawn.gd`、`game/pawns/pawn.tscn`、`game/pawns/health_component.gd`、`game/shared/core/resource_set_component.gd`、`game/pawns/player_pawn.tscn`、`game/pawns/enemy_pawn.tscn`、相关 headless 测试。
+- 非范围：灵力资源、技能消耗、自然恢复、分层生命、伤害类型、状态效果、存档迁移、多人同步和正式 UI。
+- 依赖：`INC-CORE-002`、`INC-UI-003`、`INC-PAWNS-003`。
+- 检索证据：执行 `git status --short`、`git diff --unified=0 -- agent-plan/`、`git diff --cached --unified=0 -- agent-plan/` 与 `git log --oneline -- agent-plan/`；工作区无暂存变更，父级顺序要求先完成 `INC-CORE-002`、`INC-UI-003`。两者均已实现并通过 102/86 项断言，但用户尚未明确验收，因此保持 awaiting_acceptance；本 Increment 只在其已验证 API 上迁移，验收前不提交。已验收基线为 `INC-PAWNS-003`，允许范围严格限定为 Pawn 脚本/场景、HealthComponent 兼容门面、ResourceSetComponent 适配和 headless 回归测试。
+- 风险：破坏已验收的 Pawn 信号顺序；场景继承覆盖顺序导致 @onready 引用失效；HealthComponent 兼容门面与真实资源池双源；伤害路由下沉导致基础组件耦合业务。
+- 实现说明：
+  - 场景结构：`pawn.tscn` 在 `Controller` 之后新增 `Resources`（ResourceSetComponent）与 `Resources/Health`、`Resources/Shield`（各挂一个 ResourcePoolComponent）；既有子节点顺序不变，`player_pawn.tscn` / `enemy_pawn.tscn` 的 `Controller index="5"` 覆写继续生效。
+  - `HealthComponent` 改写为兼容门面：自身不再保存 current/max 字段，`current_health` / `max_health` / `current_shield` / `max_shield` 全部是资源池的只读代理；`configure(max_health, max_shield)` 由门面生成 ResourcePoolDefinition（`initial_ratio = 1.0`）并静默配置两个池。
+  - 门面保留“先护盾、后生命”的路由与 4 个对外信号：`health_changed` / `shield_changed` 由资源池的 `value_changed` 驱动，`health_state_changed` 在一次操作结束时统一发出，`depleted` 只在生命池归零边沿发一次，顺序与 `INC-PAWNS-003` 一致。
+  - 门面提供 `bind_pools(health_pool, shield_pool)` 绑定场景资源池；未绑定时在自身节点下创建内部池（`HealthPool` / `ShieldPool`），使独立组件 API 与既有断言继续可用。
+  - `Pawn` 在 `_ready()` 最前面调用 `_register_resource_pools()`：按 `health` / `shield` 稳定 ID 注册资源池并把门面绑定到它们；新增只读查询 `get_resource_pool(resource_id)` / `get_resource_ids()`，供后续 UI 与 `INC-COMBAT-002` 的灵力复用。
+  - `Pawn.current_health` / `current_shield`、`take_damage()` 的 `max(1, attack - defense)` 结算、`notify_health_state_changed()` 与 HUD 连接均未改动；头顶血条仍是已验收的 `PawnHealthBar`，通用 `PawnStatusBars` 迁移留给 `INC-COMBAT-002`。
+  - 新增 `test/headless/pawn_resource_pools_test.gd`，覆盖场景结构、单一数据源、护盾→生命路由顺序、护盾归零不致死 / 生命归零致死、敌人继承与 HUD/血条集成。
+- 变更文件：
+  - `game/pawns/health_component.gd`
+  - `game/pawns/pawn.gd`
+  - `game/pawns/pawn.tscn`
+  - `test/headless/pawn_resource_pools_test.gd`
+  - `test/headless/pawn_resource_pools_test.gd.uid`
+- 测试证据：
+  - Godot MCP `validate`：`health_component.gd`、`pawn.gd`、`pawn_resource_pools_test.gd` 全部 `valid: true`；`pawn.tscn` / `player_pawn.tscn` / `enemy_pawn.tscn` 的信号检查只报 `orphaned_handler`，属于 `_ready()` 内运行时 `connect()` 的既有误报（同一检查在未改动的 `main.tscn` 上同样报 4 条），不是断链。
+  - 新增 headless 断言：`pawn_resource_pools_test.gd` 退出码 0，`CHECKS=49 FAILURES=0`、`PAWN_RESOURCE_POOLS_TEST_OK`。
+  - 既有回归未删改任何断言，全部继续通过：`health_component_test.gd` 55/0、`health_bar_visibility_test.gd` 38/0、`resource_pool_component_test.gd` 102/0、`resource_bar_test.gd` 86/0（合计 330 项）。
+  - 运行态冒烟（MCP `run_project` + `run_script`，真实窗口）：玩家初始 `(生命 120 / 护盾 40)`；`take_damage(defense + 10)` 后生命池 120、护盾池 30；资源池变化顺序记录为 `["shield:30", "shield:0", "health:100"]`，符合先护盾后生命。
+  - 运行态归零语义：护盾池归零时 `is_depleted()=true` 且生命门面 `is_depleted()=false`、Pawn 仍存活；生命池归零后 `pawn.is_dead()=true`、`died` 只发 1 次、`collision_layer=0`，死亡后再受伤不再产生信号。
+  - 运行态 AI 实弹链路：重新载入主场景后敌人持续攻击玩家，玩家资源池由 `(120, 40)` 降到 `(51, 0)`，证明伤害经门面真实落在资源池上；血条在连续受击期间保持可见且隐藏计时随新变化重置，符合 `INC-UI-002` 契约。
+  - `git diff --check` 退出码 0；运行日志 `errors` 为空；真实窗口截图保存于已忽略的 `.mcp/godot-runtime/screenshots/`。
+  - 复跑更新（2026-09-25T15:06:40+08:00）：后续 `INC-COMBAT-002` 为玩家 Pawn 增加了灵力池，`pawn_resource_pools_test.gd` 中 3 条“当前只应有 health/shield”的临时断言改为“灵力池只在 `max_spirit > 0` 时存在/注册”，复跑仍为 49/0，其余断言与行为未变。
+  - 命令行 stderr 中的 `Failed to open log file for writing: user://logs/godot.log` 为本地用户日志目录写入限制；`health_component_test` 中缺少 PawnData 的 ERROR 是该用例刻意覆盖的预期错误路径。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T15:03:55+08:00
+- 已知问题：
+  - `HealthComponent` 只是兼容门面，退役时间未定，仍保留 `configure()` / `reset()` / `apply_damage()` 等旧接口。
+  - 直接对 `Resources/Health` 调用 `set_value(0)` 会绕过门面的 `depleted` 信号，Pawn 不会因此死亡；生命/护盾的正常改动必须走门面或 Pawn（如需收紧可另立 Increment）。
+  - 通用资源条 `PawnStatusBars` 尚未接入 `pawn.tscn`；头顶仍使用 `PawnHealthBar`，灵力条显示与迁移留给 `INC-COMBAT-002`。
+  - 血条颜色与布局仍为 MVP 占位，正式美术未定。
+- 用户验收：已验收
+- 验收时间：2026-09-25T16:50:57+08:00
+- Git：`main` / `f6cdebf`
+- 备注：父 Increment 为 `INC-CROSS-003`；本 Increment 是“生命/护盾资源池化”的兼容迁移步骤，`INC-CORE-002` 与 `INC-UI-003` 仍在等待用户验收。
+
+## INC-PAWNS-005：将通用资源条接入 Pawn 实战头顶 UI
+
+- 状态：accepted
+- 创建时间：2026-09-25T15:14:42+08:00
+- 最后修改：2026-09-25T15:14:42+08:00
+- 主题：pawns
+- 目标：把已验证的 `PawnStatusBars` 从独立组件提升为 Pawn 的实战头顶 UI，绑定生命、护盾和灵力资源池，同时保持已验收的显示、暂停和战斗语义。
+- 验收标准：
+  - `pawn.tscn` 在 `HealthBarAnchor` 下实例化 `PawnStatusBars`；Pawn 不再实例化旧的 `PawnHealthBar`，但旧场景与脚本暂时保留以免破坏外部兼容。
+  - Pawn 在 `_ready()` 中把 `health`、`shield` 以及仅在配置了正上限时存在的 `spirit` 资源池绑定到对应子条；禁止在 Pawn 中复制数值。
+  - 生命、护盾或灵力任一真实变化时，整组同帧显示；自最后一次变化起 2 秒无新变化则整组隐藏；暂停期间隐藏计时冻结。
+  - 最大值为 0 的资源条不占布局；玩家 Pawn 应显示生命/护盾/灵力三条，敌人 Pawn 只显示生命/护盾两条。
+  - 伤害路由、`health_changed` / `shield_changed` / `spirit_changed` / `died` 信号顺序与既有契约不变；灵力归零不致死。
+  - headless 断言覆盖节点路径、绑定数量、数值映射、组级显隐、三资源独立刷新、死亡与暂停行为；保留旧 `PawnHealthBar` 组件的独立场景测试。
+- 范围：`game/pawns/pawn.gd`、`game/pawns/pawn.tscn`、`game/ui/pawn_status_bars.gd`、`game/ui/pawn_status_bars.tscn`、`test/headless/health_bar_visibility_test.gd`、`test/headless/health_component_test.gd`、`test/headless/pawn_resource_pools_test.gd`、`test/headless/spirit_pool_test.gd`、`test/tools/capture_health_bar_evidence.gd`、新增 Pawn 资源条集成测试、`AGENTS.md` 基线同步。
+- 非范围：删除或退役 `PawnHealthBar`；HUD 文本显示灵力；正式美术；渐隐、伤害数字、技能栏和资源再生规则。
+- 依赖：`INC-CORE-002`、`INC-UI-003`、`INC-PAWNS-004`、`INC-COMBAT-002`；这些依赖已实现并验证，并已随本批次验收通过。
+- 检索证据：执行 `git status --short`、`git diff --unified=0 -- agent-plan/`、`git diff --cached --unified=0 -- agent-plan/`、`git log --oneline -- agent-plan/` 与 `git grep -n "PawnStatusBars\|health_bar" -- .`；当前工作区包含 `INC-CROSS-003` 的未提交实现，父级四个子 Increment 处于 awaiting_acceptance。`INC-PAWNS-005` 继承父级已验证 API，但只允许修改本 Increment 范围列出的文件；HUD 文本改动由 `INC-UI-004` 承担。
+- 风险：替换 Pawn 场景血条节点会破坏旧测试的路径断言；灵力条绑定时机错误会在静默初始化时显示空条；组级隐藏计时可能与旧的单条计时语义不一致；继承场景的节点索引覆写可能受影响。
+- 实现说明：
+  - `pawn.tscn` 的 `HealthBarAnchor` 子节点由旧 `HealthBar` 改为 `StatusBars`（`game/ui/pawn_status_bars.tscn` 实例）；节点路径固定为 `Pawn/HealthBarAnchor/StatusBars`，锚点与资源条整体矩形在真实窗口下为 80x52，位置 `(830,320)`（玩家初始位置 `(870,410)`）。
+  - `Pawn` 的只读 UI 引用由 `health_bar: PawnHealthBar` 改为 `status_bars: PawnStatusBars`；`_ready()` 先注册并配置资源池，再调用 `_bind_status_bars()`，避免静默初始化后条显示旧值。
+  - `_bind_status_bars()` 按稳定 ID 绑定 `health`、`shield`，并在 `spirit_pool != null` 时绑定 `spirit`；没有灵力池的单位不会产生灵力条绑定。
+  - `notify_health_state_changed()` 不再复制四个数值，只调用 `status_bars.reveal()`；真实值始终由资源池通过 `value_changed` 推送到 `ResourceBar`。
+  - `PawnStatusBars.get_bound_resource_ids()` 提供只读装配查询；`ResourceBar` 的 `snap_to_target()` 只改变显示值，不回写资源池。
+  - 旧 `PawnHealthBar` 文件保留，仍通过原场景独立测试；它不再是 Pawn 的实战节点，后续退役必须另立 Increment。
+- 变更文件：
+  - `game/pawns/pawn.gd`
+  - `game/pawns/pawn.tscn`
+  - `game/ui/pawn_status_bars.gd`
+  - `test/headless/health_bar_visibility_test.gd`
+  - `test/headless/health_component_test.gd`
+  - `test/headless/pawn_resource_pools_test.gd`
+  - `test/headless/spirit_pool_test.gd`
+  - `test/headless/pawn_status_bars_integration_test.gd`
+  - `test/headless/pawn_status_bars_integration_test.gd.uid`
+  - `test/tools/capture_health_bar_evidence.gd`
+  - `AGENTS.md`（同步 §10 基线）
+- 测试证据：
+  - Godot MCP `validate`：`pawn.gd`、`pawn_status_bars.gd`、`pawn.tscn` 全部 `valid: true`。
+  - 新增 `pawn_status_bars_integration_test.gd`：退出码 0，`CHECKS=37 FAILURES=0`；覆盖玩家/敌人绑定数量、三池目标值、组级显隐、灵力变化、UI 不回写和运行态 2 秒隐藏。
+  - 回归：`resource_pool_component_test` 102/0、`resource_bar_test` 86/0、`health_component_test` 55/0、`health_bar_visibility_test` 46/0、`pawn_resource_pools_test` 49/0、`spirit_pool_test` 64/0、`hud_spirit_display_test` 8/0；8 个 headless 套件合计 447 项断言，全部退出码 0。
+  - 运行态 MCP 冒烟：玩家绑定 `["health","shield","spirit"]`，敌人绑定 `["health","shield"]` 且 `spirit_pool == null`；受伤后资源条组 `visible=true`、护盾目标从 40 变为 28；灵力消耗 25 后目标变为 75、生命与存活状态不变。
+  - 真实窗口多分辨率：1152x648、1152x720、800x720（逻辑视口 1152x1036）下资源条矩形均为 `(830,320,80,52)`，三条 16px 子条不重叠、居中于 Pawn 头顶且完全位于视口内。
+  - 视觉计时脚本 `test/tools/capture_health_bar_evidence.gd` 退出码 0：`HIDE_ELAPSED_MS=1955`、`PAUSED_BAR_VISIBLE=true`、`RESUME_HIDE_ELAPSED_MS=2046`；报告与截图写在已忽略的 `.mcp/godot-runtime/screenshots/`。
+  - 运行日志 `errors` 为空；`git diff --check` 退出码 0。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T15:14:42+08:00
+- 已知问题：
+  - 旧 `PawnHealthBar` 仍保留在仓库中作为兼容组件，尚未退役；Assets/颜色仍为 MVP 占位。
+  - `HealthComponent` 仍是兼容门面，直接对 `Resources/Health` 调 `set_value(0)` 仍可绕过门面死亡路由。
+  - 证据脚本文件名仍沿用 `capture_health_bar_evidence.gd`，但其当前实际覆盖的是三资源条整体显示；重命名属于后续工具 Increment。
+- 用户验收：已验收
+- 验收时间：2026-09-25T16:50:57+08:00
+- Git：`main` / `6df4fbb`
+- 备注：父 Increment 为 `INC-CROSS-004`；本 Increment 不退役 `PawnHealthBar`，旧组件继续保留独立测试。
+
+## INC-PAWNS-006：让生命资源池直接驱动 Pawn 死亡与状态条刷新
+
+- 状态：accepted
+- 创建时间：2026-09-25T15:16:16+08:00
+- 最后修改：2026-09-25T15:18:37+08:00
+- 主题：pawns
+- 目标：消除 Pawn 生命周期与状态条对 `HealthComponent` 兼容门面转发事件的单点依赖，使任何通过 `Resources/Health` 发生的真实数值变化都能驱动 Pawn 的生命信号、状态条显示与死亡语义。
+- 验收标准：
+  - `Pawn` 直接订阅 `Resources/Health` 与 `Resources/Shield` 的 `value_changed`；对外 `health_changed` / `shield_changed` 参数保持不变，护盾破碎时仍按“先护盾、后生命”的顺序转发。
+  - 任一生命或护盾池真实变化后，`PawnStatusBars` 在同一调用链内显示并重置整组隐藏计时；灵力变化继续只刷新资源条，不触发死亡。
+  - 直接调用 `health_pool.set_value(0)` 或等价资源池操作使生命归零时，`Pawn.die()` 必须恰好执行一次：状态变为 `DEAD`、碰撞关闭、`died` 只发一次、死亡后再操作生命池不得重复死亡。
+  - `HealthComponent` 独立实例的既有路由与四个信号契约不变；`Pawn.take_damage()` 的防御结算、护盾优先与静态数值保持不变。
+  - 新增 headless 断言覆盖“直接改生命池触发死亡”“直接改护盾池只显隐不致死”“直接恢复已死亡生物不复活”“Pawn 转发信号不重复”；相关既有回归继续通过。
+- 范围：`game/pawns/pawn.gd`、`test/headless/health_pool_authority_test.gd`、`test/headless/health_pool_authority_test.gd.uid`（如 Godot 生成）、`agent-plan/pawns.md` / `agent-plan/_index.md` 的计划回写，以及 `AGENTS.md` §10 基线同步。
+- 非范围：退役 `HealthComponent` 或 `PawnHealthBar`、把伤害路由下沉到资源池、复活机制、治疗规则、技能、分层生命、正式 UI 与存档迁移。
+- 依赖：`INC-CORE-002`（资源池 API）、`INC-PAWNS-004`（生命/护盾池迁移）、`INC-PAWNS-005`（PawnStatusBars 实战接入）；三者均已实现并验证，并已随本批次验收通过。
+- 检索证据：执行 `git status --short --branch`、`git diff --unified=0 -- agent-plan/`、`git diff --cached --unified=0 -- agent-plan/` 与 `git log --oneline -- agent-plan/`；工作区包含 `INC-CROSS-003` / `INC-CROSS-004` 的未提交实现，暂存区为空，已验收基线为 `HEAD=3bd28fb`。全量读取计划文件后确认没有后续 `planned` 子 Increment；本 Increment 来源于 `INC-PAWNS-005` 的已知问题“直接对 `Resources/Health` 调用 `set_value(0)` 会绕过门面 `depleted`，Pawn 不会死亡”，并按 Plan Gate 先登记范围后再修改代码。允许写入范围仅为 Pawn 池事件接线、新增 headless 回归脚本、计划回写与基线同步。
+- 风险：若把门面与 Pawn 对同一池事件的转发同时保留，会造成 `health_changed` 重复；若把护盾池变化误判为死亡，会在护盾归零时杀死单位；若在 `_ready()` 配置资源池前连接信号，可能把静默初始化误当成状态变化。
+- 实现说明：
+  - `Pawn._ready()` 在注册资源池后调用 `_connect_resource_pool_signals()`，直接订阅 `Resources/Health` 与 `Resources/Shield` 的 `value_changed`，并订阅生命池的 `depleted`。`HealthComponent` 仍是伤害路由与兼容 API，但不再是 Pawn 生命周期和状态条的唯一事件桥。
+  - 生命池 `value_changed` 统一转发 `Pawn.health_changed` 并调用 `notify_health_state_changed()`；护盾池 `value_changed` 统一转发 `Pawn.shield_changed` 并调用同一状态条入口。这样直接修改资源池、`Pawn.take_damage()`、治疗和加盾都会走到同一表现路径。
+  - 生命池 `depleted` 边沿直接调用 `die()`。`die()` 复用既有状态机幂等保护，因此直接 `set_value(0)`、浮点伤害溢出和重复零写入都最多死亡一次。
+  - `_setup_spirit_pool()` 仍负责创建并连接灵力池；`_connect_resource_pool_signals()` 对已有灵力连接做 `is_connected` 去重，不改变灵力归零不致死语义。
+  - 配置阶段 `ResourcePoolComponent.configure()` 是静默的，因此连接发生在 `health.configure()` 前不会在出生时误触发状态条或死亡。
+- 变更文件：
+  - `game/pawns/pawn.gd`
+  - `test/headless/health_pool_authority_test.gd`
+  - `test/headless/health_pool_authority_test.gd.uid`
+  - `agent-plan/pawns.md`
+  - `agent-plan/_index.md`
+  - `AGENTS.md`（同步 §10 基线）
+- 测试证据：
+  - Godot MCP `validate`：`game/pawns/pawn.gd` 与 `test/headless/health_pool_authority_test.gd` 均为 `valid: true`，无解析或类型错误。
+  - 新增 headless 断言：`health_pool_authority_test.gd` 退出码 0，`CHECKS=33 FAILURES=0`、`HEALTH_POOL_AUTHORITY_TEST_OK`；覆盖直接改生命池的非致命/致命路径、直接改护盾池、状态条显示、单次死亡、重复零写入不重复死亡、死亡后直接恢复不复活，以及 `take_damage()` 不重复转发。
+  - 全量回归：`resource_pool_component_test` 102/0、`resource_bar_test` 86/0、`health_component_test` 55/0、`health_bar_visibility_test` 46/0、`pawn_resource_pools_test` 49/0、`spirit_pool_test` 64/0、`pawn_status_bars_integration_test` 37/0、`hud_spirit_display_test` 8/0、`health_pool_authority_test` 33/0；9 个 headless 套件合计 `TOTAL_CHECKS=480 FAILED_SUITES=0`。
+  - MCP 运行态冒烟（隐藏真实窗口）：直接改生命池后 `current_health=110`、`bars_visible=true`、`dead=false`；直接清空护盾后 `current_shield=0`、`dead=false`；直接清空生命后 `state=DEAD`、`collision_layer=0`、`died_events=1`、`bars_visible=true`；重复写入 0 未新增事件，生命恢复 20 后仍保持死亡。运行日志 `errors` 为空。
+  - `git diff --check` 退出码 0。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T15:18:37+08:00
+- 已知问题：
+  - `HealthComponent` 仍作为 `Pawn.take_damage()` 的先护盾后生命路由层和独立兼容 API 保留；其正式退役仍需另立 Increment。
+  - 直接操作 `health_pool.set_value()` 是低层测试/工具入口，不会自动执行护盾吸收等战斗规则；本 Increment 只保证它不会绕过生命归零后的死亡和状态条契约。
+  - 死亡后直接增加生命池不会复活 Pawn；复活流程属于后续独立设计。
+- 用户验收：已验收
+- 验收时间：2026-09-25T16:50:57+08:00
+- Git：`main` / `81e1b45`
+- 备注：本 Increment 只修复资源池单一数据源与 Pawn 生命周期的脱节，不宣称退役兼容层或完成完整生命系统。
+
+## INC-PAWNS-007：玩家技能命令与施法接近逻辑
+
+- 状态：accepted
+- 创建时间：2026-09-25T15:38:42+08:00
+- 最后修改：2026-09-25T15:44:18+08:00
+- 主题：pawns
+- 目标：在不改变 `Pawn.cast_skill()` 契约的前提下，让 `PlayerController` 能接收一次主动技能命令，自动移动到技能距离并在有效目标上施放。
+- 验收标准：
+  - 新增 `PlayerController.order_skill(target: Pawn = null) -> bool`：未传目标时使用当前攻击目标；目标为空、已死亡、非敌方或自身时返回 `false`，不改变玩家灵力、生命、冷却和移动命令。
+  - 技能命令成功后，控制器记录待施放目标；普通攻击目标会同步为同一目标，HUD 可通过现有 `get_order_description()` 读出“施放技能 → 目标”。
+  - 更新控制器时，目标超出 `ActiveSkillDefinition.get_effective_cast_range()` 则先移动；进入距离后调用 `Pawn.can_cast_skill()` / `cast_skill()`，成功后清除待施放命令并保留普通攻击目标。
+  - 目标在接近过程中死亡、失效或隐身/切阵营导致不可施法时，技能命令必须清除，且不能产生灵力扣除、伤害或冷却副作用。
+  - 灵力不足或技能冷却中时，技能命令在进入距离后被清除并回退到普通攻击，不阻塞既有战斗控制。
+- 范围：`game/pawns/controllers/player_controller.gd`、`test/integration/player_skill_order_test.gd`；必要时只补充现有测试中的调用。
+- 非范围：InputMap、HUD、技能栏、多技能槽、目标选择 UI、功法/Build、范围伤害、状态异常和技能动画。
+- 依赖：`INC-COMBAT-003`（主动技能 API，已验收）、`INC-COMBAT-002`（灵力池，已验收）。
+- 检索证据：执行 `git status --short --branch`、`git diff --unified=0 -- agent-plan/`、`git log --oneline -- agent-plan/` 与 `git grep -n -E "INC-CROSS-006|INC-PAWNS-007|order_skill"`；当前 `HEAD=3bd28fb`，`PlayerController` 只有移动/攻击命令，没有技能命令；`INC-COMBAT-003` 已提供 `can_cast_skill` / `cast_skill`，但尚未接入玩家输入。
+- 风险：技能命令与移动/攻击命令互相覆盖；接近过程中重复触发；在座标或目标失效后仍保留陈旧命令；把输入和 UI 责任塞入控制器。
+- 实现说明：`PlayerController` 新增 `_skill_target` / `_has_skill_order` 与 `order_skill(target: Pawn = null) -> bool`。未传目标时复用 `_attack_target`；无技能配置或目标为空/自身/友军/已死亡时返回 `false`，且不修改既有指令、灵力、生命与冷却。成功时记录待施放目标、同步 `_attack_target`、清除移动命令，`get_order_description()` 输出“施放技能 <技能名> → <目标名>”。`update_controller()` 中技能命令优先于普通攻击：超出 `ActiveSkillDefinition.get_effective_cast_range()` 先 `move_towards()`；进入距离后调用 `Pawn.cast_skill()`，成功即清除技能命令并保留普攻目标，失败（灵力不足/冷却中/目标失效）同样清除并回退既有攻击流程。`order_move()` / `order_attack()` / `clear_orders()` 都会清除待施放技能命令。
+- 变更文件：`game/pawns/controllers/player_controller.gd`（修改）、`test/integration/player_skill_order_test.gd`（新增，7 例）。
+- 测试证据：
+  - 新增集成用例覆盖：无技能配置与空/自身/友军/死亡目标返回 `false` 且不改变移动命令与资源；合法目标记录与指令文案；超距先移动且不扣灵力；进入距离施放（灵力 -25、伤害、冷却、回退普攻目标）；接近途中目标死亡零副作用；灵力不足回退普攻并实际打出普攻伤害；冷却中二次命令不重复扣灵力且回退普攻。
+  - `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer integration` → `RESULT: PASS`（integration 21 例，0 失败）。
+  - MCP `validate`（`game/pawns/controllers/player_controller.gd`、新增用例脚本）→ `valid: true`，`errors: []`。
+  - `git diff --check` 退出码 0；改动文件 LF、UTF-8 无 BOM、无控制字符。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T15:44:18+08:00
+- 已知问题：
+  - 技能命令是一次性命令：进入距离后无论施放成功或失败都会清除，不会排队重试；目标在接近途中死亡后需玩家重新下令。
+  - 控制器不读输入、不写 HUD；Q 键映射由 `INC-CORE-003` 提供，文案由 `INC-UI-005` 提供。
+  - 灵力自然恢复、多技能槽、技能升级、施法动画与特效仍不在范围内。
+- 用户验收：已验收
+- 验收时间：2026-09-25T16:50:57+08:00
+- Git：`main` / `5f39e5f`
+- 备注：父 Increment 为 `INC-CROSS-006`；只负责命令和接近/施放，不负责键盘映射或 HUD 文案。
+
+
+## INC-PAWNS-008：Pawn 境界与 Build 汇总接口
+
+- 状态：accepted
+- 创建时间：2026-09-25T15:48:20+08:00
+- 最后修改：2026-09-25T15:56:30+08:00
+- 主题：pawns
+- 目标：把境界与功法接入单位静态数据，让 Pawn 能只读汇总自身 Build 并暴露校验结果，为 HUD 与后续装配逻辑提供唯一入口。
+- 验收标准：
+  - `PawnData` 新增可选字段 `realm: RealmDefinition` 与 `techniques: Array[TechniqueDefinition]`（默认 null / 空数组），既有预设与默认值行为不变。
+  - `Pawn` 新增 `get_realm()`、`get_build_loadout()`（由 `data.realm` + `data.techniques` + 当前 `active_skill` 汇总）与 `get_build_validation()`（转交 `BuildValidator`）。
+  - 正式玩家预设配置境界=炼气、功法=[剑修]，汇总结果为功法 1/1、主动 1/2、被动 0/1 且校验通过；试炼傀儡未配置境界时返回 `missing_realm`，但其战斗、AI、技能与资源池行为完全不变。
+  - 汇总与校验是只读操作：不修改生命、护盾、灵力、冷却、技能契约或节点结构。
+  - 新增集成用例覆盖玩家 Build、无境界单位、冲突 Build（剑修+体修）与汇总计数。
+- 范围：`game/shared/resources/pawn_data.gd`（新增字段）、`game/pawns/pawn.gd`（新增只读接口）、`game/pawns/data/player_pawn.tres`（配置境界与功法）、`test/integration/pawn_build_test.gd`（新增）。
+- 非范围：按境界结算属性、突破、多主动技能施放、装备/武器槽、被动效果生效、装配交互与存档。
+- 依赖：`INC-CULT-001`（境界资源）、`INC-CULT-002`（功法资源与 `BuildValidator`）。
+- 检索证据：执行 `git status --short --branch` 与 `git grep -n -E "RealmDefinition|TechniqueDefinition|get_build_loadout"`；当前 `PawnData` 只有 `active_skill` 单技能字段，`Pawn` 没有境界/Build 接口；`INC-CROSS-006` 已完成玩家单技能闭环，下一步按 `docs/project_summary.md` MVP 优先级 ③ 接入 Build 容量。
+- 风险：`PawnData` 新增导出字段可能影响既有 `.tres` 反序列化（应为兼容的增量字段）；每次调用都会新建 `BuildLoadout` 实例（HUD 只在信号触发时刷新，可接受）；误把汇总接口做成装配/自动卸载逻辑。
+- 实现说明：`PawnData` 只新增两个可选导出字段（`realm`、`techniques`），既有预设与默认值行为不变，`.tres` 反序列化保持向后兼容；`Pawn.get_build_loadout()` 每次调用新建 `BuildLoadout` 并按值复制功法数组，调用方修改返回值不会污染预设；被动槽暂无数据来源（被动效果不属于本 Increment），因此汇总中恒为 0 / N。三个接口都是只读的，不触碰资源池、冷却、技能契约或节点结构。
+- 变更文件：`game/shared/resources/pawn_data.gd`（新增 `realm` / `techniques` 字段）、`game/pawns/pawn.gd`（新增 `get_realm()` / `get_build_loadout()` / `get_build_validation()`）、`game/pawns/data/player_pawn.tres`（配置炼气 + 剑修）、`test/integration/pawn_build_test.gd` 与其 `.uid`（新增，4 例）。
+- 测试证据：
+  - `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer integration` → `[GdUnit4] integration ... PASS (25 cases)`；新增 `test/integration/pawn_build_test.gd` 4 例覆盖：玩家预设汇总 功法 1/1、主动 1/2、被动 0/1 且校验通过；无境界单位只报 `missing_realm` 且生命/护盾/坐标/状态不变；剑修+体修在筑基期报 `technique_conflict`（容量为 2，证明冲突与容量无关）；施法后汇总计数与校验结论不变、返回值与 `PawnData` 解耦。
+  - `-Layer all`：`[GdUnit4] gameplay ... PASS (16 cases)`；`test/unit/pawn_data_defaults_test.gd` 既有 5 例仍通过（证明新增导出字段是兼容增量）。
+  - Godot MCP `validate`：`game/pawns/pawn.gd`、`game/shared/resources/pawn_data.gd` → `valid: true`。
+  - `git diff --check` 退出码 0。
+- 验证状态：验证通过（本 Increment 范围内）
+- 验证时间：2026-09-25T15:56:30+08:00
+- 已知问题：`test/unit/pawn_data_defaults_test.gd > test_enemy_preset_declares_no_spirit` 仍失败（`max_health` 期望 80、实际 180），原因是工作区中 `game/pawns/data/enemy_pawn.tres` 被外部改为 180，不是本 Increment 引入；按 `../AGENTS.md` §6 未修改该断言，处置见父级 `INC-CROSS-007`。
+- 用户验收：已验收
+- 验收时间：2026-09-25T16:50:57+08:00
+- Git：`main` / `3351bc1`
+- 备注：父 Increment 为 `INC-CROSS-007`；本 Increment 只提供只读汇总，不改变任何战斗数值。
+## INC-PAWNS-009：同步敌人预设 180 生命的数据基线
+
+- 状态：accepted
+- 创建时间：2026-09-25T16:04:30+08:00
+- 最后修改：2026-09-25T16:19:12+08:00
+- 主题：pawns
+- 来源：`game/pawns/data/enemy_pawn.tres` 于 2026-09-25T15:47:47+08:00 被外部（Godot 编辑器保存）修改，非本批次实现写入；该改动打破了 `INC-CROSS-007` 统一门禁中两处与本批功能无关的既有断言。
+- 目标：把工作区已存在的敌人预设数据改动（生命 80 → 180、新增 `display_color = Color(1, 0.35, 0.32, 1)`）登记为正式数据基线，并同步两处被它打破的既有数值期望，使统一门禁恢复全绿。
+- 验收标准：
+  - `game/pawns/data/enemy_pawn.tres` 保留外部保存结果（`max_health = 180.0`、`display_color = Color(1, 0.35, 0.32, 1)`、编辑器生成的 `uid="uid://b53o7764o7kru"`），不做回退。
+  - `test/unit/pawn_data_defaults_test.gd > test_enemy_preset_declares_no_spirit` 的生命期望与预设一致（180.0），其余断言（`id` / `faction` / 护盾 20 / 灵力 0 / 攻击 12 / 防御 3）保持原样。
+  - `test/headless/hud_spirit_display_test.gd` 的敌人生命行期望与预设一致（`HP：180 / 180`）；“敌人不显示灵力行”与“敌人仍显示自身生命行”两条语义不变。
+  - `pwsh -File test/run_tests.ps1 -Godot $env:GODOT_BIN -Layer all` 退出码 0。
+  - 不修改 `game/` 下任何运行时代码与数值计算逻辑。
+- 范围：`game/pawns/data/enemy_pawn.tres`（仅登记，不再改写）、`test/unit/pawn_data_defaults_test.gd`、`test/headless/hud_spirit_display_test.gd`。
+- 非范围：敌人 AI、攻击/防御/移速/护盾等其它数值平衡、正式玩法数值设计文档、把本次改动包装为“更强敌人”的玩法说明。
+- 依赖：无（独立数据基线同步 Increment）。
+- 检索证据：
+  - `git status --short` → `M game/pawns/data/enemy_pawn.tres` 与两个 tests 文件出现在本批次工作区，且 `git diff -- game/pawns/data/enemy_pawn.tres` 显示改动来自外部保存（`max_health` 80 → 180、新增 `display_color`、新增 `uid`）。
+  - `git diff --unified=0 -- agent-plan/` → 命中 `INC-CROSS-003`…`INC-CROSS-007`、`INC-PAWNS-004`…`INC-PAWNS-008` 等；本 Increment 为新编号，不与既有编号冲突。
+  - `INC-CROSS-007` 的“已知问题”字段已记录这两条失败原文与用户裁决需求（回退 80 或登记独立 Increment）。
+  - 允许修改范围：仅上述三个文件。
+- 风险：把“让测试变绿”误当作允许项而放松门禁。控制措施：只同步被外部数据改动打破的两处数值期望，不放宽任何行为断言，原始失败证据保留在 `INC-CROSS-007` 中。
+- 实现说明：预设 `.tres` 是用户可编辑的数据源，编辑器保存即等于产品数据决策；本 Increment 把该决策登记为基线并同步断言，而不是回退用户数据。两处期望值继续使用字面量（180.0 / `HP：180 / 180`）而不是从预设反推，以便未来意外的预设改动仍能被测试捕获。
+- 变更文件：`game/pawns/data/enemy_pawn.tres`（登记外部改动）、`test/unit/pawn_data_defaults_test.gd`、`test/headless/hud_spirit_display_test.gd`。
+- 测试证据：
+  - `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` → `RESULT: PASS`，退出码 0（GdUnit4 105 例：unit 52 / integration 33 / gameplay 20；headless 10 套 541 项断言，0 失败）。
+  - `test/unit/pawn_data_defaults_test.gd` 的敌人预设断言与 `game/pawns/data/enemy_pawn.tres` 当前值一致（生命 180.0、护盾 20、灵力 0、攻击 12、防御 3）。
+  - `test/headless/hud_spirit_display_test.gd` 期望 `HP：180 / 180`，且“敌人不显示灵力行”语义不变（该套件 8 项断言通过）。
+  - 外部改动来源留痕：`git diff -- game/pawns/data/enemy_pawn.tres` 显示 `max_health 80.0 → 180.0`、`display_color` 规范化与 `uid="uid://b53o7764o7kru"` 生成，文件 mtime 为 2026-09-25 15:47:47，确认非本批次实现写入。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T16:19:12+08:00
+- 已知问题：本 Increment 只同步数据基线，不评估 180 生命对战斗时长与 AI 数值平衡的影响；平衡评估属后续战斗主题。
+- 用户验收：已验收
+- 验收时间：2026-09-25T16:50:57+08:00
+- Git：`main` / `83735d0`
+- 备注：不隶属任何父 Increment。若用户希望恢复 80 生命，应拒绝本 Increment 并另立回退 Increment，而不是在本 Increment 内直接改回。
+
+## INC-PAWNS-010：PawnData 身份字段与数据变更视图信号
+
+- 状态：accepted
+- 创建时间：2026-09-25T16:04:30+08:00
+- 最后修改：2026-09-25T16:19:12+08:00
+- 主题：pawns
+- 来源：`docs/pawns信息ui.md` Phase 0（数据契约与关键信号）、Phase 1（身份四行）。
+- 目标：让单位静态数据能回答“我是谁、什么流派”，并提供数据变更通知信号，使信息卡可以事件驱动刷新，而不是每帧轮询。
+- 验收标准：
+  - `PawnData` 新增可选身份字段 `sub_realm: String`（默认 `""`）与 `spirit_root: StringName`（默认 `&""`）；未配置时统一表示“未设定”，既有预设与 `PawnData.new()` 的既有默认值行为不变。
+  - `PawnData` 新增视图契约信号 `identity_changed` / `attributes_changed` / `realm_changed` / `build_changed` 及对应 `notify_*_changed()` 通知方法；信号只做变更通知，不承载、不存储运行时数值。
+  - `game/pawns/data/player_pawn.tres` 声明真实的小境界与灵根，供信息卡显示身份行。
+  - 单元用例覆盖：新增字段默认值、两个实例不共享新字段、四个通知方法在无观察者时安全返回、有观察者时只发射一次对应信号。
+- 范围：`game/shared/resources/pawn_data.gd`、`game/pawns/data/player_pawn.tres`、`test/unit/pawn_data_defaults_test.gd`。
+- 非范围：`vital_changed`（运行时数值由 `Pawn` 既有 `health_changed` / `shield_changed` / `spirit_changed` 承担，见实现说明）、`cultivation_changed` 与修为进度字段（依赖后续修为/突破 Increment）、法强/暴击等属性扩展、存档格式迁移。
+- 依赖：`INC-PAWNS-008`（Pawn 境界与 Build 汇总接口，已验收）。
+- 检索证据：
+  - `git status --short --branch` → `## main...origin/main [ahead 1]`，工作区含 `INC-CROSS-003`…`INC-CROSS-007` 未提交实现。
+  - `git diff --unified=0 -- agent-plan/` → 确认 `INC-PAWNS-004`…`INC-PAWNS-008` 已占用；本 Increment 取新号 `INC-PAWNS-010`。
+  - `Select-String` 检索 `agent-plan/*.md`、`AGENTS.md`、`docs/*.md` 中的 `PawnInfoPanel|信息卡` → 只有 `docs/pawns信息ui.md` 命中，说明信息卡尚未建立任何 Increment，属本批次新建。
+  - 依赖状态：`INC-PAWNS-008` 的 `get_realm()` / `get_build_loadout()` / `get_build_validation()` 已在工作区可用，满足 Plan Gate。
+  - 允许修改范围：仅上述三个文件；`game/shared/resources/pawn_data.gd` 是高冲突共享资源，本批次同一时间只有一个写入者。
+- 风险：导出字段顺序影响 `.tres` 文本；给 `Resource` 加信号可能被误用为运行时状态容器；新增字段必须保持向后兼容（旧 `.tres` 加载后取默认值）。
+- 实现说明：新增字段放在既有 Build 字段之后、属性字段之前，保持 `.tres` 文本可读；通知方法全部为显式 `notify_*_changed()`，由数据修改方主动调用，避免 `@export` setter 在编辑器加载阶段触发信号。`vital_changed` 与文档的偏离：项目既有架构规定运行时数值只存在于 `Pawn/Resources/*` 的 `ResourcePoolComponent`（`AGENTS.md` §5.6「不把运行时状态写进 `.tres` 源资源」），因此生命/护盾/灵力变更继续由 `Pawn` 的信号承担，`PawnData` 不新增运行时数值信号；`cultivation_changed` 待修为进度数据落地后再补，不在本 Increment 造占位字段。
+- 变更文件：`game/shared/resources/pawn_data.gd`（新增 `sub_realm` / `spirit_root` 导出字段与 `identity_changed` / `attributes_changed` / `realm_changed` / `build_changed` 四个信号及 `notify_*_changed()`）、`game/pawns/data/player_pawn.tres`（声明 `sub_realm = "三层"`、`spirit_root = &"金灵根"`）、`test/unit/pawn_data_defaults_test.gd`（同步默认值 / 实例隔离 / 玩家预设断言，并新增 `test_notify_methods_emit_matching_signal_once()`）。
+- 测试证据：
+  - `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer unit` → `[GdUnit4] unit ... PASS (52 cases)`；随后 `-Layer all` → `RESULT: PASS`（GdUnit4 105 例、headless 10 套 541 项断言）。
+  - 单元覆盖：新增字段默认值（`sub_realm == ""`、`spirit_root == &""`）、两个 `PawnData` 实例互不共享新字段、玩家预设声明 `三层` / `金灵根`、四个 `notify_*_changed()` 在无观察者时安全返回、在有观察者时只发射对应信号一次。信号统计使用 `Array[String]` 累积后再断言，规避 GDScript lambda 按值捕获标量导致计数不更新的陷阱。
+  - 向后兼容：未配置新字段的 `game/pawns/data/enemy_pawn.tres` 加载后取默认值，敌人侧 UI 行为不变（`test/headless/hud_spirit_display_test.gd` 8 项断言通过）。
+  - 静态验证：Godot MCP `validate game/shared/resources/pawn_data.gd` → `valid: true`；本会话后段 MCP 服务不可用（`unsupported call`），改由 `--headless` 全量门禁承担静态与运行验证。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T16:19:12+08:00
+- 已知问题：四个视图信号是显式通知契约，需要数据修改方主动调用 `notify_*_changed()`；当前工作区内尚无写入方调用它们（信息卡只订阅），因此“信号是否被触发”由单元用例直接验证，而不是靠端到端链路。
+- 用户验收：已验收
+- 验收时间：2026-09-25T16:50:57+08:00
+- Git：`main` / `78ecb97`
+- 备注：父 Increment 为 `INC-CROSS-008`；本 Increment 只提供静态身份数据与通知契约，不做 UI。
+## INC-PAWNS-011：修为进度组件与 Pawn 运行时接口
+
+- 状态：accepted
+- 创建时间：2026-09-25T16:24:12+08:00
+- 最后修改：2026-09-25T16:33:34+08:00
+- 主题：pawns
+- 目标：为 Pawn 增加运行时修为进度组件，使“当前修为 / 突破所需修为 / 下一境界 / 是否达到突破阈值”有唯一数据源，并通过信号驱动信息卡刷新。
+- 验收标准：
+  - 新增 `CultivationProgressComponent`（Node），提供 `configure(realm, initial_exp)`、`increase(amount, source)`、`set_current_exp(value, source)`、`get_current_exp()`、`get_required_exp()`、`get_next_realm()`、`get_ratio()`、`is_configured()`、`is_ready_for_breakthrough()` 与 `progress_changed` / `became_ready` 信号。
+  - 修为数值只存在于运行时组件，不写入 `PawnData` / `.tres`；`PawnData` 只新增可选的 `initial_cultivation_exp` 作为出生配置。
+  - `Pawn` 的 `CultivationProgress` 子节点在 `_ready()` 中按 `PawnData.realm` 配置；Pawn 暴露只读 `get_cultivation_snapshot()`、`get_cultivation_progress()`、`gain_cultivation_exp()`，并转发 `cultivation_changed(pawn, current, required)` 与 `cultivation_ready(pawn)`。
+  - 无境界单位、终点境界、负增长入参、零阈值和重复到达阈值均不崩溃、不产生伪进度；达到阈值只产生一次 `became_ready`。
+  - 单元测试覆盖组件边界，集成测试覆盖真实 `pawn.tscn` 装配、信号转发和信息卡可读取数据。
+- 范围：`game/shared/core/cultivation_progress_component.gd`（新增）、`game/shared/core/cultivation_progress_component.gd.uid`（新增）、`game/shared/resources/pawn_data.gd`、`game/pawns/pawn.gd`、`game/pawns/pawn.tscn`、`test/unit/cultivation_progress_component_test.gd`、`test/integration/cultivation_progress_pawn_test.gd`。
+- 非范围：实际境界突破与资源重置、境界属性加成、修为自然增长/战斗奖励、存档序列化、法强/暴击属性。
+- 依赖：`INC-CULT-003`（境界进阶链与突破所需修为）、`INC-PAWNS-010`（`PawnData` 视图信号，实现已在工作区）；两者满足后本 Increment 才能声称数据链路成立。
+- 检索证据：已执行 `git status --short --branch`、`git diff --unified=0 -- agent-plan/`、`git diff --cached --unified=0 -- agent-plan/`、`git log --oneline -- agent-plan/` 与 `git grep -n -E "CultivationProgress|cultivation_changed|INC-PAWNS-011" -- agent-plan/ game/ test/`；现有 `Pawn` 只有生命/护盾/灵力资源池和 Build 接口，没有修为运行时节点，本 Increment 取新号 `INC-PAWNS-011`；允许范围仅限上述组件、Pawn 数据契约、场景装配与对应测试。
+- 风险：`pawn.tscn` 是共享高冲突场景，必须在 UI-008 之前完成并验证；`PawnData` 新增字段要保持旧 `.tres` 向后兼容；信号必须避免在配置阶段误触发。
+- 实现说明：组件以 Node 形式挂在 `Pawn/CultivationProgress`，与 `ResourcePoolComponent` 一样只持有运行时状态；`Pawn` 是唯一装配者，UI 只读取 Pawn 的只读快照。`increase()` 采用 0..required 截断并返回实际增量，`became_ready` 只在从“未达标”跨到“达标”时发出。`initial_cultivation_exp` 默认 `0.0`，不改变既有预设的实际游戏表现。
+- 变更文件：`game/shared/core/cultivation_progress_component.gd`、`game/shared/core/cultivation_progress_component.gd.uid`、`game/shared/resources/pawn_data.gd`、`game/pawns/pawn.gd`、`game/pawns/pawn.tscn`、`test/unit/cultivation_progress_component_test.gd` 及其 `.uid`、`test/integration/cultivation_progress_pawn_test.gd` 及其 `.uid`。
+- 测试证据：
+  - 新增 `cultivation_progress_component_test.gd` 5 例覆盖静默配置、增加/设置截断、`became_ready` 边沿、终点/无境界与非法入参；真实 `pawn.tscn` 集成测试 3 例覆盖玩家/敌人装配、信号转发与只读快照。
+  - `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer unit` → `PASS (62 cases, 0 failures)`；`-Layer integration` → `PASS (37 cases, 0 failures)`；`-Layer all` → `PASS (119 cases, 0 failures)`。
+  - Godot MCP `validate` `cultivation_progress_component.gd`、`pawn.gd`、两份新测试与 `pawn.tscn` → 全部 `valid: true`；`git diff --check` 退出码 0。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T16:33:34+08:00
+- 已知问题：本 Increment 只提供修为状态、增加/设置与阈值信号，不执行突破；`initial_cultivation_exp` 仅作为出生配置，尚未接入存档迁移。
+- 用户验收：已验收
+- 验收时间：2026-09-25T16:50:57+08:00
+- Git：`main` / `8e1f0de`
+- 备注：父 Increment 为 `INC-CROSS-009`；本 Increment 只建立修为状态与信号，不执行突破。
+
+## INC-PAWNS-012：PawnData 武器字段与 Build 汇总校验接入
+
+- 状态：accepted
+- 创建时间：2026-09-25T16:38:52+08:00
+- 最后修改：2026-09-25T16:45:46+08:00
+- 主题：pawns
+- 目标：让 Pawn 能携带一件主武器，并把武器并入既有的 Build 汇总与校验链路，使信息卡与后续系统读到的是同一份数据。
+- 验收标准：
+  - `PawnData.weapon` 为可选 `WeaponDefinition`（null 表示无武器），不改变既有预设的默认行为。
+  - `BuildLoadout.weapons` 与 `get_weapon()` 提供只读汇总；`get_entries(KIND_WEAPON)` / `get_used_slots(KIND_WEAPON)` / `get_capacity(KIND_WEAPON)` 与功法/技能语义一致。
+  - `BuildValidator` 对武器执行与其他类别相同的判定：空条目、未配置、重复、境界门槛、容量超限，错误码沿用既有常量。
+  - `Pawn.get_build_loadout()` 汇总武器；武器缺失或未配置时不影响其他类别的校验结论。
+  - 集成测试覆盖“玩家预设装备武器后校验通过”“武器超出容量时报 `over_capacity`”“无武器单位不产生武器错误”。
+- 范围：`game/shared/resources/pawn_data.gd`、`game/shared/build/build_loadout.gd`、`game/shared/build/build_validator.gd`、`game/pawns/pawn.gd`、`game/pawns/data/player_pawn.tres`、`test/unit/build_validator_test.gd`、`test/unit/pawn_data_defaults_test.gd`、`test/integration/pawn_build_test.gd`。
+- 非范围：武器更换 / 卸下命令、武器数值与战斗结算、掉落与背包、五行与灵根相容校验、存档迁移、信息卡显示（`INC-UI-009`）。
+- 依赖：`INC-INVENTORY-001`（武器定义）、`INC-CULT-004`（武器槽容量）、`INC-PAWNS-008`（Build 汇总接口，实现已在工作区）。
+- 检索证据：已执行 `git status --short --branch`、`git diff --unified=0 -- agent-plan/`、`git diff --cached --unified=0 -- agent-plan/`（暂存区为空）、`git log --oneline -- agent-plan/`、`git grep -n -E "INC-(CULT|PAWNS|UI|INVENTORY|CROSS)-00[0-9]" -- agent-plan/` 与 `git grep -n "weapon" -- game/ test/`（无匹配）。结论：`INC-PAWNS-001`~`011` 已存在，`INC-PAWNS-012` 未被占用；Pawn 侧完全没有武器字段与校验，属 Phase 2 的真实缺口。允许修改范围仅限上述数据定义、Build 汇总与校验、玩家预设与对应测试。
+- 风险：`player_pawn.tres` 是已登记基线数据，新增武器字段会改变序列化内容，必须同步 `test/unit/pawn_data_defaults_test.gd`；`BuildValidator` 的错误顺序是既有契约，武器判定必须插在三类既有判定之间且不影响无武器单位的结论。
+- 实现说明：沿用 `active_skill` 的“单入口字段 + 汇总数组”约定，`PawnData.weapon` 是唯一装备入口，`BuildLoadout.weapons` 只是汇总视图，避免两套表示漂移；校验顺序固定为 功法 → 武器 → 主动 → 被动，保证 `get_errors()` 顺序可复现；武器本轮只参与 Build 校验与展示，不参与战斗结算。
+- 变更文件：
+  - `game/shared/resources/pawn_data.gd`（新增 `weapon` 字段）
+  - `game/shared/build/build_loadout.gd`（新增 `weapons` 汇总与 `get_weapon()`）
+  - `game/shared/build/build_validator.gd`（接入武器校验，错误顺序 功法→武器→主动→被动）
+  - `game/pawns/pawn.gd`（`get_build_loadout()` 汇总武器）
+  - `game/pawns/data/player_pawn.tres`（预设武器 `青锋剑`）
+  - `test/unit/build_validator_test.gd`
+  - `test/unit/pawn_data_defaults_test.gd`
+  - `test/integration/pawn_build_test.gd`
+- 测试证据：
+  - `pwsh -File test/run_tests.ps1 -Godot $GODOT_PATH -Layer all` → `RESULT: PASS`（GdUnit4 130 例 0 失败：unit 71 / integration 39 / gameplay 20；headless 10 套 549 断言 0 失败），退出码 0。
+  - `test/integration/pawn_build_test.gd` 覆盖三条验收标准：玩家预设装备武器后校验通过、武器超出容量报 `over_capacity`、无武器单位不产生武器错误。
+  - `test/unit/build_validator_test.gd` 用武器桩覆盖未配置与境界门槛；`test/unit/pawn_data_defaults_test.gd` 校验 `player_pawn.tres` 的武器指向与四类槽位默认值。
+  - Godot MCP `validate`：`pawn_data.gd`、`build_loadout.gd`、`build_validator.gd`、`pawn.gd`、`player_pawn.tres` 全部 `valid: true`。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T16:45:46+08:00
+- 已知问题：
+  - 武器只参与 Build 汇总/校验与信息卡展示，不参与战斗结算与属性加成。
+  - 只有单武器入口（`PawnData.weapon`），无更换/卸下命令，无存档迁移字段。
+  - 五行不参与相容校验；`required_realm_tier` 复用功法门槛语义，目前没有高于炼气的武器数据可供回归。
+- 用户验收：已验收
+- 验收时间：2026-09-25T16:50:57+08:00
+- Git：`main` / `c21d8ec`
+- 备注：父 Increment 为 `INC-CROSS-010`；武器槽容量为 1 的约束来自 `INC-CULT-004`，本 Increment 不重复实现容量规则。

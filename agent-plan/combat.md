@@ -1,6 +1,6 @@
 # Combat 主题计划
 
-> 最后修改：2026-09-25T13:43:51+08:00  
+> 最后修改：2026-09-25T16:50:57+08:00
 > 主题：combat  
 > 规则来源：`../AGENTS.md`
 
@@ -48,3 +48,126 @@
 - 验收时间：2026-09-25T13:43:51+08:00
 - Git：分支 main，commit d7c2e1e（feat(pawns): add pawn MVP with movement, combat, HUD and pause [INC-CROSS-001]）
 - 备注：此 Increment 是 `INC-CROSS-001` 的子 Increment。
+
+## INC-COMBAT-002：增加灵力资源池与原子消耗能力
+
+- 状态：accepted
+- 创建时间：2026-09-25T14:31:51+08:00
+- 最后修改：2026-09-25T15:06:34+08:00
+- 主题：combat
+- 目标：新增灵力（技能蓝条）作为第二个实际资源消费者，验证 ResourcePoolComponent 与 ResourceBar 能覆盖“不能透支、可恢复、非死亡资源”的场景，但暂不实现技能链。
+- 验收标准：
+  - PawnData 能静态配置灵力上限与初始值；默认 `max_spirit = 0` 的 Pawn 不显示灵力条，配置为正数的 Pawn 创建 `Spirit` 资源池。
+  - Pawn 暴露只读 `current_spirit` / `max_spirit` 与 `spirit_changed(current, max)`；资源变化驱动 PawnStatusBars 的 SpiritBar 显示和延迟追赶。
+  - 提供 `try_spend_spirit(amount)` 原子接口：余额不足返回 false 且数值完全不变；余额足够时一次性扣除并返回 true。
+  - 提供 `restore_spirit(amount)` 或等价接口，按上限截断；自动再生是否启用由资源定义或战斗规则决定，基础池不得强制再生。
+  - 灵力归零只触发资源池的 depleted 语义，不得直接令 Pawn 死亡；技能、消耗、回复技能和施法校验均不在本 Increment 实现。
+  - 新增 headless 断言覆盖满灵力消耗、连续消耗、余额不足、超量恢复、默认无灵力和 UI 绑定；现有战斗与血条回归继续通过。
+- 范围：`game/pawns/data/*.tres`、`game/shared/resources/pawn_data.gd`、`game/pawns/pawn.gd`、`game/pawns/pawn.tscn`、`game/combat/**` 中资源消耗接口、必要的 `game/ui/pawn_status_bars.gd` 绑定与 `test/headless/spirit_pool_test.gd`。
+- 非范围：主动技能、技能栏、冷却、施法前摇、功法、五行、灵根、分层生命、敌人技能、战斗平衡和自动回复策略。
+- 依赖：`INC-CORE-002`、`INC-UI-003`、`INC-PAWNS-004`。
+- 检索证据：执行 `git status --short`、`git diff --unified=0 -- agent-plan/`、`git diff --cached --unified=0 -- agent-plan/` 与 `git log --oneline -- agent-plan/`；工作区无暂存变更。父级 `INC-CROSS-003` 为 in_progress，顺序为 `INC-CORE-002 → INC-UI-003 → INC-PAWNS-004 → INC-COMBAT-002`，前三者已完成并通过 102/86/49 项断言（等待用户验收，未提交）。已验收基线仍为 `INC-PAWNS-003`（`a873c3f`）；允许范围严格限定为 PawnData 静态配置、Pawn 灵力池与消耗接口、`game/pawns/data/*.tres`、必要的 PawnStatusBars 绑定验证与 `test/headless/spirit_pool_test.gd`。
+- 风险：把灵力回复和技能消耗规则写死进基础池；UI 在 `max_spirit = 0` 时错误显示空条；灵力归零与死亡语义混淆；PawnData 新增字段造成旧 `.tres` 默认值兼容问题。
+- 实现说明：
+  - 灵力是资源池的生产级第二消费者，用于证明抽象不是只为生命写死的伪通用组件。
+  - `try_spend_spirit()` 只做原子扣除；技能系统未来负责“检查冷却、目标、施法条件”，不得把完整技能逻辑塞进资源组件。
+  - 灵力条仅在最大灵力大于 0 时参与布局；其显示仍受 PawnStatusBars 组级隐藏计时控制。
+  - `PawnData` 新增 `max_spirit`（默认 0）与 `initial_spirit_ratio`（默认 1.0，0..1）：默认 0 的单位完全不创建灵力池，因此也不会出现空灵力条；旧 `.tres` 不写字段时行为与迁移前一致。
+  - 灵力池由 `Pawn._setup_spirit_pool()` 在 `_ready()` 中按需动态创建为 `Resources/Spirit`（ResourcePoolComponent），并以稳定 ID `spirit` 注册进 ResourceSetComponent；没有另建 Pawn 自持数值，`current_spirit` / `max_spirit` 都是资源池的只读代理。
+  - `spirit_changed(pawn, current, max)` 由灵力池的 `value_changed` 驱动；灵力归零只保留资源池的 `depleted` 边沿，**不连接** `depleted → die()`，也不冒充 `health_state_changed`，因此不会弹出头顶血条或让单位死亡。
+  - `restore_spirit()` 只做按上限截断的恢复，返回实际恢复量；基础池与 Pawn 都不实现自动再生 tick，恢复时机留给后续战斗规则。
+  - 本 Increment 不改动 `pawn.tscn`、也不把头顶血条换成 `PawnStatusBars`：`INC-UI-003` 的通用资源条通过 headless 绑定验证（生命/护盾/灵力三条独立刷新与延迟追赶），实际接入头顶 UI 属于后续 Increment。
+- 变更文件：
+  - `game/shared/resources/pawn_data.gd`
+  - `game/pawns/pawn.gd`
+  - `game/pawns/data/player_pawn.tres`
+  - `test/headless/spirit_pool_test.gd`
+  - `test/headless/spirit_pool_test.gd.uid`
+  - `test/headless/pawn_resource_pools_test.gd`（3 条“当前只应有 health/shield”的临时断言随灵力池落地更新，见测试证据）
+- 测试证据：
+  - Godot MCP `validate`：`pawn_data.gd`、`pawn.gd`、`spirit_pool_test.gd` 全部 `valid: true`，无解析或类型错误。
+  - 新增 headless 断言：`spirit_pool_test.gd` 退出码 0，`CHECKS=63 FAILURES=0`、`SPIRIT_POOL_TEST_OK`；覆盖默认无灵力、正上限建池、一次性扣满、余额不足不变量、非法消耗、超量恢复、归零不致死与 UI 绑定/延迟追赶。
+  - 全量回归：`spirit_pool_test` 63/0、`pawn_resource_pools_test` 49/0、`health_component_test` 55/0、`health_bar_visibility_test` 38/0、`resource_pool_component_test` 102/0、`resource_bar_test` 86/0，合计 393 项断言全部通过，退出码均为 0。
+  - `pawn_resource_pools_test.gd` 的 3 条断言因本 Increment 增加了灵力池而更新（“只应有 health/shield” → “灵力池只在 `max_spirit > 0` 时存在”），复跑 49/0 通过，其余断言未改动。
+  - 运行态冒烟（MCP `run_project` + `run_script`，真实窗口）：玩家 `get_resource_ids() = ["health","shield","spirit"]`、灵力 `100/100`（来自 `PawnData.max_spirit`）；敌人仍只有 `["health","shield"]`，`try_spend_spirit` 返回 false、`restore_spirit` 返回 0。
+  - 运行态灵力语义：`try_spend_spirit(40)` → true 且灵力 60、只发出一次 `spirit_changed(60,100)`、`health_changed`/`shield_changed` 未触发、血量护盾不变、Pawn 存活、头顶血条保持隐藏；`try_spend_spirit(999)` → false 且灵力仍为 60、无新信号；`restore_spirit(9999)` → 返回 40 且补满到 100。
+  - 运行态通用资源条绑定：把 `PawnStatusBars` 实例挂到主场景并绑定生命/护盾/灵力三池后，三条矩形为 `(480,120)/(480,138)/(480,156)`，互不重叠；灵力条 `visible = true`、目标值随灵力池立即变为 65、显示值按 `delayed_drain` 追赶后对齐 65，且未回写灵力池数值（截图为 `.mcp/godot-runtime/screenshots/screenshot_1790319971_481.png`，已忽略不入库）。
+  - 运行态战斗回归：真实 AI 攻击后玩家护盾池由 40 降到 33、生命池不变，说明生命/护盾链路未受灵力改动影响。
+  - `git diff --check` 退出码 0；运行日志 `errors` 为空。
+  - 命令行 stderr 中的 `Failed to open log file for writing: user://logs/godot.log` 为本地用户日志目录写入限制，不影响断言与退出码。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T15:06:34+08:00
+- 已知问题：
+  - 灵力条尚未接入 Pawn 头顶 UI（Pawn 仍使用已验收的 `PawnHealthBar`）；`PawnStatusBars` 的灵力显示目前由 headless 断言与运行态手动绑定验证，接入棋盘/头顶 UI 需另立 Increment。
+  - 灵力自然恢复速率、战斗内恢复规则与技能消耗公式尚未设计；本 Increment 只提供池与原子接口。
+  - `HUD/SelectedLabel` 仍未显示灵力（`game/main/main.gd` 不在本 Increment 范围）。
+- 用户验收：已验收
+- 验收时间：2026-09-25T16:50:57+08:00
+- Git：`main` / `f6cdebf`
+- 备注：父 Increment 为 `INC-CROSS-003`；本 Increment 完成后仍不宣称技能系统可用。
+
+## INC-COMBAT-003：实现首个主动技能执行闭环
+
+- 状态：accepted
+- 创建时间：2026-09-25T15:25:30+08:00
+- 最后修改：2026-09-25T15:37:12+08:00
+- 主题：combat
+- 目标：在已验证的普通攻击与灵力池之上，增加数据驱动的主动技能执行契约：技能定义、施法前置校验、灵力原子扣除、伤害结算、冷却推进与 AI 自动施放。完成后灵力资源第一次拥有真实战斗消费者，但本 Increment 不接入玩家键位和技能栏 UI。
+- 验收标准：
+  - 新增 `ActiveSkillDefinition extends Resource`，至少描述稳定技能 ID、显示名、灵力消耗、冷却时间、施法距离和伤害倍率；资源只保存静态配置，不保存当前冷却。
+  - `PawnData` 可配置一个可选主动技能；未配置技能的单位保持普通攻击行为完全不变。
+  - Pawn 提供 `cast_skill(skill, target)` / `can_cast_skill(skill, target)` / `is_skill_ready(skill)` / `get_skill_cooldown_remaining(skill_id)`，并由 `_physics_process()` 推进冷却。
+  - 施法前必须一次性检查：施法者存活、目标有效且为敌方活体、目标在施法距离内、技能已冷却、灵力足够；任一检查失败时不得扣灵力、不得造成伤害、不得进入冷却。
+  - 施法成功时先原子扣除灵力，再调用目标 `take_damage()`，最后进入冷却并发出 `skill_cast` / 冷却变化信号；同一个技能在冷却归零前不能重复施放。
+  - AI 控制器在目标进入技能距离且技能可用时优先施放技能，随后继续普通攻击；无技能或无灵力配置的单位行为不变。
+  - 新增 GdUnit4 单元/集成用例覆盖资源默认值与距离回退、成功路径、灵力不足无副作用、冷却阻断与归零、无效目标和 AI 自动施放。
+- 范围：`game/shared/resources/active_skill_definition.gd`、`game/pawns/data/*.tres`、`game/shared/resources/pawn_data.gd`、`game/pawns/pawn.gd`、`game/pawns/controllers/ai_controller.gd`、`test/unit/active_skill_definition_test.gd`、`test/integration/active_skill_execution_test.gd`；以及仅用于计划回写与测试基线同步的 `agent-plan/combat.md`、`agent-plan/_index.md`、`AGENTS.md`。
+- 非范围：玩家键位、技能栏、目标选择 UI、功法/Build、范围伤害、五行、暴击、状态异常、灵力自然恢复、技能动画与正式特效。
+- 依赖：`INC-COMBAT-002`（灵力池、`spirit_changed`、`try_spend_spirit`）；该依赖已实现并通过验证，并已随本批次验收通过。
+- 检索证据：
+  - 执行 `git status --short --branch`：当前分支为 `main`，相对 `origin/main` ahead 1；工作区同时存在 `INC-CROSS-003`、`INC-CROSS-004`、`INC-PAWNS-006`、`INC-TESTING-001` 等未提交变更。
+  - 执行 `git diff --unified=0 -- agent-plan/`：识别到 `INC-CORE-002`、`INC-UI-003`、`INC-PAWNS-004`、`INC-COMBAT-002`、`INC-PAWNS-005`、`INC-UI-004`、`INC-PAWNS-006`、`INC-TESTING-001` 的计划变更；暂存区为空。
+  - 执行 `git log --oneline -- agent-plan/`：最新计划提交为 `3bd28fb`，历史中不存在 `INC-COMBAT-003`。
+  - 执行 `git grep -n -E "INC-COMBAT-003|active_skill|cast_skill|skill_cooldown"`：仅匹配到 AGENTS.md 的编号示例，业务代码与计划中没有已有主动技能实现。
+  - 结构核对：`Pawn.try_spend_spirit()` 已存在并保持原子语义；`AIController` 目前只做靠近与普通攻击，没有技能消费者。启动时测试基线为 GdUnit4 三层 34 个用例、9 个 headless 套件 480 项断言，统一 runner 实测通过；完成后 GdUnit4 用例增至 44 个（unit 25 / integration 14 / gameplay 5，见测试证据）。
+- 风险：
+  - 技能伤害仍经过目标 `take_damage()` 的防御减免；测试必须断言伤害“通过既有伤害路由”，不能假设倍率等于最终扣血。
+  - 冷却推进必须使用 `_physics_process(delta)`，不能使用 `_process` 绕过暂停；暂停时冷却应冻结。
+  - 需要保证失败路径完全无副作用，特别是灵力、目标生命和冷却三者不能被部分修改。
+  - 只修改 combat 主题范围；玩家输入、HUD 技能文本和技能栏必须留给后续 Increment，避免把本 Increment 扩成跨主题特性。
+- 实现说明：
+  - `ActiveSkillDefinition extends Resource` 只保存稳定技能 ID、显示名、灵力消耗、冷却、施法距离与伤害倍率等静态配置；提供 `is_configured()`、距离回退与负数归一化读取，当前冷却不写入资源，避免多个 Pawn 共享资源时污染状态。
+  - `PawnData` 新增可选 `active_skill`。`player_pawn.tres` 引用 `player_sword_skill.tres`（`御剑斩`：25 灵力、2.5 秒冷却、110 施法距离、1.8 倍攻击）；未配置技能的单位仍只走普通攻击路径。
+  - `Pawn.can_cast_skill()` 在一次入口中校验：技能有效、施法者存活、目标有效且为敌方活体、目标在施法距离内、技能未冷却、灵力足够。失败路径只返回 `false`，不扣灵力、不造成伤害、不进入冷却。
+  - `Pawn.cast_skill()` 成功顺序固定为：原子扣除灵力 → 调用目标 `take_damage()` → 写入按 `skill.id` 索引的冷却 → 发出 `skill_cast` 与 `skill_cooldown_changed`。冷却由 `_physics_process()` 推进；Pawn 死亡后不推进，暂停时因物理帧冻结而自然冻结。
+  - `AIController` 在激活延迟后、进入技能距离且技能可用时优先施放一次技能，否则继续既有的接近与普通攻击流程。
+  - 复杂度控制：没有引入全局技能管理器、事件总线或对象池；单个 Pawn 的冷却字典足以支撑当前每单位单技能切片，后续多技能装配再另行抽象。
+- 变更文件：
+  - 新增 `game/shared/resources/active_skill_definition.gd` 与 `.uid`。
+  - 修改 `game/shared/resources/pawn_data.gd`。
+  - 修改 `game/pawns/pawn.gd`：新增技能信号、施法校验/执行、冷却查询与物理推进。
+  - 修改 `game/pawns/controllers/ai_controller.gd`：新增技能优先施放分支。
+  - 新增 `game/pawns/data/player_sword_skill.tres`。
+  - 修改 `game/pawns/data/player_pawn.tres`：增加 `active_skill` 资源引用。
+  - 新增 `test/unit/active_skill_definition_test.gd` 与 `.uid`。
+  - 新增 `test/integration/active_skill_execution_test.gd` 与 `.uid`。
+  - 修改 `agent-plan/combat.md`、`agent-plan/_index.md`、`AGENTS.md`（计划回写与测试基线同步）。
+- 测试证据：
+  - MCP Godot `validate` 批量校验（2026-09-25T15:36:24+08:00 左右）：`active_skill_definition.gd`、`pawn_data.gd`、`pawn.gd`、`ai_controller.gd`、两个新增测试脚本均返回 `valid: true`，`errors: []`。
+  - 统一测试门禁（2026-09-25T15:35 左右，`pwsh -File test/run_tests.ps1 -Godot $env:GODOT_BIN -Layer all`）：GdUnit4 `unit 25 例 / integration 14 例 / gameplay 5 例`，汇总 `44 cases, 0 failures`；headless `9 suites, 480 assertions, 0 failing suites`；输出 `RESULT: PASS`，退出码 `0`。
+  - 编辑器工程校验（`--headless --path <repo> --editor --quit`）：退出码 `0`，Godot 4.7.2 成功注册 `ActiveSkillDefinition` 并完成资源扫描；仅有 headless 环境无法写 `user://` editor settings/log 的环境警告，无项目脚本错误。
+  - 运行态冒烟（`--headless --path <repo> --quit-after 120`）：退出码 `0`；仅有 `user://logs/godot.log` 无法创建的环境级错误，无项目脚本错误。
+  - 技能专项集成用例覆盖：成功施法扣灵力并造成防御减免后的伤害、进入冷却、重复施法阻断；灵力不足完全无副作用；超距/同阵营/自身/空目标/已死亡目标全部拒绝；物理推进后冷却归零并可再次施放；AI 激活延迟后自动施放。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T15:37:12+08:00
+- 已知问题：
+  - 玩家侧尚无键位、技能栏或施法目标选择入口；本切片只提供 Pawn API，AI 可自动使用，玩家 Pawn 的 `active_skill` 配置当前不会被 `PlayerController` 主动触发。
+  - 正式 `main.tscn` 的试炼傀儡继续保持既有 `max_spirit = 0`、不绑定灵力条的契约，因此当前没有自带主动技能；AI 自动施放由集成用例注入临时 `PawnData` 验证。要让实战单位施放技能，需后续 Increment 明确正式单位的灵力配置并更新对应回归基线。
+  - 无技能动画、施法前摇、命中特效、伤害数字和音效；伤害只有单一瞬时结算。
+  - 灵力自然恢复、技能升级、功法/Build、范围伤害、五行、暴击、状态异常和多个技能装配均不在本 Increment 范围。
+  - 冷却状态位于 Pawn 实例内，不参与存档；单位死亡后冷却冻结，当前没有复活/重置契约。
+  - AI 只有在目标进入技能距离后才施放；不会为了技能主动脱离或调整站位。
+- 用户验收：已验收
+- 验收时间：2026-09-25T16:50:57+08:00
+- Git：`main` / `193c1c5`
+- 备注：本 Increment 是主动技能系统的第一个可验证切片，只证明“技能可以安全消耗灵力、造成一次伤害并进入冷却”；玩家操作、技能栏和技能编辑/装配不在此范围。

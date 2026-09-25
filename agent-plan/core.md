@@ -1,6 +1,6 @@
 # Core 主题计划
 
-> 最后修改：2026-09-25T13:43:51+08:00  
+> 最后修改：2026-09-25T16:50:57+08:00
 > 主题：core  
 > 规则来源：`../AGENTS.md`
 
@@ -47,3 +47,145 @@
 - 验收时间：2026-09-25T13:43:51+08:00
 - Git：分支 main，commit d7c2e1e（feat(pawns): add pawn MVP with movement, combat, HUD and pause [INC-CROSS-001]）
 - 备注：此 Increment 是 `INC-CROSS-001` 的子 Increment。
+
+## INC-CORE-002：抽取 ResourcePoolComponent 资源池基础组件
+
+- 状态：accepted
+- 创建时间：2026-09-25T14:31:51+08:00
+- 最后修改：2026-09-25T14:49:30+08:00
+- 主题：core
+- 目标：把生命、护盾、灵力等“当前值/最大值/增加/减少/归零”行为抽取为单一数值池组件，并通过资源定义与资源集合支持多资源组合，避免 HealthComponent 继续扩张为万能组件。
+- 验收标准：
+  - 新增 `ResourcePoolDefinition extends Resource`，静态描述资源 ID、显示名、最大值、初始比例、是否自动再生和归零语义；运行时当前值不得写入该 Resource。
+  - 新增 `ResourcePoolComponent extends Node`，每个实例只管理一个资源池，提供 `configure()`、`reset()`、`increase()`、`decrease()`、`try_spend()`、`set_value()`、`get_ratio()` 和 `is_depleted()`。
+  - `increase()` / `decrease()` 返回实际成功变化的数值；0、负数、超过上限和无实际变化均为安全操作；`try_spend()` 在余额不足时不得改变数值。
+  - `configure()` / `reset()` 静默初始化，不发出变化信号；真实增减按实际变化发出 `value_changed`；首次归零只发出一次 `depleted`；从归零恢复只发出一次 `restored`。
+  - 新增 `ResourceSetComponent extends Node`，可按稳定资源 ID 挂载和查找多个资源池；不得在基础组件中实现护盾优先吸收、生命死亡、灵力技能消耗或 UI 策略。
+  - 通过 headless 自建断言覆盖边界值、信号次数、原子消耗、静默初始化与多资源集合；本 Increment 不修改 Pawn、UI 或战斗行为。
+- 范围：`game/shared/resources/resource_pool_definition.gd`、`game/shared/core/resource_pool_component.gd`、`game/shared/core/resource_set_component.gd`、`test/headless/resource_pool_component_test.gd`。
+- 非范围：Pawn 迁移、生命/护盾业务语义、灵力技能、伤害路由、条状 UI、延迟动画、分层生命、存档格式和正式美术。
+- 依赖：`INC-PAWNS-003`（当前 HealthComponent 作为迁移前基线）。
+- 检索证据：执行 `git status --short`、`git diff --unified=0 -- agent-plan/`、`git diff --cached --unified=0 -- agent-plan/`、`git log --oneline -- agent-plan/` 与 `git grep -n -E "INC-[A-Z]+-[0-9]{3}" -- agent-plan/`；工作区显示 `INC-CROSS-003` 及 `INC-CORE-002`/`INC-UI-003`/`INC-PAWNS-004`/`INC-COMBAT-002` 均未暂存，当前主题为 core，父 Increment 为 `INC-CROSS-003`，依赖 `INC-PAWNS-003` 已 accepted；允许修改范围严格限定为本 Increment 声明的三个脚本与一个 headless 测试。
+- 风险：抽象过度；Godot `Resource` 命名混淆；把生命/护盾/灵力规则写进基础组件；多节点带来的少量开销；信号粒度过细导致连接复杂。
+- 实现说明：
+  - 采用“基础池只管一个数值，集合组件只负责查找，业务规则单独路由”的组合方案，不使用 Health/Shield/Qi 共同继承一个万能 ResourceComponent 的方案。
+  - `ResourcePoolDefinition` 提供 `resource_id`、`display_name`、`max_value`、`initial_ratio`、`auto_regenerate` 与 `depleted_behavior`；其中 `auto_regenerate` 仅作为策略声明，本 Increment 不实现自动 tick。
+  - `ResourcePoolComponent` 一个实例只维护一个池，公开只读 `current_value` / `max_value`、`increase()`、`decrease()`、`try_spend()`、`set_value()`、`get_ratio()` 与 `is_depleted()`；真实变化才发 `value_changed`，归零/恢复只做边沿信号。
+  - `ResourceSetComponent` 只维护稳定资源 ID 到池的注册表，提供注册、注销、存在性和排序查找；不实现护盾吸收、生命死亡、灵力消耗或 UI 策略。
+  - `configure()` 与 `reset()` 均静默；`reset()` 恢复到定义中的初始比例而非强制满值，生命/护盾等需要满值恢复的消费者应配置 `initial_ratio = 1.0`。
+  - 组件支持带 `resource_definition` 进入场景树时在 `_ready()` 静默自动配置。
+- 变更文件：
+  - `game/shared/resources/resource_pool_definition.gd`
+  - `game/shared/resources/resource_pool_definition.gd.uid`
+  - `game/shared/core/resource_pool_component.gd`
+  - `game/shared/core/resource_pool_component.gd.uid`
+  - `game/shared/core/resource_set_component.gd`
+  - `game/shared/core/resource_set_component.gd.uid`
+  - `test/headless/resource_pool_component_test.gd`
+  - `test/headless/resource_pool_component_test.gd.uid`
+- 测试证据：
+  - Godot MCP `validate` 批量验证：定义、池、集合和 headless 测试四个脚本全部 `valid: true`，无解析/类型错误。
+  - 新增 headless 断言：通过 Godot CLI 执行 `--headless --path . --script res://test/headless/resource_pool_component_test.gd`，退出码 0，输出 `CHECKS=102 FAILURES=0` 和 `RESOURCE_POOL_COMPONENT_TEST_OK`。
+  - 既有回归：`health_component_test.gd` 退出码 0、`CHECKS=55 FAILURES=0`；`health_bar_visibility_test.gd` 退出码 0、`CHECKS=38 FAILURES=0`。
+  - 差异检查：`git diff --check` 退出码 0，无空白错误。
+  - 命令行 stderr 中的 `Failed to open log file for writing: user://logs/godot.log` 为本地用户日志目录写入限制；测试退出码和断言结果不受影响。`health_component_test` 中缺少 PawnData 的 ERROR 是该测试刻意覆盖的预期错误路径。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T14:49:26+08:00
+- 已知问题：
+  - `auto_regenerate` 当前只有静态声明，没有自动再生 tick；何时恢复由后续消费者或独立 Increment 决定。
+  - 基础池尚未接入 Pawn、UI 或战斗系统；生命/护盾迁移与灵力生产消费分别留给 `INC-PAWNS-004` / `INC-COMBAT-002`。
+  - `reset()` 恢复定义初始比例，不保证恢复到满值；需要满值语义的资源必须显式配置 `initial_ratio = 1.0`。
+- 用户验收：已验收
+- 验收时间：2026-09-25T16:50:57+08:00
+- Git：`main` / `f6cdebf`
+- 备注：父 Increment 为 `INC-CROSS-003`；本 Increment 是后续 UI 与 Pawn 迁移的前置依赖。
+
+## INC-CORE-003：增加主动技能输入动作与主场景路由
+
+- 状态：accepted
+- 创建时间：2026-09-25T15:38:42+08:00
+- 最后修改：2026-09-25T15:45:56+08:00
+- 主题：core
+- 目标：新增 `cast_skill` 输入动作并绑定 Q 键，使主场景在玩家 Pawn 被选中且存在有效目标时，将输入转交给 `PlayerController.order_skill()`。
+- 验收标准：
+  - `project.godot` 的 InputMap 新增 `cast_skill`，默认键位为 Q；输入动作名称只使用稳定英文 slug。
+  - 主场景 `_unhandled_input()` 处理 `cast_skill`：未选中玩家、玩家已死亡、没有有效攻击目标或目标不是敌方时，不调用技能、不扣灵力、不报错。
+  - 合法输入会调用 `PlayerController.order_skill()` 并立即刷新 HUD 指令文本；暂停状态下允许记录命令，恢复运行后由控制器执行。
+  - 不改变 `select`、`command`、`toggle_pause` 的既有行为、键位和 `set_input_as_handled()` 语义。
+  - 新增或扩展现有玩法测试覆盖输入动作存在性、无目标无副作用和有效目标转发。
+- 范围：`project.godot`、`game/main/main.gd`、`test/gameplay/main_scene_gameplay_test.gd`。
+- 非范围：HUD 技能文案/技能条、PlayerController 内部接近算法、多个技能输入、手柄/键盘重绑定 UI、快捷键设置界面。
+- 依赖：`INC-PAWNS-007`（必须先提供 `order_skill()`）；`INC-COMBAT-003`（技能 API，已验收）。
+- 检索证据：执行 `git status --short --branch`、`git diff --unified=0 -- agent-plan/` 与 `git grep -n -E "cast_skill|order_skill"`；当前 InputMap 只有 `select`、`command`、`toggle_pause`，主场景没有技能输入分支。
+- 风险：Q 键与未来的技能栏/快捷键冲突；暂停状态下输入处理顺序；重复按键导致命令重复；错误地把 UI 文案写入 core。
+- 实现说明：`project.godot` 的 `[input]` 新增 `cast_skill`（`InputEventKey`，`keycode=81` / `unicode=113`，即 Q 键），格式与既有 `toggle_pause` 一致，未改动 `select`、`command`、`toggle_pause`。`game/main/main.gd._unhandled_input()` 在 `toggle_pause` 之后、鼠标分支之前处理 `cast_skill`，统一调用 `_handle_cast_skill()` 并 `set_input_as_handled()`：只有 `_selected_pawn == player_pawn` 且玩家存活时才转交 `PlayerController.order_skill()`；返回 `true` 时立即 `_update_hud()` 刷新指令文案。`Main.process_mode = 3`（ALWAYS），暂停期间仍可记录命令，恢复运行后由控制器接近并施放。
+- 变更文件：`project.godot`（新增 `cast_skill` 动作）、`game/main/main.gd`（输入分支与 `_handle_cast_skill()`）、`test/gameplay/main_scene_gameplay_test.gd`（新增 3 例）。
+- 测试证据：
+  - 新增玩法用例：`InputMap` 存在 `cast_skill` 且事件包含 `KEY_Q`；未选中玩家、已选中但无有效敌方目标时按 Q 不扣灵力、不进冷却、不产生技能指令；先经 `_handle_command()` 对敌人下达攻击命令后按 Q，指令由“攻击 试炼傀儡”变为含“施放技能”的技能命令且不立即扣灵力。
+  - `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer gameplay` → `RESULT: PASS`（gameplay 12 例）；`-Layer all` → `RESULT: PASS`（GdUnit4 58 例，headless 9 套 480 断言）。
+  - MCP `validate`（`game/main/main.gd`）→ `valid: true`，`errors: []`；`--headless --editor --quit` 与 `--headless --quit-after 120` 退出码 0。
+  - MCP 运行态端到端复验（`run_project` + `simulate_input`）：未选中玩家按 Q 无任何变化；选中玩家并右键敌人后按 Q，指令立即由 `攻击 试炼傀儡` 变为 `施放技能 御剑斩 → 试炼傀儡`，运行日志 errors 为空，证明 Q 键经过 `_unhandled_input()` → `_handle_cast_skill()` → `PlayerController.order_skill()` 的真实链路可用。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T15:45:56+08:00
+- 已知问题：
+  - Q 为单一硬编码键位，暂无按键重绑定 UI；未来多技能槽需要把 `cast_skill` 扩展为动作组或技能栏输入。
+  - `order_skill()` 返回 `false` 时不刷新 HUD（无状态变化）；“为什么不能施放”的原因文案由 `INC-UI-005` 的技能行负责。
+  - 输入只在正式 `main.tscn` 路由，其他场景（如测试场景）需要自行接线。
+- 用户验收：已验收
+- 验收时间：2026-09-25T16:50:57+08:00
+- Git：`main` / `5f39e5f`
+- 备注：父 Increment 为 `INC-CROSS-006`；本 Increment 只负责输入动作与路由，不改变技能数值契约。
+
+## INC-CORE-004：主场景信息卡路由（选中 / 取消选中 / 暂停）
+
+- 状态：accepted
+- 创建时间：2026-09-25T16:04:30+08:00
+- 最后修改：2026-09-25T16:19:12+08:00
+- 主题：core
+- 来源：`docs/pawns信息ui.md` 第五章跨阶段交互规则（点击战场 Pawn 打开信息卡、战斗中精简、暂停时完整）与 Phase 0 验收标准“点击不同 Pawn，信息卡显示真实数据”。
+- 目标：把信息卡实例接入正式主场景，让选中状态、取消选中与暂停状态驱动信息卡的绑定、解绑与精简/完整切换，且不改变既有 HUD 与输入语义。
+- 验收标准：
+  - `game/main/main.tscn` 的 `HUD` 下新增唯一一个 `PawnInfoPanel` 实例（位于 `PauseOverlay` 之前，使暂停遮罩仍然覆盖它），初始隐藏。
+  - 选中玩家 Pawn 时信息卡绑定该单位并显示；取消选中（点击空白）或单位死亡时解绑并隐藏。
+  - 暂停时信息卡切换为完整模式（`is_compact() == false`），恢复运行时切换为精简模式（`is_compact() == true`）。
+  - 选中切换不会残留上一个单位的信号：先绑定 A 再绑定 B 后，A 的数值变化不再刷新面板。
+  - 既有 HUD 行（说明/选中/指令/技能/Build）文本与暂停行为不变；`_unhandled_input` 的 `select` / `command` / `cast_skill` / `toggle_pause` 语义不变。
+  - 玩法用例覆盖：选中后绑定并显示、取消选中后解绑并隐藏、暂停切换完整/精简、受伤后面板文本同步刷新。
+- 范围：`game/main/main.tscn`、`game/main/main.gd`、`test/gameplay/main_scene_gameplay_test.gd`。
+- 非范围：允许点击敌人/中立 Pawn（沿用既有“仅玩家 Pawn 可选中”语义，Phase 4 再扩展）、面板关闭按钮与多面板管理、信息卡内交互操作（更换技能/突破）、正式美术与主题、独立信息卡场景（非战斗场景）。
+- 依赖：`INC-UI-007`（`PawnInfoPanel` 场景与绑定接口，必须先完成）。
+- 检索证据：
+  - `git diff --unified=0 -- agent-plan/` → `INC-CORE-002`、`INC-CORE-003` 已占用；本 Increment 取新号 `INC-CORE-004`。
+  - `Get-Content game/main/main.gd` → 选中状态由 `_set_selected_pawn()` 单点维护，暂停由 `_set_paused()` 单点维护，两者是唯一接入点；`_update_hud()` 是既有信号刷新汇聚点。
+  - `Get-Content game/main/main.tscn` → `HUD` 层现有 `HudMargin`（顶部，宽 1120、高 206）、`PauseStateLabel`（右上 244x36）、`PauseOverlay`；信息卡需要避开这三点。
+  - 允许修改范围：仅上述三个文件；`main.tscn` / `main.gd` 为高冲突文件，本批次同一时间只有一个写入者。
+- 风险：信息卡与顶部 HUD、右上暂停标签在窄屏重叠；新增 Control 拦截鼠标导致战场无法下达指令；暂停遮罩层序错误导致遮罩不覆盖信息卡；运行中的 Godot 编辑器（PID 11224）持有旧场景版本，可能覆盖本 Increment 对 `main.tscn` 的修改。
+- 实现说明：
+  - 路由位置：`_set_selected_pawn()` 内统一调用 `info_panel.bind_pawn()` / `info_panel.unbind()`，`_set_paused()` 内调用 `info_panel.set_compact(not value)`，避免在信号回调里分散新增入口。
+  - 面板布局：锚定右下角并避开顶部 HUD 与右上暂停标签，`mouse_filter` 保持默认拦截，使点击面板内部不会被战场解释为“选中/移动指令”。
+  - 未新增信号与 Autoload：沿用“选中状态 → 面板绑定、暂停状态 → 面板模式”的既有单点状态流。
+  - 场景接线细节：`main.tscn` 新增 `ext_resource`（`res://game/ui/pawn_info_panel.tscn`，`id="3_info_panel"`）与 `[node name="PawnInfoPanel" parent="HUD" instance=ExtResource("3_info_panel")]`，插在 `PauseStateLabel` 之后、`PauseOverlay` 之前，因此暂停遮罩仍绘制在信息卡之上（运行态实测 `DRAWN_ABOVE_PANEL=true`）。子场景根节点自带 `visible = false` 与右下锚点，主场景不重复覆盖，避免出现两份可见性真相。
+  - 死亡路径复用选中路由：`_on_pawn_died()` 在“阵亡单位正是当前选中单位”时改为调用 `_set_selected_pawn(null)` 并提前返回，使信息卡解绑与 HUD 清理共用同一条状态流；非选中单位阵亡仍只刷新 HUD。
+  - 布局协同：信息卡高度由 `INC-UI-007` 按真实窗口实测从 384 改为 354（`offset_top = -370`），使 1152x648 下与顶部 HUD（实测下沿 y=262）保持 16px 间距；本 Increment 不修改信息卡内部布局。
+  - 已知环境风险处置：编辑器 PID 11224 仍打开本项目，本次修改后必须在计划与回复中提示用户重载（Project → Reload Current Project）而不是在编辑器中直接保存旧版本，并记录该风险。
+- 变更文件：
+  - 修改 `game/main/main.tscn`：新增信息卡子场景 `ext_resource` 与 `HUD/PawnInfoPanel` 实例（位于 `PauseOverlay` 之前）。
+  - 修改 `game/main/main.gd`：新增 `@onready var info_panel`；`_set_selected_pawn()` 内绑定 / 解绑；`_set_paused()` 内 `set_compact(not value)`；`_on_pawn_died()` 改为复用选中路由。
+  - 修改 `test/gameplay/main_scene_gameplay_test.gd`：新增 `INFO_PANEL_PATH` / `INFO_PANEL_SHIELD_LABEL_PATH` / `INFO_PANEL_HEALTH_LABEL_PATH` 常量与 4 个玩法用例。
+- 测试证据：
+  - `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer gameplay` → `[GdUnit4] gameplay ... PASS (20 cases)`（新增 4 例，由 16 → 20）。
+  - `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` → `RESULT: PASS`，退出码 0（GdUnit4 105 例：unit 52 / integration 33 / gameplay 20；headless 10 套 541 项断言，0 失败）。
+  - 新增玩法用例覆盖：`test_info_panel_binds_on_select_and_hides_on_clear`（选中即绑定并显示、取消选中即解绑并隐藏）、`test_info_panel_compact_switches_with_pause`（暂停 `is_compact() == false`、恢复运行 `== true`）、`test_info_panel_tracks_damage_like_hud`（第一次命中先扣护体：护体行变、气血行不变；第二次打穿护体后气血行同步刷新且与资源池数值一致）、`test_info_panel_unbinds_when_selected_pawn_dies`（致命伤后解绑并隐藏）。
+  - 既有语义回归：暂停契约、技能行、Build 行等 16 个既有玩法用例保持 PASS，HUD 文本与输入动作映射未变。
+  - 真实窗口取证（`test/tools/capture_pawn_info_panel_evidence.gd`，2026-09-25T16:19:12+08:00）：`PAUSE_OVERLAY_VISIBLE=true DRAWN_ABOVE_PANEL=true`；三档窗口（16:9 / 16:10 / 窄屏）在精简与暂停两种模式下信息卡与顶部 HUD、`PauseStateLabel` 均无交集，脚本退出码 0。
+  - 静态验证：本会话后段 Godot MCP 服务不可用（`unsupported call`），改由 `--headless` 全量门禁与上面的真实窗口取证共同承担。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T16:19:12+08:00
+- 已知问题：
+  - **编辑器覆盖风险（未解除）**：Godot 编辑器 PID 11224（2026-09-25 15:46:59 启动）在本 Increment 执行期间一直持有本项目，并持续占用 CPU（5 秒采样 1.53s，约 30% 单核），会周期性重扫描 / 重导入新文件。本次 `main.tscn` 是直接写入磁盘的，必须在编辑器中执行 Project → Reload Current Project（或关闭编辑器）后再操作场景，否则编辑器内的旧版本保存会覆盖本次接线。
+  - 该编辑器负载同时造成 `health_bar_visibility_test.gd` / `pawn_status_bars_integration_test.gd` 的墙钟计时断言抖动（实测 1871~1898ms 对硬下界 1900ms），已另立 `INC-TESTING-002` 处理，与本 Increment 的接线无关。
+  - 信息卡仅对玩家 Pawn 生效：敌人 / 中立单位的查看按文档留待 Phase 4。
+- 用户验收：已验收
+- 验收时间：2026-09-25T16:50:57+08:00
+- Git：`main` / `78ecb97`
+- 备注：父 Increment 为 `INC-CROSS-008`；本 Increment 只做场景接线与状态路由，不改变 `PawnInfoPanel` 内部渲染逻辑。

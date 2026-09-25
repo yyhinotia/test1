@@ -1,6 +1,6 @@
 # UI 主题计划
 
-> 最后修改：2026-09-25T13:54:22+08:00  
+> 最后修改：2026-09-25T16:50:57+08:00
 > 主题：ui  
 > 规则来源：`../AGENTS.md`
 
@@ -104,3 +104,304 @@
 - 验收时间：2026-09-25T14:09:39+08:00
 - Git：分支 main，commit `e233120`（feat(ui): show pawn health bar on health change and auto-hide [INC-CROSS-002]）
 - 备注：父 Increment 为 `INC-CROSS-002`；本 Increment 取代 `INC-UI-001` 中“每个 Pawn 常驻显示生命条”的表现约定，数值刷新与选中 HUD 行为保持不变。
+
+## INC-UI-003：抽取通用 ResourceBar 与 PawnStatusBars 多资源条
+
+- 状态：accepted
+- 创建时间：2026-09-25T14:31:51+08:00
+- 最后修改：2026-09-25T14:56:35+08:00
+- 主题：ui
+- 目标：把现有 PawnHealthBar 中可复用的条状显示、数值绑定、延迟追赶和统一显隐能力抽取出来，使生命、护盾和灵力条共用同一套显示组件。
+- 验收标准：
+  - 新增 `ResourceBar extends Control`，单个实例只绑定一个 `ResourcePoolComponent`；组件不包含生命、护盾或灵力专有逻辑。
+  - 真实数值立即更新；显示值可配置 `delayed_drain_delay` 与 `delayed_drain_duration` 在减少后延迟追赶，增加默认立即补齐；所有动画通过公开 `tick(delta)` 推进，便于 headless 确定性验证。
+  - `delayed_drain_duration <= 0` 时关闭延迟表现；无论视觉处于何种追赶状态，不得修改资源池真实数值。
+  - 新增 `PawnStatusBars` 作为多资源条容器，至少可装配 HealthBar、ShieldBar、SpiritBar；任一子资源变化时显示整组，最后一次变化后按统一 `auto_hide_delay` 隐藏，避免多个条各自计时造成闪烁。
+  - 最大值不大于 0 的资源条默认隐藏；不同资源条不得重叠；健康、护盾和灵力的颜色/顺序可由配置提供。
+  - 迁移后现有血条 38 项断言继续通过或按内部路径变化逐项更新并记录；新增延迟追赶、组级显隐、暂停冻结、多资源独立刷新断言。
+- 范围：`game/ui/resource_bar.gd`、`game/ui/resource_bar.tscn`、`game/ui/pawn_status_bars.gd`、`game/ui/pawn_status_bars.tscn`、`test/headless/resource_bar_test.gd`、现有血条测试的必要适配。
+- 非范围：正式美术、字体与本地化、伤害数字、技能栏、能力提示、渐隐特效、分层生命条和技能消耗规则。
+- 依赖：`INC-CORE-002` 的 ResourcePoolComponent API；`INC-PAWNS-003` 的现有血条行为基线。
+- 检索证据：重新执行 `git status --short`、`git diff --unified=0 -- agent-plan/`、`git diff --cached --unified=0 -- agent-plan/` 与 `git log --oneline -- agent-plan/`；工作区无暂存变更，`INC-CROSS-003` 为 in_progress，父级顺序为 `INC-CORE-002 → INC-UI-003 → INC-PAWNS-004 → INC-COMBAT-002`。依赖 `INC-CORE-002` 已实现并通过 102 项断言，当前因用户尚未明确验收而保持 awaiting_acceptance，本 Increment 可继续实现与验证但不得提前提交稳定版本。允许范围严格限定为两个 UI 脚本、两个 UI 场景和 `test/headless/resource_bar_test.gd`。
+- 风险：把业务语义写进 ResourceBar；显示值与真实值混淆；组级与单条计时冲突；多分辨率下布局拥挤或越界；迁移时破坏已验收的血条自动隐藏行为。
+- 实现说明：
+  - `ResourceBar` 只持有一个 `ResourcePoolComponent` 引用；真实数值或最大值变化时，`target_value` 立即更新，`displayed_value` 根据“增加立即补齐、减少延迟追赶”的规则变化，表现层从不回写资源池。
+  - 减少时记录 `_drain_start_value`、重设 `delayed_drain_delay` 与 `delayed_drain_duration`；通过公开 `tick(delta)` 推进，`delayed_drain_duration <= 0` 时关闭追赶，追赶完成后发出 `drain_finished`。
+  - `PawnStatusBars` 按 `health`、`shield`、`spirit` 三个稳定 ID 装配子条；每个子条仍独立绑定和刷新，组容器只负责统一显隐、布局和最后一次变化后的 2 秒隐藏计时。
+  - 最大值为 0 的子条隐藏；`VBoxContainer` 负责纵向排列，组容器在子条可见性变化后调用 `queue_sort()`，避免三条重叠。
+  - 新场景通过 Godot MCP 创建：`resource_bar.tscn` 根为 `ResourceBar`，`pawn_status_bars.tscn` 根为 `PawnStatusBars`，子节点顺序为 `HealthBar → ShieldBar → SpiritBar`。
+  - 本 Increment 不修改已有 `PawnHealthBar`、Pawn 场景或战斗脚本；旧血条仍作为已验收基线运行，迁移到通用资源条留给 `INC-PAWNS-004`。
+- 变更文件：
+  - `game/ui/resource_bar.gd`
+  - `game/ui/resource_bar.gd.uid`
+  - `game/ui/resource_bar.tscn`
+  - `game/ui/pawn_status_bars.gd`
+  - `game/ui/pawn_status_bars.gd.uid`
+  - `game/ui/pawn_status_bars.tscn`
+  - `test/headless/resource_bar_test.gd`
+  - `test/headless/resource_bar_test.gd.uid`
+- 测试证据：
+  - Godot MCP `validate`：`resource_bar.gd`、`pawn_status_bars.gd`、`resource_bar.tscn`、`pawn_status_bars.tscn`、`resource_bar_test.gd` 全部 `valid: true`，结构与信号检查无错误。
+  - 新增 headless 断言：`resource_bar_test.gd` 退出码 0，`CHECKS=86 FAILURES=0`、`RESOURCE_BAR_TEST_OK`；覆盖延迟追赶、增加立即补齐、关闭追赶、连续减少重定向、最大值为 0 隐藏、组级显隐计时、多资源独立刷新与暂停冻结。
+  - 回归：`resource_pool_component_test.gd` 102/0、`health_component_test.gd` 55/0、`health_bar_visibility_test.gd` 38/0。
+  - 真实渲染冒烟截图：`1152x648`（16:9）中 health/shield/spirit 的像素包围盒分别为 `577..695 × 325..354`、`577..695 × 361..390`、`577..639 × 397..426`；`1280x800`（16:10）分别为 `712..995 × 402..478`、`712..843 × 486..518`、`712..781 × 526..558`；`720x900`（窄屏）分别为 `226..551 × 226..300`、`226..299 × 304..322`、`226..264 × 327..345`。三档下三条 y 区间互不重叠且都位于视口边界内。
+  - 差异检查：`git diff --check` 退出码 0。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T14:56:32+08:00
+- 已知问题：
+  - 通用资源条尚未接入 `pawn.tscn`；现有 Pawn 仍使用 `PawnHealthBar`，实际迁移与回归留给 `INC-PAWNS-004`。
+  - 真实渲染证据使用运行期临时节点，截图位于已忽略的 `.mcp/godot-runtime/screenshots/`，不作为仓库资源。
+  - 当前只提供可配置颜色与固定顺序，正式美术、渐隐、伤害数字和技能栏不在本 Increment 范围。
+- 用户验收：已验收
+- 验收时间：2026-09-25T16:50:57+08:00
+- Git：`main` / `f6cdebf`
+- 备注：父 Increment 为 `INC-CROSS-003`；本 Increment 不直接接技能逻辑。
+
+## INC-UI-004：在 HUD 中显示选中 Pawn 的灵力
+
+- 状态：accepted
+- 创建时间：2026-09-25T15:14:42+08:00
+- 最后修改：2026-09-25T15:14:42+08:00
+- 主题：ui
+- 目标：把已验证的灵力资源接入选中信息面板，让玩家在战术暂停和实战中都能看到当前/最大灵力，同时保持无灵力单位的 HUD 不出现虚假资源行。
+- 验收标准：
+  - 玩家 Pawn 的 `spirit_changed` 信号连接到 HUD；灵力变化只在选中该 Pawn 时刷新选中信息。
+  - `SelectedLabel` 在 `max_spirit > 0` 时显示 `灵力：当前 / 最大`，在 `max_spirit == 0` 时不显示灵力行。
+  - HUD 既有 HP、护盾、阵营、状态和指令文本不变；暂停、选中、取消选中和死亡路径继续正确刷新。
+  - 增加 headless/运行态断言覆盖有灵力、无灵力、选中切换和灵力变化刷新；不修改战斗数值和资源恢复规则。
+- 范围：`game/main/main.gd`、`game/main/main.tscn`、`test/headless/hud_spirit_display_test.gd`。
+- 非范围：技能栏、施法按钮、灵力自然恢复、正式 HUD 美术、Pawn 头顶资源条（见 `INC-PAWNS-005`）。
+- 依赖：`INC-COMBAT-002` 的 `spirit_changed` 与只读灵力属性；当前依赖已验证并已随本批次验收通过。
+- 检索证据：执行 `git status --short`、`git diff --unified=0 -- agent-plan/`、`git diff --cached --unified=0 -- agent-plan/`、`git log --oneline -- agent-plan/` 与 `git grep -n "spirit_changed\|current_spirit" -- game/`；当前 HUD 只连接生命/护盾/状态/死亡，灵力变化仍不刷新，故登记本 Increment。
+- 风险：HUD 文本换行导致面板高度变化；无灵力单位的格式分支遗漏；信号连接重复导致多次刷新。
+- 实现说明：
+  - `_update_hud()` 改为按需构建 `Array[String]`；`max_spirit > 0` 时插入 `灵力：当前 / 最大`，否则保持原来的四行结构。
+  - `game/main/main.tscn` 新增 `spirit_changed -> _on_spirit_changed` 连接；`_on_spirit_changed()` 只在变化 Pawn 是当前选中单位时刷新 HUD。
+  - HUD 只读取 Pawn 的 `current_spirit` / `max_spirit`，不直接访问资源池，也不把显示逻辑下沉到 Pawn。
+- 变更文件：
+  - `game/main/main.gd`
+  - `game/main/main.tscn`
+  - `test/headless/hud_spirit_display_test.gd`
+  - `test/headless/hud_spirit_display_test.gd.uid`
+- 测试证据：
+  - Godot MCP `validate`：`main.gd`、`main.tscn` 和新增 `hud_spirit_display_test.gd` 全部 `valid: true`。
+  - 新增 `hud_spirit_display_test.gd`：退出码 0，`CHECKS=8 FAILURES=0`；覆盖选中玩家显示 `灵力：100 / 100`、灵力消耗到 70 后 HUD 立即刷新、选中无灵力敌人不显示灵力行、取消选中恢复文本。
+  - 运行态 MCP 读取玩家选中文本为 `测试修士 / 阵营：player / HP：120 / 120 护盾：28 / 40 / 灵力：75 / 100 / 状态：待命`，与新增实例保持同步。
+  - 真实窗口 1152x648、1152x720、800x720（逻辑视口 1152x1036）下 `SelectedLabel` 矩形均在视口内，既有 HP/护盾行未改变。
+  - 8 个 headless 套件合计 447 项断言全部通过；`git diff --check` 退出码 0。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T15:14:42+08:00
+- 已知问题：当前仅显示数值，不提供施法按钮、技能冷却或灵力恢复；HUD 面板高度由文本行数自然扩展，正式主题美术未定。
+- 用户验收：已验收
+- 验收时间：2026-09-25T16:50:57+08:00
+- Git：`main` / `6df4fbb`
+- 备注：父 Increment 为 `INC-CROSS-004`；本 Increment 只显示数值，不新增技能或施法接口。
+
+## INC-UI-005：HUD 主动技能状态显示
+
+- 状态：accepted
+- 创建时间：2026-09-25T15:38:42+08:00
+- 最后修改：2026-09-25T15:45:56+08:00
+- 主题：ui
+- 目标：在选中 HUD 中增加主动技能状态行，显示技能名、Q 键位、灵力消耗、剩余冷却和可用性原因，让玩家能判断技能为何不能施放。
+- 验收标准：
+  - `main.tscn` 的 HUD 内容区新增 `SkillLabel`；初始文本明确技能为空或可用状态，不使用会与现有 HUD 混淆的临时文本。
+  - 选中带主动技能的 Pawn 时显示“技能：[Q] 名称 / 消耗 / 剩余冷却 / 可用状态”；技能为空时显示“技能：无”或等价稳定文案。
+  - 灵力变化、`skill_cooldown_changed` 和 `skill_cast` 信号都能触发 HUD 刷新；冷却归零后显示可用，灵力不足时显示原因。
+  - `InstructionsLabel` 增加 Q 键说明；不改变 HP、护盾、灵力行的既有文本格式和选中/取消选中行为。
+  - 新增或扩展现有玩法测试覆盖技能行初始显示、施法后冷却显示、灵力不足提示和敌人无技能状态。
+- 范围：`game/main/main.gd`、`game/main/main.tscn`、`test/gameplay/main_scene_gameplay_test.gd`。
+- 非范围：技能栏图标、鼠标点击施法、多个技能槽、冷却环/进度条、正式美术、Build/功法界面。
+- 依赖：`INC-PAWNS-007`（技能命令）、`INC-CORE-003`（Q 输入动作）；`INC-UI-004` 的 HUD 灵力行可复用但当前仍待验收。
+- 检索证据：执行 `git status --short --branch`、`git diff --unified=0 -- agent-plan/` 与 `git grep -n -E "SkillLabel|skill_cooldown_changed|skill_cast"`；当前 HUD 只有 `SelectedLabel` 和 `OrderLabel`，没有技能状态行。
+- 风险：HUD 高度不足导致新行溢出；信号重复刷新导致每帧更新；冷却显示单位/四舍五入不一致；选中目标切换时残留上一单位技能状态。
+- 实现说明：`main.tscn` 的 `HudContent` 在 `OrderLabel` 之后新增 `SkillLabel`（初始文本 `技能：-`），`HudMargin.offset_bottom` 由 158 调整为 190 以容纳新增行；`InstructionsLabel` 文案补入“Q：主动技能”，场景静态文本与运行时文案保持一致。`main.gd` 新增只读展示函数 `_describe_active_skill()`：无选中写 `技能：-`，无技能或未配置技能写 `技能：无`，否则输出“技能：[Q] <名称>    消耗 <N> 灵力    <可用 | 冷却中 X.Xs | 灵力不足 a / b>”。刷新来源为 `skill_cooldown_changed`、`skill_cast`（新增处理函数 `_on_player_skill_cooldown_changed()` / `_on_player_skill_cast()`，仅当变化单位是选中单位或玩家时刷新）、既有 `spirit_changed` 以及选中切换与死亡；技能行不持有任何资源或冷却数值。
+- 变更文件：`game/main/main.tscn`、`game/main/main.gd`、`test/gameplay/main_scene_gameplay_test.gd`（新增 4 例）。
+- 测试证据：
+  - 新增玩法用例：启动时 `SkillLabel` 为 `技能：-`，选中玩家后显示 `技能：[Q]`、技能名、`消耗 25` 与 `可用`；玩家对范围内敌人施放后（等待一帧，冷却被 `_physics_process` 推进）显示 `冷却中` 且不再显示 `可用`；灵力降到 5 后显示 `灵力不足`；选中无主动技能的试炼傀儡显示 `技能：无`。
+  - `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer gameplay` → `RESULT: PASS`（gameplay 12 例）；`-Layer all` → `RESULT: PASS`（GdUnit4 58 例，headless 9 套 480 断言）；`git diff --check` 退出码 0。
+  - MCP `validate`（`game/main/main.gd`）→ `valid: true`；场景 signals 检查（`game/main/main.tscn`）未报新增连接问题。
+  - MCP 运行态端到端复验（`run_project` + `simulate_input`，运行日志 errors 为空，截图 `.mcp/godot-runtime/screenshots/screenshot_1790322329_547.png`）：右键敌人后 HUD 显示 `指令：攻击 试炼傀儡`，按 Q 后同帧变为 `指令：施放技能 御剑斩 → 试炼傀儡`，`SkillLabel` 变为 `技能：[Q] 御剑斩    消耗 25 灵力    冷却中 2.5s`，玩家灵力 100 → 75，敌人护盾 20 → 0、生命 80 → 52.6；300ms 后指令回到 `攻击 试炼傀儡`、冷却显示 2.3s，验证“施法后清除技能命令并保留普攻目标”。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T15:45:56+08:00
+- 已知问题：
+  - 技能行为纯文本，没有图标、冷却环或进度条；冷却显示保留 1 位小数，四舍五入由格式化完成。
+  - HUD 现在按固定 190px 顶部高度排版，继续增加行（如多层技能槽）需要重新设计布局或改用可滚动/自适应容器。
+  - 运行态实测布局：`HudContent` 实际高度由子节点最小尺寸撑到 217px（`HudMargin.offset_bottom = 190` 只是下限），`SkillLabel` 位于 y 210–233、未被裁剪；HUD 面板背景与右上角 `PauseStateLabel`（y 16–52）区域重叠属既有布局状态，文字仍在面板之上可见。
+  - 场景 signals 检查会报 12 条既有 `orphaned_handler`（`Pawn` / `HealthComponent` 在 `_ready()` 中动态 `connect()` 内部资源池处理器），属工具静态检查的既有噪声，不是本次回归。
+- 用户验收：已验收
+- 验收时间：2026-09-25T16:50:57+08:00
+- Git：`main` / `5f39e5f`
+- 备注：父 Increment 为 `INC-CROSS-006`；本 Increment 只做 HUD 读侧显示，不改变技能战斗逻辑。
+
+
+## INC-UI-006：HUD 境界与 Build 容量行
+
+- 状态：accepted
+- 创建时间：2026-09-25T15:48:20+08:00
+- 最后修改：2026-09-25T15:56:30+08:00
+- 主题：ui
+- 目标：在选中 HUD 增加 Build 行，显示当前境界与功法/主动/被动容量占用，并在 Build 不可用时直接给出首条原因。
+- 验收标准：
+  - `main.tscn` 的 `HudContent` 新增 `BuildLabel`（初始文本 `Build：-`），面板高度按新增行调整且文本不被裁剪。
+  - 选中带境界的单位显示 `境界：<名称>    功法 a / N    主动 b / N    被动 c / N`；校验存在错误时同行追加 `    Build：<首条错误文案>`。
+  - 未配置境界的单位显示 `境界：无    Build：不适用`；未选中任何单位时显示 `Build：-`。
+  - 选中切换、单位死亡、生命/护盾/灵力/技能信号触发时 Build 行与既有行一同刷新；HP、护盾、灵力、技能行的既有文本格式不变。
+  - 新增玩法用例覆盖初始态、玩家容量行、无境界单位与 Build 不可用原因。
+- 范围：`game/main/main.gd`、`game/main/main.tscn`、`test/gameplay/main_scene_gameplay_test.gd`。
+- 非范围：Build 编辑/拖拽装配界面、容量进度条与美术、五行与属性要求提示、突破界面、存档。
+- 依赖：`INC-PAWNS-008`（Pawn Build 汇总接口）。
+- 检索证据：执行 `git grep -n -E "BuildLabel|get_build_validation"`（无匹配）；`INC-UI-005` 已建立技能行模式（只读、由信号驱动刷新），本 Increment 沿用同一模式；`main.tscn` 当前 HUD 行为 Instructions/Selected/Order/Skill 四行。
+- 风险：HUD 继续增高导致与右上角暂停状态标签重叠加剧；每帧刷新会反复创建 BuildLoadout；错误文案过长导致换行/溢出。
+- 实现说明：`main.tscn` 的 `HudContent` 在 `SkillLabel` 之后新增 `BuildLabel`（列宽与其它行一致，`HudMargin.offset_bottom` 190 → 222，仍由 VBoxContainer 自动排版）；`main.gd` 的 `_describe_build()` 只读 Pawn 的 `get_realm()` / `get_build_loadout()` / `get_build_validation()`，容量与规则全部来自 `RealmDefinition` 与 `BuildValidator`，UI 不重复实现任何规则，也没有新增信号或刷新路径（沿用既有“信号 → `_update_hud()`”模式）。
+- 变更文件：`game/main/main.tscn`（新增 `BuildLabel`、调整面板高度）、`game/main/main.gd`（新增 `build_label`、`_describe_build()` 与 `_update_hud()` 中的 Build 行）、`test/gameplay/main_scene_gameplay_test.gd`（新增 `BUILD_LABEL_PATH` / `PLAYER_DATA_PATH` 常量与 4 例）。
+- 测试证据：
+  - `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer gameplay` → `[GdUnit4] gameplay ... PASS (16 cases)`；新增 4 例覆盖：未选中 `Build：-` 与玩家容量行、无境界单位 `境界：无    Build：不适用`、Build 冲突时同行给出首条原因（含互斥双方名称）、灵力信号触发刷新后容量行文本不变。
+  - MCP 运行态复验（`run_project` → `run_script`）：未选中 `Build：-`；选中玩家 `境界：炼气    功法 1 / 1    主动 1 / 2    被动 0 / 1`、`player_build_valid = true`、`error_codes = []`；选中试炼傀儡 `境界：无    Build：不适用`、`error_codes = [missing_realm]`；取消选中恢复 `Build：-`；`HudMargin.offset_bottom = 222`；`BuildLabel.get_global_rect() = (16, 135, 1120, 23)` 在画布内且与 `PauseStateLabel` (892, 16, 244, 36) 不重叠；`get_debug_output` 的 `errors` 为空。
+  - 三档分辨率（`DisplayServer.window_set_size` → 逻辑视口 1152x648 / 1152x720 / 1152x1036）：Build 行均在画布内、与技能行固定 6px 间距、均不与暂停状态标签重叠。
+  - 截图 `.mcp/godot-runtime/screenshots/screenshot_1790322954_761.png`（1152x648；`.mcp/` 不入库）。本会话图片预览不可用，故视觉结论以 `get_global_rect()` 数值与 HUD 文本抓取为准。
+  - `git diff --check` 退出码 0。
+- 验证状态：验证通过（本 Increment 范围内）
+- 验证时间：2026-09-25T15:56:30+08:00
+- 已知问题：HUD 已增至 5 行（说明/选中/指令/技能/Build），窄屏下顶部面板继续变高；本 Increment 只验证到逻辑视口 1152x1036 内不越界与不重叠，未做滚动或自适应折叠。另有一条与本 Increment 无关的外部失败：`test/headless/hud_spirit_display_test.gd` 的 `HP：80 / 80` 断言受外部改动的 `enemy_pawn.tres`（80 → 180）影响，见父级 `INC-CROSS-007`。
+- 用户验收：已验收
+- 验收时间：2026-09-25T16:50:57+08:00
+- Git：`main` / `3351bc1`
+- 备注：父 Increment 为 `INC-CROSS-007`；本 Increment 只做只读展示，不参与 Build 校验规则本身。
+## INC-UI-007：PawnInfoModel 与 PawnInfoPanel 信息卡骨架
+
+- 状态：accepted
+- 创建时间：2026-09-25T16:04:30+08:00
+- 最后修改：2026-09-25T16:19:12+08:00
+- 主题：ui
+- 来源：`docs/pawns信息ui.md` Phase 0（数据契约与 UI 骨架）与 Phase 1 中当前有真实数据支撑的部分（身份、资源状态、核心属性、Build 摘要）。
+- 目标：建立“Pawn → PawnData → PawnInfoPanel”的唯一绑定关系，让玩家点开单位后能立刻看懂“我是谁、什么境界、什么 Build、当前状态如何”，并做到事件驱动刷新、UI 不侵入 Pawn。
+- 验收标准：
+  - 新增 `PawnInfoModel`（纯逻辑读模型）与 `PawnInfoPanel`（Control 场景），面板提供 `bind_pawn(pawn)` / `unbind()` / `get_bound_pawn()` / `is_bound()` / `get_snapshot()` / `set_compact()` / `is_compact()` 与 `pawn_bound` / `pawn_unbound` / `refreshed` 信号。
+  - 身份区显示真实姓名、境界（含小境界）、灵根、由功法流派派生的 Build 标签；未配置的字段显示 `—`，不使用假数据。
+  - 资源区复用既有 `ResourceBar`，按绑定单位实际存在的资源池显示气血/真元/护体条与 `当前 / 上限` 文本；`max_spirit == 0` 的单位不显示灵力行。
+  - 属性区显示攻击、防御、攻速（由 `attack_interval` 派生）、移速、攻击距离；法强与暴击因当前无数据来源而不显示（见非范围）。
+  - Build 区显示境界容量与占用（功法 / 主动 / 被动）、功法与主动技能名称、以及校验首条原因。
+  - 数值变化时面板自动刷新：生命/护盾/灵力来自 `Pawn` 既有信号，静态数据变化来自 `PawnData` 视图信号。
+  - `unbind()` 后必须断开全部 `Pawn` / `PawnData` / 资源池连接，切换绑定另一个 Pawn 时旧单位信号不再影响面板。
+  - `set_compact(true)` 时隐藏属性区与 Build 明细，仅保留身份与资源状态；`set_compact(false)` 恢复完整信息。
+  - 单元层覆盖读模型的派生与兜底文案；集成层覆盖绑定/刷新/解绑/精简；headless 套件覆盖面板矩形与文本在真实分辨率下的可见性。
+- 范围：`game/ui/pawn_info_model.gd`（新增）、`game/ui/pawn_info_panel.gd`（新增）、`game/ui/pawn_info_panel.tscn`（新增）、`test/unit/pawn_info_model_test.gd`（新增）、`test/integration/pawn_info_panel_test.gd`（新增）、`test/headless/pawn_info_panel_display_test.gd`（新增）、`test/tools/capture_pawn_info_panel_evidence.gd`（新增，真实窗口多分辨率布局取证，见实现说明的范围追加）。
+- 非范围：法强 / 暴击等缺失属性的数据源建设、修为进度与突破条件区（依赖后续修为 Increment，属 Phase 3）、Build 槽位点击更换与容量预览（Phase 2）、敌人/中立 Pawn 的点击查看（Phase 4）、装备/状态图标/关系/宗门贡献/立绘、面板关闭与多面板管理、正式视觉设计与主题。
+- 依赖：`INC-PAWNS-008`（Pawn Build 汇总只读接口）、`INC-PAWNS-010`（`PawnData` 身份字段与视图信号）、`INC-UI-003`（通用 `ResourceBar`）、`INC-CROSS-004`（Pawn 资源池装配）。以上依赖实现均已在工作区（本批次已验收）。
+- 检索证据：
+  - `git status --short` → `game/ui/pawn_status_bars.gd`、`game/ui/resource_bar.gd` 等资源条组件已在工作区，可直接复用，不需要新建通用条组件。
+  - `git diff --unified=0 -- agent-plan/` → `INC-UI-003`…`INC-UI-006` 已占用；本 Increment 取新号 `INC-UI-007`。
+  - `Select-String -Path 'agent-plan\*.md','AGENTS.md','docs\*.md' -Pattern 'PawnInfoPanel|信息卡'` → 仅 `docs/pawns信息ui.md` 命中，确认信息卡尚无既有实现或计划。
+  - `Get-Content game/ui/resource_bar.gd` → `bind_pool()` / `unbind_pool()` / `has_valid_pool()` 可直接被面板复用，延迟减少只是显示层效果。
+  - 允许修改范围：上述新增文件；`game/main/main.tscn` 与 `main.gd` 由 `INC-CORE-004` 独占，本 Increment 不改动。
+- 风险：面板与既有 HUD 面板（顶部 1120x206）在窄屏下重叠；面板在 `unbind()` 后残留信号导致旧单位数值污染新绑定；读模型与 `main.gd._describe_build()` 出现两套 Build 文案；新增文件需要 Godot 生成 `.uid` 后入库。
+- 实现说明：
+  - 数据边界：读模型 `PawnInfoModel.build_snapshot(data: PawnData, runtime: Dictionary) -> Dictionary` 为纯函数，静态字段取自 `PawnData`，运行时字段由调用方以字典传入，保证单元层不实例化场景即可验证派生逻辑。
+  - 偏离文档之处：`docs/pawns信息ui.md` 写 `bind_pawn(pawn_data)`，但项目架构规定运行时数值只存在于 `Pawn/Resources/*` 的 `ResourcePoolComponent`，`PawnData` 不承载运行时状态，因此面板绑定 `Pawn` 并在内部拆分为“静态读 `pawn.data`、运行时读 `Pawn` 只读代理与资源池”；UI 不写回任何数值，也不在 `Pawn` 上挂 UI 字段，符合文档禁止项（`pawn.hp_label` 等）。
+  - 刷新路径：绑定期间连接 `Pawn.health_changed` / `shield_changed` / `spirit_changed` / `state_changed` / `died` 与 `PawnData` 的 `identity_changed` / `attributes_changed` / `realm_changed` / `build_changed`，任一触发即重算快照并刷新文本，不做每帧轮询。
+  - 资源条复用：面板只为该单位实际存在的资源池绑定 `ResourceBar`（`health` / `shield` / `spirit` 按 `Pawn.get_resource_pool()` 结果），无池的行整行隐藏。
+  - 布局修正（真实窗口实测发现）：面板初始 `offset_top = -400`（高 384），而顶部 HUD 实际占位到 y=262（`HudMargin` 上边距 16 + 内容最小高度 246，**不是** Scene 里写的 `offset_bottom = 222`），在 1152x648 下信息卡上边缘 248 会与 HUD 重叠 14px。按实测把 `offset_top` 改为 -370（高 354，上边缘 278），三档分辨率均留出 16px 间距；面板内容最小高度仅 180，缩短后仍有余量。该重叠是纯 headless 测试无法发现的（dummy 视口 64x64），只有真实窗口取证能暴露。
+  - 范围追加说明：`AGENTS.md` §5.4 要求新增 UI 必须同时验证 16:9 / 16:10 / 窄屏，§10 规定 `--headless` 的 dummy 窗口固定 64x64、多分辨率验证必须真实渲染，因此新增 `test/tools/capture_pawn_info_panel_evidence.gd`（与既有 `test/tools/capture_health_bar_evidence.gd` 同构，输出到不入库的 `.mcp/godot-runtime/screenshots/`）。headless 套件用显式设计分辨率宿主控件验证矩形数学与文本，取证脚本验证真实窗口下的锚点解析与渲染，两者互补。
+  - Build 标签派生：由已装备功法与主动技能的 `school` / 名称派生（例如“剑修 · 御剑斩”），未配置时显示“无功法”，避免新增冗余字段。
+- 变更文件：
+  - 新增 `game/ui/pawn_info_model.gd` 与 `.uid`：纯静态读模型（`build_snapshot()` / `identity_lines()` / `vital_line()` / `attribute_line()` / `build_lines()` / `get_attack_speed()` / `get_build_tag()`），常量含 `UNKNOWN_TEXT`、`NO_BUILD_TAG`、`BUILD_UNAVAILABLE_TEXT`、`RESOURCE_LABELS`。
+  - 新增 `game/ui/pawn_info_panel.gd` 与 `.uid`：绑定/解绑生命周期、信号驱动刷新、精简/完整模式、按资源池显隐与复用 `ResourceBar`。
+  - 新增 `game/ui/pawn_info_panel.tscn`：右下锚定四段式面板（Header / Vital / Attribute / Build），初始隐藏，`offset_top = -370`（见实现说明的布局修正）。
+  - 新增 `test/unit/pawn_info_model_test.gd`（9 例）、`test/integration/pawn_info_panel_test.gd`（8 例）、`test/headless/pawn_info_panel_display_test.gd`（61 项断言）。
+  - 新增 `test/tools/capture_pawn_info_panel_evidence.gd`：真实窗口三档分辨率 × 两种模式的布局取证脚本。
+  - 未修改 `game/main/main.tscn` / `game/main/main.gd`（由 `INC-CORE-004` 独占）。
+- 测试证据：
+  - `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` → `RESULT: PASS`，退出码 0（GdUnit4 105 例：unit 52 / integration 33 / gameplay 20；headless 10 套 541 项断言，0 失败），其中 `test/headless/pawn_info_panel_display_test.gd` 61 项断言 0 失败。
+  - MCP `validate`（`game/ui/pawn_info_model.gd`、`game/ui/pawn_info_panel.gd`、`game/ui/pawn_info_panel.tscn`、`test/unit/pawn_info_model_test.gd`、`test/integration/pawn_info_panel_test.gd`）→ 全部 `valid: true`；本会话后段 MCP 服务不可用（`unsupported call`），改由 `--headless` 全量门禁承担。
+  - MCP 运行态实测（`run_project` + `run_script` 读取面板文本）：`name_label="测试修士"`、`identity_label="炼气 · 三层\n灵根：金灵根\n流派：剑修 · 御剑斩"`、`health_label="气血  120 / 120"`、`shield_label="护体  40 / 40"`、`spirit_label="灵力  100 / 100"`、`attribute_label="攻击 28   防御 5   攻速 1.25   移速 145"`、`build_label="功法  1 / 1    剑修\n主动  1 / 2    御剑斩\n被动  0 / 1    —"`；`get_debug_output().finalErrors = []`。
+  - 真实窗口布局取证（`test/tools/capture_pawn_info_panel_evidence.gd`，2026-09-25T16:19:12+08:00）：三档窗口 `1152x648`（16:9）/ `1152x720`（16:10）/ `800x720`（窄屏 → 逻辑视口 1152x1036），在“战斗中精简 / 暂停完整”两种模式下均 `BOUNDS_INSIDE_VIEWPORT=true`、`HUD_OVERLAP=false`、`PAUSE_LABEL_OVERLAP=false`、`CONTENT_FITS=true`，且 `PAUSE_OVERLAY_VISIBLE=true DRAWN_ABOVE_PANEL=true`，脚本退出码 0。
+  - 实测矩形：顶部 HUD `(16, 16, 1120x246)`（下沿 y=262）；信息卡 `1152x648 → (780, 278, 356x354)`、`1152x720 → (780, 350, 356x354)`、窄屏逻辑视口 `1152x1036 → (780, 666, 356x354)`，三档均与 HUD、暂停状态标签无交集。
+  - 证据文件（`.mcp/` 不入库，需重跑脚本生成）：`.mcp/godot-runtime/screenshots/pawn_info_panel_evidence_report.txt` 与 6 张 PNG（三档 × 精简/暂停）。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T16:19:12+08:00
+- 已知问题：
+  - 顶部 HUD 高度是内容驱动的 246px（5 行文本 + 间距），不是 Scene 里写的固定值；若后续 HUD 增删行，信息卡的避让间距需要重新实测。`test/headless/pawn_info_panel_display_test.gd` 的 `TOP_HUD_BAND_BOTTOM = 262.0` 与取证脚本都会在变化时暴露该问题。
+  - 面板是固定尺寸（356x354），未做比 800x720 更窄窗口的自适应；按项目规则窄屏以 800x720 为准。
+  - `PawnInfoPanel` 根节点保持默认鼠标拦截：面板可见时其矩形内的点击不会被战场解释为选中 / 移动指令（这是刻意行为，但也意味着面板遮挡的战场区域不可点击）。
+  - 法强 / 暴击、修为进度与突破条件、Build 槽位交互、敌人与中立单位查看均按文档留在后续 Phase，当前面板为纯只读。
+- 用户验收：已验收
+- 验收时间：2026-09-25T16:50:57+08:00
+- Git：`main` / `78ecb97`
+- 备注：父 Increment 为 `INC-CROSS-008`；本 Increment 只建立信息卡骨架与只读展示，不实现任何更换/突破操作。
+## INC-UI-008：信息卡修为进度与下一境界显示
+
+- 状态：accepted
+- 创建时间：2026-09-25T16:24:12+08:00
+- 最后修改：2026-09-25T16:33:34+08:00
+- 主题：ui
+- 来源：`docs/pawns信息ui.md` Phase 1「显示修为进度与下一境界」；Phase 3 的突破条件与独立突破页面不在本 Increment。
+- 目标：在 Pawn 信息卡完整模式中增加“修为进度 → 下一境界”区域，数据来自 `Pawn` 的真实运行时进度，变化时通过信号刷新；战斗中精简模式不显示成长信息。
+- 验收标准：
+  - `PawnInfoModel` 的快照新增 `cultivation` 段，提供 `cultivation_line(snapshot)`；无境界/无修为链单位返回空或不适用文案，终点境界返回“已至最高境界”，不显示假百分比。
+  - `PawnInfoPanel` 新增 `CultivationSection`（分隔线、标题、当前/所需修为文本、进度条），完整模式显示，精简模式隐藏；绑定/解绑时正确订阅与断开 `cultivation_changed`。
+  - 修为变化、达到突破阈值、切换绑定单位后，面板文本与进度条同步刷新；解绑后旧单位信号不影响面板。
+  - 16:9（1152x648）、16:10（1152x720）、窄屏（800x720 → 逻辑视口 1152x1036）真实窗口下信息卡仍在视口内、不压顶部 HUD、内容不溢出。
+  - 统一门禁 `pwsh -File test/run_tests.ps1 -Godot $env:GODOT_BIN -Layer all` 退出码 0。
+- 范围：`game/ui/pawn_info_model.gd`、`game/ui/pawn_info_panel.gd`、`game/ui/pawn_info_panel.tscn`、`test/unit/pawn_info_model_test.gd`、`test/integration/pawn_info_panel_test.gd`、`test/headless/pawn_info_panel_display_test.gd`、`test/tools/capture_pawn_info_panel_evidence.gd`。
+- 非范围：实际突破按钮/独立突破页面、突破材料条件、法强/暴击数据源、Build 槽位点击更换、敌人/中立单位查看、正式美术与动画。
+- 依赖：`INC-PAWNS-011`（Pawn 修为接口与信号）、`INC-UI-007`（信息卡骨架，实现已在工作区）；`INC-CULT-003` 提供下一境界显示数据。
+- 检索证据：已执行 `git status --short --branch`、`git diff --unified=0 -- agent-plan/`、`git diff --cached --unified=0 -- agent-plan/`、`git log --oneline -- agent-plan/` 与 `git grep -n -E "cultivation|修为|INC-UI-008" -- agent-plan/ game/ui test/`；现有信息卡只有 Header / Vital / Attribute / Build 四段，尚无修为段；允许范围仅限信息卡脚本/场景与对应三层测试、真实窗口取证脚本。
+- 风险：新增区域会把面板内容高度推过 1152x648 下的可用垂直空间；必须真实渲染测量并用容器间距调整解决，不能只改 Scene 里的固定 offset 后宣称通过。另一个风险是 `PawnInfoPanel` 的信号订阅生命周期与既有资源池信号重复。
+- 实现说明：修为区放在 Build 区之后，复用 VBoxContainer 的流式布局；进度条使用 Godot `ProgressBar` 并关闭内建百分比文本，百分比与“下一境界”由同一读模型文案输出，避免两处数字漂移。为在 356x354 固定面板内同时容纳新增修为区，`Content` separation 压到 2、各 Section separation 压到 2、修为进度条最小高度设为 8、Margin 上下边距设为 7；这些值已纳入真实窗口取证。
+- 变更文件：`game/ui/pawn_info_model.gd`、`game/ui/pawn_info_panel.gd`、`game/ui/pawn_info_panel.tscn`、`test/unit/pawn_info_model_test.gd`、`test/integration/pawn_info_panel_test.gd`、`test/headless/pawn_info_panel_display_test.gd`、`test/tools/capture_pawn_info_panel_evidence.gd`。
+- 测试证据：
+  - `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` → `RESULT: PASS`，退出码 0；GdUnit4 `119 cases, 0 failures`（unit 62 / integration 37 / gameplay 20），headless 10 套 `548 assertions, 0 failing suites`。
+  - 单元层新增修为文案/进度用例；集成层新增 `gain_cultivation_exp()` 信号刷新、可突破文案、精简模式隐藏和无境界单位隐藏用例；headless 套件新增修为节点路径、文本、显隐与内容适配断言。
+  - 真实窗口取证 `test/tools/capture_pawn_info_panel_evidence.gd` 退出码 0，报告为 `.mcp/godot-runtime/screenshots/pawn_info_panel_evidence_report.txt`；三档窗口 × 精简/暂停共 6 次测量全部 `BOUNDS_INSIDE_VIEWPORT=true`、`HUD_OVERLAP=false`、`PAUSE_LABEL_OVERLAP=false`、`CONTENT_FITS=true`，修为区显隐与模式一致，暂停遮罩 `DRAWN_ABOVE_PANEL=true`。
+  - Godot MCP `validate` `pawn_info_model.gd`、`pawn_info_panel.gd`、`pawn_info_panel.tscn` → 全部 `valid: true`；`git diff --check` 退出码 0。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T16:33:34+08:00
+- 已知问题：面板仍为固定 356x354，未做比 800x720 更窄窗口的自适应；为容纳修为区已压缩内容间距与进度条高度，后续任何节点增删都必须重新跑真实窗口取证。修为区只读，实际突破按钮/条件/独立页面仍未实现。
+- 用户验收：已验收
+- 验收时间：2026-09-25T16:50:57+08:00
+- Git：`main` / `8e1f0de`
+- 备注：父 Increment 为 `INC-CROSS-009`；本 Increment 只读展示修为，不改变境界或执行突破。
+
+## INC-UI-009：信息卡 Build 区四类槽位与武器显示
+
+- 状态：accepted
+- 创建时间：2026-09-25T16:38:52+08:00
+- 最后修改：2026-09-25T16:45:46+08:00
+- 主题：ui
+- 目标：让信息卡 Build 区一眼可见四类 Build 槽位的“已占 / 上限”和已装备内容，并把武器类型与五行标签直接显示在条目上。
+- 验收标准：
+  - Build 区显示四行：功法 / 武器 / 主动 / 被动，每行形如 `功法  1 / 1    剑修`，武器行形如 `武器  1 / 1    青锋剑（剑 · 金）`。
+  - 槽位名称与容量来自 `Pawn` 的 Build 汇总接口，UI 不重复实现容量规则；武器缺失时该行显示 `—`，容量仍显示真实上限。
+  - 未配置境界的单位仍只显示一条“不适用”结论，不显示四行。
+  - 容量或 Build 数据变化（`build_changed` / `realm_changed`）时面板无需重开即刷新。
+  - 真实窗口三档（1152x648 / 1152x720 / 800x720）下信息卡不与顶部 HUD、暂停标签重叠且内容不溢出；为容纳新增行，移除修为区冗余标题与分隔线。
+- 范围：`game/ui/pawn_info_model.gd`、`game/ui/pawn_info_panel.gd`、`game/ui/pawn_info_panel.tscn`、`test/unit/pawn_info_model_test.gd`、`test/integration/pawn_info_panel_test.gd`、`test/headless/pawn_info_panel_display_test.gd`、`test/tools/capture_pawn_info_panel_evidence.gd`。
+- 非范围：槽位点击详情、装备更换 / 卸下交互、槽位卡片控件与图标、Build 冲突弹窗、突破预览（Phase 3）、面板宽度自适应。
+- 依赖：`INC-PAWNS-012`（武器字段与容量）、`INC-UI-007`、`INC-UI-008`（实现均在工作区，本批次已验收）。
+- 检索证据：已执行 `git status --short --branch`、`git diff --unified=0 -- agent-plan/`、`git diff --cached --unified=0 -- agent-plan/`（暂存区为空）、`git log --oneline -- agent-plan/`、`git grep -n -E "INC-(CULT|PAWNS|UI|INVENTORY|CROSS)-00[0-9]" -- agent-plan/` 与 `git grep -n "weapon\|武器" -- game/ui/ test/`（无匹配）。结论：`INC-UI-001`~`008` 已存在，`INC-UI-009` 未被占用；信息卡 Build 区当前只有功法/主动/被动三行纯文本，没有武器与任何槽位标签。允许修改范围仅限上述读模型、面板脚本与场景、以及对应三层测试与取证脚本。
+- 风险：面板固定 356x354，新增一行会挤压布局，必须用真实窗口重新取证（`--headless` 的 dummy 视口无法代表多分辨率）；条目名加标签后文本变长，`BuildLabel` 可能换行撑高面板；`pawn_info_panel.tscn` 是高冲突场景，必须单写入。
+- 实现说明：容量行仍由 `PawnInfoModel.build_lines()` 统一派生，面板只负责渲染，避免规则出现在 UI；武器条目标签取“类型 · 五行”，只在条目确实配置了对应字段时追加，不给缺数据的条目补假标签；为回收高度移除修为区标题 Label 与分隔线（修为行文案已自带“修为”前缀，信息不丢失），保留 BUILD 标题维持分区视觉层级。
+- 变更文件：
+  - `game/ui/pawn_info_model.gd`（Build 快照四类槽位 + 武器条目与标签）
+  - `game/ui/pawn_info_panel.gd`（运行时数值读取补武器槽）
+  - `game/ui/pawn_info_panel.tscn`（移除修为区标题与分隔线，为第四行回收高度）
+  - `test/unit/pawn_info_model_test.gd`
+  - `test/integration/pawn_info_panel_test.gd`
+  - `test/headless/pawn_info_panel_display_test.gd`
+  - `test/tools/capture_pawn_info_panel_evidence.gd`
+- 测试证据：
+  - `pwsh -File test/run_tests.ps1 -Godot $GODOT_PATH -Layer all` → `RESULT: PASS`（GdUnit4 130 例 0 失败：unit 71 / integration 39 / gameplay 20；headless 10 套 549 断言 0 失败，其中 `pawn_info_panel_display_test.gd` 69 断言），退出码 0。
+  - 真实窗口取证：`Start-Process -Wait <godot> --path <proj> --script res://test/tools/capture_pawn_info_panel_evidence.gd` → 退出码 0、`CAPTURE_DONE FAILURES=0`；三档窗口（1152x648 / 1152x720 / 800x720）× 精简/暂停 共 6 次测量全部 `BOUNDS_INSIDE_VIEWPORT=true`、`HUD_OVERLAP=false`、`PAUSE_LABEL_OVERLAP=false`、`CONTENT_FITS=true`。
+  - 6 次 `BUILD=` 证据行一致：`功法  1 / 1    剑修 | 武器  1 / 1    青锋剑（剑 · 金） | 主动  1 / 2    御剑斩 | 被动  0 / 1    —`；面板恒为 `356x354`，HUD `(16,16,1120x246)`，暂停标签 `(892,16,244x36)` 且 `PAUSE_OVERLAY_VISIBLE=true DRAWN_ABOVE_PANEL=true`。
+  - Godot MCP `validate`：`pawn_info_model.gd`、`pawn_info_panel.gd`、`pawn_info_panel.tscn` 及三层测试脚本全部 `valid: true`。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T16:45:46+08:00
+- 已知问题：
+  - 槽位点击查看详情、从详情入口更换功法/武器/技能、更换后 Build 标签即时刷新均未实现（Phase 2 剩余）。
+  - 面板固定 356x354：为容纳武器行移除了修为区标题与分隔线，后续任何增删节点都必须重跑真实窗口取证。
+  - 证据报告与截图落在 `.mcp/godot-runtime/screenshots/`（不入库）；`--headless` dummy 视口固定 64x64，多分辨率结论只能以真实窗口取证为准。
+- 用户验收：已验收
+- 验收时间：2026-09-25T16:50:57+08:00
+- Git：`main` / `c21d8ec`
+- 备注：父 Increment 为 `INC-CROSS-010`；本 Increment 只做只读展示，不做槽位点击与装备更换。

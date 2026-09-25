@@ -4,7 +4,7 @@
 > 项目定位：修仙 RPG + 宗门经营 + 秘境探索 + 暂停式实时战术战斗  
 > 设计源：`docs/project_summary.md`  
 > 引擎版本：Godot `4.7.2.stable`  
-> 文档最后修改：`2026-09-25T14:38:49+08:00`
+> 文档最后修改：`2026-09-25T16:46:47+08:00`
 
 ## 0. 指令优先级
 
@@ -454,6 +454,17 @@ res://
 5. 用户验收路径的手动测试步骤。
 6. 对 UI/视觉改动提供截图或视频证据。
 
+提交前的统一自动化门禁（框架分层与新增测试步骤见 `test/README.md`）：
+
+```powershell
+pwsh -File test/run_tests.ps1 -Godot $env:GODOT_BIN
+```
+
+- 退出码 `0` 表示全部通过；非 `0` 时必须把失败用例与关键输出摘录进 Increment，不得跳过。
+- 三层职责：`test/unit`（纯逻辑）、`test/integration`（系统组合）、`test/gameplay`（场景与玩法）。新增或修改业务逻辑时必须补对应层用例；能落在下层的验证不要上推。
+- `test/headless/` 的自建套件是历史回归基线，必须保持可运行，断言总数不得下降。
+- 不得为了让测试变绿而修改断言期望值掩盖业务缺陷；发现业务缺陷应另立对应主题的 Increment，不在测试任务内顺手改 `game/` 业务代码。
+
 优先使用现有 Godot MCP 能力：
 
 - `validate`：验证脚本、场景、结构和信号。
@@ -522,7 +533,7 @@ res://
 - 项目路径：本仓库根目录（Git 仓库与 project.godot 所在目录）。
 - 项目名：`test1`。
 - 当前已有 `game/main/main.tscn` 主场景，以及 Pawn MVP 的脚本、场景和资源配置。
-- 当前已是 Git 仓库，默认分支 `main`，remote 为 `origin`，但尚无提交。
+- 当前已是 Git 仓库，默认分支 `main`，remote 为 `origin`；`INC-CROSS-001`、`INC-CROSS-002` 与 `INC-PAWNS-003` 已完成提交并 push 到 `origin/main`。
 - art/ 下有 6 套素材包、2998 个文件、35.56 MB：PNG 1495 张（34.02 MB）与 .png.import 1495 个（1.49 MB），最大单文件 2.77 MB，无超过 10 MB 的文件。
 - art/ 下 1495 张 PNG 与 1495 个 .png.import 已一一配对，缺失 0 个、孤儿 0 个（2026-09-25 复核；早期“约 327 张缺少导入记录”的基线已过期）。
 - 像素素材过滤策略需要统一为 Nearest：project.godot 目前未设置 rendering/textures/canvas_textures/default_texture_filter，仍是引擎默认线性过滤；MVP 场景只使用占位 SVG，因此不影响本次验收。
@@ -531,11 +542,21 @@ res://
 - 首个 Pawn MVP（`INC-CROSS-001` 及 `INC-PAWNS-001/COMBAT-001/UI-001/CORE-001`）已通过用户验收，并在 `main` 上提交为 `d7c2e1e`。
 - 2026-09-25T13:52:23+08:00 已按用户授权完成首次 push：`origin/main` = `567b6e7`；`INC-TOOLS-001`、`INC-TOOLS-002` 已登记验收。
 - `docs/血条ui需求.txt` 是用户提供的血条 UI 需求输入（“变化时显示 + 延迟自动隐藏”），对应父 Increment `INC-CROSS-002`；需求文档中的“① HealthComponent”登记为 `INC-PAWNS-003`（已验收 2026-09-25T14:16:35+08:00，已提交为 `a873c3f`）。
-- 2026-09-25T13:55 起本会话 Godot MCP 工具调用返回 unsupported，改用 Godot CLI headless 与 `test/headless/` 自建脚本验证；MCP 恢复后应优先回到 MCP。
-- Pawn 场景结构自 `INC-PAWNS-002` 起为 `Pawn/HealthBarAnchor(Node2D, y = -46)/HealthBar`（`game/ui/pawn_health_bar.tscn` 实例）；血条默认隐藏，只在生命状态变化时显示，最后一次变化 2 秒后隐藏。
-- 生命/护盾运行时数值自 `INC-PAWNS-003` 起由 `Pawn/HealthComponent`（`game/pawns/health_component.gd`）持有，`Pawn.current_health` / `current_shield` 是只读代理属性；Pawn 仍向外转发 `health_changed` / `shield_changed`（参数与顺序不变），血条由组件的 `health_state_changed` 驱动。
-- 自建验证脚本现有三份：`test/headless/health_bar_visibility_test.gd`（38 项）、`test/headless/health_component_test.gd`（55 项，`INC-PAWNS-003`）与 `test/tools/capture_health_bar_evidence.gd`（三档分辨率截图与报告）；项目仍未引入 GUT 或 GdUnit。
+- Godot MCP 在当前 Codex 会话已恢复并可用；运行时验证优先使用 MCP，CLI headless 与 `test/headless/` 自建脚本作为可重复回归和 MCP 不可用时的等价后备。
+- Pawn 场景结构自 `INC-PAWNS-005` 起为 `Pawn/HealthBarAnchor(Node2D, y = -46)/StatusBars`（`game/ui/pawn_status_bars.tscn` 实例）；资源条组默认隐藏，任一已绑定资源变化时显示，最后一次变化 2 秒后隐藏。旧 `game/ui/pawn_health_bar.tscn` 仅作为兼容组件保留，不再由 Pawn 实例化。
+- 生命/护盾运行时数值自 `INC-PAWNS-004` 起由 `Pawn/Resources/Health` 与 `Pawn/Resources/Shield`（`ResourcePoolComponent`）持有；自 `INC-PAWNS-006` 起 Pawn 直接订阅资源池的 `value_changed` / `depleted`，兼容门面不再承担生命周期事件桥，`HealthComponent` 仍提供先护盾后生命的兼容路由。`Pawn.current_health` / `current_shield` 仍是只读代理，灵力由按需创建的 `Pawn/Resources/Spirit` 持有；Pawn 仍向外转发 `health_changed` / `shield_changed` / `spirit_changed`，参数与顺序不变。
+- 自建验证脚本现有 10 个 headless 套件：`resource_pool_component_test.gd`（102）、`resource_bar_test.gd`（86）、`spirit_pool_test.gd`（64）、`pawn_info_panel_display_test.gd`（69）、`health_component_test.gd`（55）、`pawn_resource_pools_test.gd`（49）、`health_bar_visibility_test.gd`（46）、`pawn_status_bars_integration_test.gd`（37）、`health_pool_authority_test.gd`（33）、`hud_spirit_display_test.gd`（8），合计 549 项；另有 `test/tools/capture_health_bar_evidence.gd` 与 `test/tools/capture_pawn_info_panel_evidence.gd` 负责真实窗口多分辨率截图与报告（输出到不入库的 `.mcp/godot-runtime/screenshots/`，需重跑脚本再生成）。
+- 自 `INC-TESTING-001` 起已引入 GdUnit4 `v6.2.1`（`addons/gdUnit4/`，MIT License）作为统一测试框架：`test/unit` 71 例、`test/integration` 39 例、`test/gameplay` 20 例，共 130 个用例，与上述 10 个 headless 套件由 `test/run_tests.ps1` 统一驱动（退出码 0 = 全通过）。GdUnit4 编辑器插件未在 `project.godot` 中启用，测试只走 headless 命令；`reports/` 为可重建产物，不入库。
+- 自 `INC-CROSS-006` 起玩家主动技能闭环可用：`project.godot` 的 `cast_skill`（Q）仅在选中存活玩家且存在有效敌方目标时调用 `PlayerController.order_skill()`；控制器先接近 `ActiveSkillDefinition.get_effective_cast_range()` 再调用 `Pawn.cast_skill()`，成功后清除技能命令并保留普攻目标，灵力不足/冷却中则回退普通攻击且无副作用。HUD `SkillLabel` 显示技能名、Q 键位、灵力消耗、剩余冷却与不可用原因（未选中 `技能：-`、无技能 `技能：无`）。
 - `INC-CROSS-002` 已通过用户验收：血条改为“生命状态变化时显示、最后一次变化 2 秒后隐藏”；16:9（1152x648）/ 16:10（1152x720）/ 窄屏（窗口 800x720 → 逻辑视口 1152x1036）三档真实渲染验证通过，已提交为 `e233120`；证据报告为 `.mcp/godot-runtime/screenshots/health_bar_evidence_report.txt`（`.mcp/` 不入库，需重跑脚本再生成）。
+- 自 `INC-CROSS-007` 起境界与 Build 容量可用：`RealmDefinition`（炼气→化神，容量 1/2/1 … 5/6/5）是 Build 容量的唯一来源；`TechniqueDefinition` / `PassiveSkillDefinition` 提供流派、境界门槛与互斥标签；`BuildValidator.validate(BuildLoadout)` 以结构化错误码覆盖缺境界、容量超限、同类重复、功法互斥、境界不足与条目未配置；`Pawn.get_realm()` / `get_build_loadout()` / `get_build_validation()` 均为只读接口，HUD `BuildLabel` 显示 `境界：<名>    功法 a / N    主动 b / N    被动 c / N`（无境界显示 `境界：无    Build：不适用`，未选中显示 `Build：-`），面板 `HudMargin.offset_bottom = 222`。
+- 已裁决的基线差异（原 2026-09-25T15:47:47+08:00，2026-09-25T16:19:12+08:00 处理）：`game/pawns/data/enemy_pawn.tres` 被外部（编辑器保存）把 `max_health` 由 80.0 改为 180.0，并带上 `uid` 与 `Color` 规范化。按“登记数据基线、不回退用户数据”的结论登记为 `INC-PAWNS-009`（`awaiting_acceptance`），同步 `test/unit/pawn_data_defaults_test.gd` 与 `test/headless/hud_spirit_display_test.gd` 的期望值为 180.0 / `HP：180 / 180`，统一门禁已恢复退出码 0。
+- 自 `INC-CROSS-008` 起 Pawn 信息卡可用：`game/ui/pawn_info_model.gd`（`PawnInfoModel`，纯静态读模型）与 `game/ui/pawn_info_panel.gd` / `.tscn`（`PawnInfoPanel`，`bind_pawn()` / `unbind()` / `is_bound()` / `get_snapshot()` / `set_compact()` 与 `pawn_bound` / `pawn_unbound` / `refreshed` 信号）构成只读信息卡；主场景把唯一实例挂在 `HUD/PawnInfoPanel`（位于 `PauseOverlay` 之前，暂停遮罩仍覆盖它），`main.gd` 的 `_set_selected_pawn()` 负责绑定/解绑、`_set_paused()` 负责 `set_compact(not value)`。面板锚定右下角、`offset_top = -370`（高 354、宽 356、边距 16）。
+- 自 `INC-CROSS-009` 起修为进度链路可用：`RealmDefinition.next_realm` / `breakthrough_exp` 串起炼气→筑基→金丹→元婴→化神（非终点原型阈值 100.0，化神无下一境界）；`Pawn/CultivationProgress`（`CultivationProgressComponent`）是当前修为与突破阈值的唯一运行时状态源，`Pawn.get_cultivation_snapshot()` / `gain_cultivation_exp()` 提供只读快照与受控增加，`cultivation_changed` / `cultivation_ready` 驱动信息卡刷新；`PawnInfoPanel` 完整模式显示修为文案与 `CultivationSection` 进度条，精简模式隐藏。实际突破仍未实现。
+- `INC-UI-008` 为在固定 356x354 信息卡内容纳修为区，把 `Content` separation 设为 2、各 Section separation 设为 2、`CultivationProgress` 最小高度设为 8、Margin 上下边距设为 7；这些值通过 1152x648 / 1152x720 / 800x720（逻辑视口 1152x1036）真实窗口验证。`INC-UI-009` 为容纳第四行 Build 行，进一步移除 `CultivationSection` 的 `CultivationSeparator` 与 `CultivationTitleLabel`（修为行文案自带“修为”前缀，信息不丢失），面板仍固定 356x354 并再次通过三档真实窗口取证。后续增删信息卡节点必须重新跑 `test/tools/capture_pawn_info_panel_evidence.gd`，不得只改固定 offset 后宣称通过。
+- 自 `INC-CROSS-010` 起 Build 分层补齐武器一层：`WeaponDefinition`（`game/shared/resources/weapon_definition.gd`，字段 `id` / `display_name` / `weapon_type` / `element` / `required_realm_tier` / `description`）是武器唯一静态契约，五行标签只有 `ELEMENT_LABELS` 一个来源（类型 `sword` / `artifact` / `blade` → 剑 / 法器 / 刀，未知回退原值或 `无属性`）；`RealmDefinition.KIND_WEAPON` / `weapon_slots` 让 `ALL_KINDS` 覆盖功法 / 武器 / 主动 / 被动四类槽位，五个境界的 `weapon_slots` 固定为 1 且不随境界递增；`PawnData.weapon` 是唯一装备入口（沿用 `active_skill` 的“单入口字段 + 汇总数组”约定），`BuildLoadout.weapons` / `get_weapon()` 只是只读汇总，`BuildValidator` 判定顺序固定为 功法 → 武器 → 主动 → 被动；信息卡 Build 区显示四行 `功法 / 武器 / 主动 / 被动`，武器行形如 `武器  1 / 1    青锋剑（剑 · 金）`。武器目前只参与 Build 校验与信息卡展示，不参与战斗结算与属性加成，五行也不参与相容 / 克制校验。
+- 顶部 HUD 实测占位（`INC-CROSS-008` 记录）：`HudMargin` 的内容最小高度 246 会覆盖 Scene 里 `offset_bottom = 222` 的设计值，实际下沿为 y=262（`16 + 246`）。信息卡避让间距必须按 262 计算；若后续 HUD 增删行，需要重新实测。
+- 自 `INC-TESTING-002` 起：`health_bar_visibility_test.gd` / `pawn_status_bars_integration_test.gd` 的“约 2 秒自动隐藏”运行态断言下界由 1900ms 放宽到 1500ms（上界 3500ms 不变）。原因是倒计时从触发帧起算、该帧 delta 会被立即计入，机器负载下实测 1871~1898ms 会假失败；精确的 2.0 秒语义仍由 `tick()` 驱动的确定性用例负责。
 - 已知工具限制：`--headless` 的 dummy 窗口固定为 64x64，逻辑视口会退化成 1152x1152，因此多分辨率 UI 验证必须使用真实窗口渲染；Windows 版 Godot 是 GUI 子系统进程，必须用 `Start-Process -Wait` 才能取得退出码与 stdout，否则会静默脱离。
 - 这些是已知基线问题，不得在无对应 Increment 的情况下顺手修复。
 
@@ -589,7 +610,10 @@ res://
 
 ### 12.6 测试框架与并行开发
 
-- 当前项目尚未确定测试框架。第一个引入测试的 Increment 必须先选择并记录 GUT、GdUnit 或自建 headless 测试方案的取舍。
-- 没有测试框架时，不得声称“已做单元测试”；只能写实际执行的 Godot 验证或人工冒烟测试。
+- 测试框架已确定为 **GdUnit4 `v6.2.1`**：`addons/gdUnit4/`，MIT License（© 2023 Mike Schulze），来源 https://github.com/godot-gdunit-labs/gdUnit4 。选型结论与 GdUnit4 / GUT / 自建 headless 三者的取舍实证记录在 `agent-plan/testing.md` 的 `INC-TESTING-001`；引入时的来源、版本、许可证、维护状态与安全审计结论同见该 Increment（§12.4）。
+- 统一入口为 `test/run_tests.ps1`，一条命令跑完三层 GdUnit4 用例与全部 `test/headless/*_test.gd`；退出码 `0` 表示全通过。分层职责、命名规则与新增测试步骤见 `test/README.md`。
+- GdUnit4 编辑器插件未在 `project.godot` 中启用；测试只通过 `GdUnitCmdTool.gd` 在 headless 下运行，避免影响并行进行的 MCP 运行时验证。
+- 引入新的测试依赖或插件必须重新执行 §12.4 的审计。
+- 不得声称未实际执行的测试结果；没有对应测试时只能写实际执行的 Godot 验证或人工冒烟测试。
 - 多个 Agent 并行开发时，一个主题文件、一个场景、一个 Autoload 或一个共享资源同一时间只能有一个写入者。
 - `project.godot`、`agent-plan/_index.md`、全局事件总线和共享资源属于高冲突文件，修改前必须先确认没有其他 Agent 正在写入。
