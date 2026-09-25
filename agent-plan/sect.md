@@ -97,3 +97,33 @@
 - Git：
 - 备注：父 Increment 为 `INC-CROSS-017`。
 
+## INC-SECT-003：转化设施（藏经阁参悟 / 炼器房强化 / 丹房炼丹）
+
+- 状态：accepted
+- 创建时间：2026-09-25T19:22:00+08:00
+- 最后修改：2026-09-25T19:38:41+08:00
+- 主题：sect
+- 目标：让宗门从「产资源」升级为「产 Build」：藏经阁用灵石参悟新功法并进入修士运行时功法列表、炼器房用灵石强化主武器、丹房用灵草炼出丹药并可在出发前服用恢复生命 / 灵力，三者都把结果落在运行时覆盖层上，不改写任何静态 `.tres`。
+- 验收标准：
+  - 藏经阁 `learn_technique_from_pavilion(technique) -> bool`：校验设施等级 ≥ 1、灵石足够、修士境界 tier ≥ 功法 `required_realm_tier`、功法已配置且未领悟；成功时扣 `spirit_stone_cost`、把功法写入修士运行时列表并发出 `technique_learned`，返回 true；失败返回 false 且不扣灵石、不改变修士状态。
+  - 炼器房 `strengthen_weapon() -> bool`：校验设施等级 ≥ 1、灵石足够、修士有主武器且强化等级未达设施等级上限；成功时扣 `spirit_stone_cost`、修士强化等级 +1 并发出 `weapon_strengthened`，返回 true；失败返回 false 且无副作用。
+  - 丹房 `refine_pill() -> int`：校验设施等级 ≥ 1、灵草 ≥ `herb_cost`；成功时扣灵草、丹药 +`get_yield(level)` 并发出 `pill_refined`，返回本次产出数量，失败返回 0 且无副作用。`use_pill() -> float` 在丹药 > 0 且修士存活时消耗 1 颗，按 `设施等级 × PILL_RESTORE_PER_LEVEL` 分别恢复生命与灵力，返回两者实际恢复量之和并发出 `pill_used`；丹药为 0、修士未绑定或已死亡时返回 0 且不消耗丹药。
+  - 三条转化路径都不修改 `PawnData`、`WeaponDefinition`、`TechniqueDefinition` 的任何字段（用 `resource_path` 读取真实资源断言），只通过 `INC-PAWNS-018` 提供的运行时覆盖层生效。
+  - 新增集成用例覆盖：三条成功路径的数值与信号、以及「灵石不足」「灵草不足」「功法门槛不足」「重复领悟」「无武器」「丹药为 0」六条拒绝路径。
+- 范围：`game/sect/sect_state.gd`（新增转化部分）、`test/integration/sect_state_conversion_test.gd`（新增）。
+- 非范围：功法 / 武器的正式掉落表、装备槽更换与卸下、丹药作为背包物品的抽象与堆叠上限、炼丹配方系统、强化失败与保底、炼器房多武器选择、藏经阁随机功法池。`PILL_RESTORE_PER_LEVEL` 只定义 MVP 的每级恢复量，不引入药品品质 / 持续时间 / 战斗中使用。
+- 依赖：`INC-SECT-001`、`INC-SECT-002`、`INC-PAWNS-018`。
+- 检索证据：Git Diff 优先检索结论同 `INC-SECT-001`；`git grep -n -E "learn_technique|strengthen_weapon|refine_pill|use_pill" -- game/ test/` 无匹配，确认三条转化路径均未实现；`game/shared/resources/technique_definition.gd` 明确声明「功法本身不授予技能、不结算属性；授予与解锁属于后续 Increment」，本 Increment 正是该声明的兑现者。
+- 风险：最大风险是把「领悟功法」实现成直接改 `PawnData.techniques`，那会污染共享静态资源并让其它使用同一档案的单位一起变强，因此本 Increment 强制依赖运行时覆盖层。第二风险是丹房被做成完整物品 / 背包系统，本 Increment 只做「丹药计数 + 立刻恢复」，把物品化留给后续库存主题。
+- 实现说明：`SectState` 新增四条转化路径与四个变更信号。藏经阁先做设施 / 修士 / 境界 / 查重 / 灵石五重校验，再调用 `Pawn.learn_technique()` 写运行时列表；炼器房以 `min(设施等级, Pawn.MAX_FORGE_LEVEL)` 为上限，先确认 `Pawn.strengthen_weapon()` 确实递增再扣灵石；丹房把灵草换成 `get_yield(level)` 颗丹药；服丹按 `丹房等级 × PILL_RESTORE_PER_LEVEL` 分别调用 `Pawn.restore_health()` 与 `Pawn.restore_spirit()`，返回实际恢复总量。所有路径都只写 `SectState` 库存与 `Pawn` 运行时覆盖层。
+- 变更文件：`game/sect/sect_state.gd`（新增转化方法、信号与 `PILL_RESTORE_PER_LEVEL`）、`test/integration/sect_state_conversion_test.gd`（新增，含 `.uid`）。
+- 测试证据：
+  - `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer integration` → `RESULT: PASS`，退出码 0；`GdUnit4 integration 130 cases / 0 failures`（本 Increment 前为 122 cases），新增 8 个用例覆盖藏经阁成功 / 灵石不足 / 空功法 / 重复 / 境界不足、炼器房成功 / 武器不存在 / 灵石不足 / 设施等级封顶、丹房成功 / 灵草不足、服丹恢复生命与灵力 / 无修士 / 已死亡拒绝，以及三条路径对真实静态资源零污染。
+  - 丹药恢复用例使用真实 Player Pawn：`100/120` 生命与 `60/100` 灵力，1 级丹房服丹后恢复到 `115/120` 与 `75/100`，实际恢复量 = 30。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T19:32:01+08:00
+- 已知问题：丹药目前是宗门库存计数，不是背包物品；强化与参悟没有二次确认、冷却或失败率；`PILL_RESTORE_PER_LEVEL` 是 MVP 固定值，药品品质与战斗中使用属于后续主题；转化设施面板入口由 `INC-UI-016` 实现。
+- 用户验收：已验收（依据用户 2026-09-25 指令「验收通过，分increment提交」与「推送」）
+- 验收时间：2026-09-25T19:38:41+08:00
+- Git：
+- 备注：父 Increment 为 `INC-CROSS-017`。

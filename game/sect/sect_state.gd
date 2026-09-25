@@ -16,6 +16,10 @@ signal pills_changed(state: SectState, current: int)
 signal facility_upgraded(state: SectState, facility_id: StringName, new_level: int)
 signal cultivation_gained(state: SectState, pawn: Pawn, amount: float)
 signal herbs_harvested(state: SectState, facility_id: StringName, amount: int)
+signal technique_learned(state: SectState, pawn: Pawn, technique: TechniqueDefinition)
+signal weapon_strengthened(state: SectState, pawn: Pawn, level: int)
+signal pill_refined(state: SectState, amount: int)
+signal pill_used(state: SectState, pawn: Pawn, restored: float)
 
 ## 不可升级原因：空 StringName 表示可以升级；面板与测试共用同一套原因，不在 UI 里重新判断。
 const REASON_NONE: StringName = &""
@@ -32,8 +36,12 @@ const CAVE_DWELLING_BONUS_PER_LEVEL: float = 0.5
 const FACILITY_CAVE_DWELLING: StringName = &"cave_dwelling"
 const FACILITY_SPIRIT_ARRAY: StringName = &"spirit_array"
 const FACILITY_SPIRIT_FIELD: StringName = &"spirit_field"
+const FACILITY_ALCHEMY_ROOM: StringName = &"alchemy_room"
+const FACILITY_FORGE_ROOM: StringName = &"forge_room"
+const FACILITY_SCRIPTURE_PAVILION: StringName = &"scripture_pavilion"
 
 ## 单颗丹药每级恢复的生命与灵力；实际恢复量再按各资源上限截断。
+const PILL_RESTORE_PER_LEVEL: float = 15.0
 
 ## 设施初始等级：1 表示「已建成但未强化」，0 只可能来自未知 id。
 const INITIAL_FACILITY_LEVEL: int = 1
@@ -192,6 +200,92 @@ func harvest_spirit_field() -> int:
 	herbs_harvested.emit(self, FACILITY_SPIRIT_FIELD, amount)
 	return amount
 
+
+## 藏经阁参悟：把功法写入修士运行时列表，绝不改写 TechniqueDefinition / PawnData。
+## 成功时扣灵石并广播；任一前置校验失败都返回 false 且零副作用。
+func learn_technique_from_pavilion(technique: TechniqueDefinition) -> bool:
+	if technique == null or not technique.is_configured():
+		return false
+	if _cultivator == null or not is_instance_valid(_cultivator):
+		return false
+	var pavilion: SectFacilityDefinition = get_facility(FACILITY_SCRIPTURE_PAVILION)
+	if pavilion == null or get_facility_level(FACILITY_SCRIPTURE_PAVILION) < 1:
+		return false
+	if get_cultivator_realm_tier() < technique.required_realm_tier:
+		return false
+	if _cultivator.has_technique(technique.id):
+		return false
+	if _spirit_stones < pavilion.spirit_stone_cost:
+		return false
+	if not _cultivator.learn_technique(technique):
+		return false
+	_spirit_stones -= pavilion.spirit_stone_cost
+	spirit_stones_changed.emit(self, _spirit_stones)
+	technique_learned.emit(self, _cultivator, technique)
+	return true
+
+
+## 炼器房强化：灵石换取本代修士主武器的运行时强化等级 +1。
+## 强化上限 = min(设施等级, Pawn.MAX_FORGE_LEVEL)；资源扣除与信号只在强化确实成功后发生。
+func strengthen_weapon() -> bool:
+	if _cultivator == null or not is_instance_valid(_cultivator):
+		return false
+	var forge_room: SectFacilityDefinition = get_facility(FACILITY_FORGE_ROOM)
+	var forge_level: int = get_facility_level(FACILITY_FORGE_ROOM)
+	if forge_room == null or forge_level < 1:
+		return false
+	if not _cultivator.has_weapon():
+		return false
+	var current_level: int = _cultivator.get_forge_level()
+	if current_level >= mini(forge_level, Pawn.MAX_FORGE_LEVEL):
+		return false
+	if _spirit_stones < forge_room.spirit_stone_cost:
+		return false
+	if _cultivator.strengthen_weapon() != current_level + 1:
+		return false
+	_spirit_stones -= forge_room.spirit_stone_cost
+	spirit_stones_changed.emit(self, _spirit_stones)
+	weapon_strengthened.emit(self, _cultivator, current_level + 1)
+	return true
+
+
+## 丹房炼丹：扣灵草并增加丹药库存，返回本次产出数量；失败返回 0 且无副作用。
+func refine_pill() -> int:
+	var alchemy_room: SectFacilityDefinition = get_facility(FACILITY_ALCHEMY_ROOM)
+	var alchemy_level: int = get_facility_level(FACILITY_ALCHEMY_ROOM)
+	if alchemy_room == null or alchemy_level < 1:
+		return 0
+	if _spirit_herbs < alchemy_room.herb_cost:
+		return 0
+	var amount: int = alchemy_room.get_yield(alchemy_level)
+	if amount <= 0:
+		return 0
+	_spirit_herbs -= alchemy_room.herb_cost
+	_pills += amount
+	spirit_herbs_changed.emit(self, _spirit_herbs)
+	pills_changed.emit(self, _pills)
+	pill_refined.emit(self, amount)
+	return amount
+
+
+## 服丹：消耗 1 颗丹药，按丹房等级等量恢复生命与灵力，返回两者实际恢复量之和。
+## 未绑定修士 / 已死亡 / 无丹药时不消耗；已满的资源只贡献 0 到实际恢复量。
+func use_pill() -> float:
+	if _pills <= 0:
+		return 0.0
+	if _cultivator == null or not is_instance_valid(_cultivator) or not _cultivator.is_alive():
+		return 0.0
+	var alchemy_level: int = get_facility_level(FACILITY_ALCHEMY_ROOM)
+	if alchemy_level < 1:
+		return 0.0
+	_pills -= 1
+	pills_changed.emit(self, _pills)
+	var restore_amount: float = float(alchemy_level) * PILL_RESTORE_PER_LEVEL
+	var health_restored: float = _cultivator.restore_health(restore_amount)
+	var spirit_restored: float = _cultivator.restore_spirit(restore_amount)
+	var restored: float = health_restored + spirit_restored
+	pill_used.emit(self, _cultivator, restored)
+	return restored
 
 ## 只读快照：面板只渲染本方法的返回值，每次调用都返回新字典，外部修改不影响宗门状态。
 func get_snapshot() -> Dictionary:
