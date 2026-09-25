@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="SectFacilityDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/shared/resources/sect_facility_definition.gd" id="1_facility"]
+
+[resource]
+script = ExtResource("1_facility")
+id = &"spirit_array"
+display_name = "聚灵阵"
+kind = 1
+description = "以灵石为引聚拢灵气。每次打坐按阵法等级产出修为，是「回去修炼一下再出发」的主要来源。"
+base_upgrade_cost = 30
+upgrade_cost_growth = 20
+max_level = 3
+required_realm_tier = 1
+spirit_stone_cost = 0
+herb_cost = 0
+yield_per_level = 8

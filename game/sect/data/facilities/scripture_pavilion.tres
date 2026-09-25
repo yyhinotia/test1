@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="SectFacilityDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/shared/resources/sect_facility_definition.gd" id="1_facility"]
+
+[resource]
+script = ExtResource("1_facility")
+id = &"scripture_pavilion"
+display_name = "藏经阁"
+kind = 5
+description = "收藏功法典籍。每次参悟消耗灵石，可领悟一份功法并写入修士的运行时功法列表，用于重构 Build。"
+base_upgrade_cost = 50
+upgrade_cost_growth = 30
+max_level = 3
+required_realm_tier = 1
+spirit_stone_cost = 45
+herb_cost = 0
+yield_per_level = 1

@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="SectFacilityDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/shared/resources/sect_facility_definition.gd" id="1_facility"]
+
+[resource]
+script = ExtResource("1_facility")
+id = &"cave_dwelling"
+display_name = "洞府"
+kind = 0
+description = "修士闭关之地。洞府等级越高，打坐时引入灵气的效率越高（对聚灵阵产出提供每级 50% 的加成）。"
+base_upgrade_cost = 40
+upgrade_cost_growth = 30
+max_level = 3
+required_realm_tier = 1
+spirit_stone_cost = 0
+herb_cost = 0
+yield_per_level = 0
