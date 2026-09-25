@@ -733,9 +733,9 @@
 
 ## INC-PAWNS-020：四人队伍数据契约与多单位运行时快照
 
-- 状态：planned
+- 状态：awaiting_acceptance
 - 创建时间：2026-09-25T20:47:54+08:00
-- 最后修改：2026-09-25T21:14:43+08:00
+- 最后修改：2026-09-25T21:27:06+08:00
 - 主题：pawns
 - 目标：建立 `SquadDefinition` 队伍静态契约，并让遭遇运行时能够按队伍定义创建、持有和延续多名成员；本 Increment 只提供多单位数据与快照能力，不负责 Vertical Slice 内容、AI 战术或 UI。
 - 验收标准：
@@ -750,12 +750,12 @@
 - 依赖：`INC-CROSS-018` accepted（现有运行时境界 / Build 延续是多人快照的前置事实源）；父 Increment `INC-CROSS-019`。
 - 检索证据：2026-09-25T20:47:54+08:00 执行 `git status --short`（仅 `?? docs/4v4-vertical-slice.md`）、`git diff --unified=0 -- agent-plan/`（空）、`git diff --cached --unified=0 -- agent-plan/`（空）、`git log --oneline -5 -- agent-plan/`（最新 `cdbc535`）与 `git grep` 编号检查（`INC-PAWNS-020`、`INC-PAWNS-021` 均未占用）。当前 `EncounterDefinition` 只有单 `enemy_profile`，`EncounterSession` 只有 `_player` / `_enemy` 与单点死亡终局。
 - 风险：最容易出现的回归是多人化后旧单单位 API 语义漂移；必须保持主单位代理并在快照写回时以成员 id 为键，不能以顺序复制。另一个风险是把内容数据硬编码进运行时代码，故本 Increment 只定义契约，Vertical Slice 具体资源留给 `INC-WORLD-007`。
-- 实现说明：待实现。
-- 变更文件：待实现。
-- 测试证据：待实现。
-- 验证状态：待验证
-- 验证时间：待验证
-- 已知问题：待实现。
+- 实现说明：新增 `SquadDefinition`（成员 id / 档案 / 站位校验与默认偏移生成）与 `SquadResourceSnapshot` / `SquadProgressSnapshot`（按成员 id 捕获与写回，复用既有单人采集逻辑）；`EncounterDefinition` 增加可选 `enemy_squad` 与 `player_count`（`enemy_squad` 优先，旧 `enemy_profile` 行为不变）；`EncounterSession` 改为按队伍定义生成并持有 `_player_units` / `_enemy_units`，`_player` / `_enemy` 仍是第 0 位主单位代理，旧 API 签名与单点死亡终局语义保持不变。
+- 变更文件：`game/shared/resources/squad_definition.gd`（与 `.uid`）、`game/shared/core/squad_resource_snapshot.gd`（与 `.uid`）、`game/shared/core/squad_progress_snapshot.gd`（与 `.uid`）、`game/shared/resources/encounter_definition.gd`、`game/world/encounter_session.gd`、`test/unit/squad_definition_test.gd`（与 `.uid`）、`test/unit/encounter_definition_test.gd`、`test/integration/squad_session_test.gd`（与 `.uid`）、`agent-plan/pawns.md`、`agent-plan/_index.md`。
+- 测试证据：`res://test/unit/squad_definition_test.gd` 12 cases 0 failures；`res://test/unit/encounter_definition_test.gd` 10 cases 0 failures；`res://test/integration/squad_session_test.gd` 8 cases 0 failures（2 / 3 / 4 人按序生成、旧 1v1 不变、主单位代理与 id 查找、队友与副敌人死亡不终局、主玩家死亡失败、按 id 快照与缺员跳过、队伍进度按 id 恢复功法）；unit 层 20 / 20 套件 145 cases 0 failures；统一门禁 `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` → `RESULT: PASS`（GdUnit4 357 cases 0 failures、headless 10 suites 549 assertions 0 failing suites、exit 0）；Godot MCP `validate` 5 个目标全部 `valid: true`；`git diff --check` 通过。
+- 验证状态：验证通过（unit / integration 与统一门禁均通过）
+- 验证时间：2026-09-25T21:27:06+08:00
+- 已知问题：`INC-CROSS-018` 在本 Increment 实现时仍未 `accepted`（`INC-CORE-011`、`INC-TESTING-010` 仍为 `planned`），实际只依赖其已验收部分（`INC-WORLD-006` / `INC-PAWNS-019` 的运行时境界延续）；终局判定仍是「主玩家死亡 / 主敌人死亡」单点规则，团队胜负、四方遭遇与 AI 目标重选留给 `INC-COMBAT-009`；多单位集合尚未接入玩家输入、AI 目标与 UI，本 Increment 的集合只被新测试消费；既有 `main_scene_sect_test.gd` 324 orphans 与 `sect_panel_test.gd` 目录模式 288 orphans 为历史债务，与本 Increment 无关。
 - 用户验收：待验收
 - 验收时间：待验收
 - Git：待提交

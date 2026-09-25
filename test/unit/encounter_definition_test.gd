@@ -92,6 +92,86 @@ func test_two_encounter_instances_do_not_share_fields() -> void:
 	assert_int(second.threat_tag).is_equal(EncounterDefinition.ThreatTag.BASELINE)
 
 
+func _squad_with(member_ids: Array) -> SquadDefinition:
+	var squad: SquadDefinition = SquadDefinition.new()
+	squad.id = &"encounter_squad"
+	squad.display_name = "遭遇队伍"
+	var members: Array[PawnData] = []
+	for member_id: Variant in member_ids:
+		var member: PawnData = PawnData.new()
+		member.id = StringName(member_id)
+		members.append(member)
+	squad.members = members
+	return squad
+
+
+## INC-PAWNS-020：敌方队伍优先于单敌人档案，且不吞掉旧字段。
+func test_enemy_squad_takes_priority_over_single_profile() -> void:
+	var encounter: EncounterDefinition = EncounterDefinition.new()
+	encounter.id = &"squad_encounter"
+	encounter.display_name = "队伍遭遇"
+	encounter.enemy_profile = load("res://game/pawns/data/enemy_pawn.tres") as PawnData
+	var squad: SquadDefinition = _squad_with(["enemy_a", "enemy_b", "enemy_c"])
+	encounter.enemy_squad = squad
+
+	assert_bool(encounter.uses_enemy_squad()).is_true()
+	assert_bool(encounter.is_configured()).is_true()
+	assert_int(encounter.get_enemy_count()).is_equal(3)
+	assert_str(String(encounter.get_enemy_profile_id())).is_equal("encounter_squad")
+	assert_str(encounter.get_enemy_display_name()).is_equal("遭遇队伍")
+	assert_int(encounter.get_enemy_spawn_offsets().size()).is_equal(3)
+
+	var members: Array[PawnData] = encounter.get_enemy_members()
+	assert_int(members.size()).is_equal(3)
+	assert_str(String(members[0].id)).is_equal("enemy_a")
+	assert_str(String(members[1].id)).is_equal("enemy_b")
+	assert_str(String(members[2].id)).is_equal("enemy_c")
+	# 旧字段保持不变：多人遭遇不吞掉单敌人档案，回退路径仍然可用。
+	assert_object(encounter.enemy_profile).is_not_null()
+
+
+func test_unconfigured_squad_falls_back_to_single_enemy_profile() -> void:
+	var encounter: EncounterDefinition = EncounterDefinition.new()
+	encounter.id = &"fallback_encounter"
+	encounter.display_name = "回退遭遇"
+	encounter.enemy_profile = load("res://game/pawns/data/enemy_pawn.tres") as PawnData
+	encounter.enemy_squad = SquadDefinition.new()
+
+	assert_bool(encounter.uses_enemy_squad()).is_false()
+	assert_bool(encounter.is_configured()).is_true()
+	assert_int(encounter.get_enemy_count()).is_equal(1)
+	assert_str(String(encounter.get_enemy_profile_id())).is_equal("enemy_001")
+	assert_int(encounter.get_enemy_spawn_offsets().size()).is_equal(1)
+
+
+func test_no_enemy_source_at_all_is_not_configured() -> void:
+	var encounter: EncounterDefinition = EncounterDefinition.new()
+	encounter.id = &"empty_encounter"
+	encounter.display_name = "空遭遇"
+	encounter.enemy_squad = SquadDefinition.new()
+
+	assert_bool(encounter.is_configured()).is_false()
+	assert_int(encounter.get_enemy_count()).is_zero()
+	assert_array(encounter.get_enemy_spawn_offsets()).is_empty()
+
+
+## INC-PAWNS-020：玩家上阵人数默认跟随敌方人数，显式 player_count 优先。
+func test_requested_player_count_follows_enemy_count_unless_explicit() -> void:
+	var squad_encounter: EncounterDefinition = EncounterDefinition.new()
+	squad_encounter.id = &"count_encounter"
+	squad_encounter.display_name = "人数遭遇"
+	squad_encounter.enemy_squad = _squad_with(["enemy_a", "enemy_b", "enemy_c"])
+	assert_int(squad_encounter.get_requested_player_count()).is_equal(3)
+
+	squad_encounter.player_count = 2
+	assert_int(squad_encounter.get_requested_player_count()).is_equal(2)
+
+	var single: EncounterDefinition = EncounterDefinition.new()
+	single.id = &"single_encounter"
+	single.display_name = "单人遭遇"
+	single.enemy_profile = load("res://game/pawns/data/enemy_pawn.tres") as PawnData
+	assert_int(single.get_requested_player_count()).is_equal(1)
+
 func _unique_count(values: Array) -> int:
 	var unique: Array = []
 	for value: Variant in values:
