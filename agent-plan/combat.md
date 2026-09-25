@@ -199,3 +199,62 @@
 - 验收时间：2026-09-25T17:17:48+08:00
 - Git：`main` / `70a09f1`
 - 备注：父 Increment 为 `INC-CROSS-011`。
+
+
+## INC-COMBAT-005：技能目标类型与控制器目标解析
+
+- 状态：accepted
+- 创建时间：2026-09-25T17:31:30+08:00
+- 最后修改：2026-09-25T17:34:51+08:00
+- 主题：combat
+- 来源：`docs/build-mvp.md` MVP-2。
+- 目标：让 `SELF` / `ALLY` / `ENEMY` 成为技能执行的真实规则，而不是只存在于编辑器字段；玩家控制器、AI 控制器与 Pawn 施法校验必须对同一目标类型给出一致结论。
+- 验收标准：
+  - `Pawn.can_cast_skill(skill, target)` 按 `skill.target_type` 校验：SELF 只能指向施法者自身，ALLY 只能指向同阵营存活单位且不等于施法者，ENEMY 只能指向不同阵营存活单位；失败路径不得扣灵力、造成效果或进入冷却。
+  - `PlayerController.order_skill_instance(skill, target = null)` 对 SELF 自动解析为施法者，对 ALLY/ENEMY 使用显式目标或当前攻击目标；目标类型不合法时返回 `false` 且不覆盖既有命令。
+  - 控制器接近距离或直接施法的判定统一使用同一解析目标；SELF 技能无需移动即可施法。
+  - AI 至少支持 SELF 自动施法，并继续支持对当前敌人目标施放 ENEMY 技能；ALLY 无合法目标时安全回退，不误伤敌人。
+  - 单元/集成测试覆盖三种目标类型、同阵营排除自身、死亡目标、错误类型无副作用与 SELF 立即施法。
+- 范围：`game/pawns/pawn.gd`、`game/pawns/controllers/player_controller.gd`、`game/pawns/controllers/ai_controller.gd`、对应 unit/integration 测试。
+- 非范围：鼠标目标选择 UI、范围/AOE、地面目标、友军列表编成、目标高亮。
+- 依赖：`INC-PAWNS-014`。
+- 检索证据：待 PAWNS-014 计划落库后按 Git Diff 复核；当前控制器硬编码 `_is_valid_enemy_target()`，Pawn 也硬编码“目标必须是敌人”。
+- 风险：旧 Q/技能栏调用依赖“默认敌方目标”；解析逻辑必须保留旧默认行为，且不能在失败时破坏普通攻击目标。
+- 实现说明：目标类型判断只保留一个来源，控制器负责解析，Pawn 负责最终裁决；两个入口不得复制不同规则。
+- 变更文件：`game/pawns/pawn.gd`、`game/pawns/controllers/player_controller.gd`、`game/pawns/controllers/ai_controller.gd`、`test/integration/skill_target_type_test.gd`（新增）。
+- 测试证据：统一门禁 `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` 通过：GdUnit4 unit 87 / integration 58 / gameplay 26，共 171 cases、0 failures；headless 10 suites、549 assertions、0 failing suites。定向用例 `test/integration/skill_target_type_test.gd` 4 例：Pawn 按 SELF / ALLY / ENEMY 裁决、SELF 由控制器解析为施法者、ALLY 需要显式目标、AI 对 SELF 技能自动施法且不覆盖敌人目标。Godot MCP `validate` 对 `pawn.gd`、`player_controller.gd`、`ai_controller.gd`、`skill_target_type_test.gd` 通过；`git diff --check` 通过。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T17:34:51+08:00
+- 已知问题：ALLY 暂无友军目标提供方：玩家入口需要显式传入友军目标，AI 在缺少友军目标时安全跳过；友军列表与编成属于后续非范围。
+- 用户验收：已验收
+- 验收时间：2026-09-25T17:34:51+08:00
+- Git：`main` / `df36f24`
+- 备注：父 Increment 为 `INC-CROSS-012`；本 Increment 不实现 Effect System。验收依据：用户 2026-09-25T17:31+08:00 回复“验收通过，分increment提交”。
+
+## INC-COMBAT-006：最小 Skill Effect System（Damage / Heal / Shield / Stun）
+
+- 状态：planned
+- 创建时间：2026-09-25T17:31:30+08:00
+- 最后修改：2026-09-25T17:31:30+08:00
+- 主题：combat
+- 来源：`docs/build-mvp.md` MVP-3。
+- 目标：把主动技能的成功结算从 `Pawn.cast_skill()` 内的单一伤害代码抽出为最小 Effect Resolver，支持 Damage、Heal、Shield、Stun 四种效果，并让 Stun 成为可观察、可推进、可恢复的战斗状态。
+- 验收标准：
+  - 新增最小 Effect Resolver，统一执行“技能校验 → 灵力原子扣除 → 按 `effect_type` 应用效果 → 记录冷却 → 发出信号”的顺序；失败路径不得出现部分结算。
+  - DAMAGE 继续通过既有 `Pawn.take_damage()` 防御/护盾路由；HEAL 通过生命资源池增加生命；SHIELD 通过护盾资源池增加护盾并按上限截断；STUN 给目标增加有限持续时间并立即停止移动。
+  - 被眩晕单位在持续期间不能移动、普通攻击或施放技能；眩晕只影响行动，不应直接扣血或致死；物理帧推进后恢复，并发出可测试的状态信号。
+  - `Pawn.cast_skill()` 不再包含四类效果的业务分支，只调用 Resolver；旧伤害技能与旧测试保持通过。
+  - 单元/集成测试覆盖四种效果、满血治疗/满盾截断、灵力不足无副作用、眩晕期间行为阻断与到期恢复。
+- 范围：新增 `game/combat/skill/` 下的最小 Effect Resolver 与状态接口；修改 `game/pawns/pawn.gd`、必要的技能执行测试。
+- 非范围：Buff/Debuff 编辑器、堆叠、免疫、抗性、沉默、持续伤害、复杂 Trigger/Condition/Modifier、动画与 VFX。
+- 依赖：`INC-COMBAT-005`。
+- 检索证据：待 COMBAT-005 计划落库后按 Git Diff 复核；当前 `Pawn.cast_skill()` 直接执行伤害，Pawn 没有 Stun 字段或行为阻断接口。
+- 风险：Stun 推进必须使用 `_physics_process(delta)` 以在暂停时冻结；冷却与状态计时不能混用同一个字典；治疗/护盾不能把资源池变成第二个真相。
+- 实现说明：第一版只支持单效果技能，不提前实现 Effect 数组；Resolver 通过 Pawn 的受控业务接口修改资源，不直接写资源池内部字段。
+- 变更文件：待实现回填。
+- 测试证据：待实现回填。
+- 验证状态：未验证
+- 已知问题：待实现回填。
+- 用户验收：待验收
+- Git：待验收后提交
+- 备注：父 Increment 为 `INC-CROSS-012`；本 Increment 只实现最小效果系统。

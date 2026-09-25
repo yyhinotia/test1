@@ -218,3 +218,32 @@
 - 验收时间：2026-09-25T17:17:48+08:00
 - Git：`main` / `182190b`
 - 备注：父 Increment 为 `INC-CROSS-011`。
+
+
+## INC-CORE-006：主场景技能目标选择与取消路由
+
+- 状态：planned
+- 创建时间：2026-09-25T17:31:30+08:00
+- 最后修改：2026-09-25T17:31:30+08:00
+- 主题：core
+- 来源：`docs/build-mvp.md` MVP-4 的输入闭环。
+- 目标：把 SkillBar 的 targeting 请求、鼠标左键目标点击、右键/Escape 取消与 PlayerController 的目标命令接到同一个主场景路由，形成“点技能 → 选合法目标 → 高亮确认 → 施法”的可操作闭环。
+- 验收标准：
+  - 选中玩家后点击 ENEMY/ALLY 技能进入目标选择；SELF 技能直接进入既有命令路径，不要求玩家再点目标。
+  - 目标选择期间左键点击合法 Pawn 只确认一次，交给 `PlayerController.order_skill_instance(skill, target)`；点击非法 Pawn、空白地或 UI 控件不得误施法。
+  - 右键或 Escape 取消目标选择并清除 SkillSlot/TARGETING 状态；普通右键移动命令与选中命令在非 targeting 状态下保持原行为。
+  - 暂停式战斗中目标选择期间允许暂停/恢复；恢复后仍可继续确认，单位死亡或目标技能失效时自动取消且无副作用。
+  - Gameplay 测试覆盖 SELF 直接施法、ENEMY/ALLY 点击确认、非法目标拒绝、右键/Escape 取消、技能切换和玩家死亡清理。
+- 范围：`game/main/main.gd`、`game/main/main.tscn`、必要的 `project.godot` InputMap（仅当需要 cancel 动作时）与 gameplay/integration 测试。
+- 非范围：建筑菜单、4v4 编队、拖拽施法、范围/AOE 指示器、连续施法队列。
+- 依赖：`INC-UI-012`、`INC-COMBAT-005`、`INC-COMBAT-006`。
+- 检索证据：待前置 Increment 计划落库后按 Git Diff 复核；当前左键只负责选中玩家，右键只负责攻击/移动，技能点击直接使用既有攻击目标。
+- 风险：左键既要选中玩家又要确认技能目标，必须由明确 targeting 状态隔离；鼠标 UI 点击不应穿透到世界坐标；暂停/恢复必须清理由死引用。
+- 实现说明：主场景保留唯一 targeting 路由，不把鼠标坐标或 UI 文案下沉到 Pawn/Controller；控制器仍负责最终合法性裁决。
+- 变更文件：待实现回填。
+- 测试证据：待实现回填。
+- 验证状态：未验证
+- 已知问题：待实现回填。
+- 用户验收：待验收
+- Git：待验收后提交
+- 备注：父 Increment 为 `INC-CROSS-012`；本 Increment 只负责输入与命令接线。

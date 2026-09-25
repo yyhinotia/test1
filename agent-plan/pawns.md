@@ -555,3 +555,33 @@
 - 验收时间：2026-09-25T17:17:48+08:00
 - Git：`main` / `200e822`
 - 备注：父 Increment 为 `INC-CROSS-011`；本 Increment 只提供数据与命令能力，不实现技能栏视觉。
+
+
+## INC-PAWNS-014：三种战术主动技能与数据契约
+
+- 状态：accepted
+- 创建时间：2026-09-25T17:31:30+08:00
+- 最后修改：2026-09-25T17:34:51+08:00
+- 主题：pawns
+- 来源：`docs/build-mvp.md` MVP-1；用户要求按 docs 新需求细化 Increment 并开发。
+- 目标：在保留既有主动技能执行链的前提下，把技能从“只有伤害倍率”升级为可声明目标类型与效果类型的静态数据契约，并落地输出、生存、控制三种战术技能资源，使后续目标解析、Effect System 与 Build 组合有稳定数据来源。
+- 验收标准：
+  - `ActiveSkillDefinition` 新增 `description`、`target_type`、`effect_type`、`effect_value`、`effect_duration` 字段；目标类型至少包含 `SELF` / `ALLY` / `ENEMY`，效果类型至少包含 `DAMAGE` / `HEAL` / `SHIELD` / `STUN`；旧技能默认仍为敌方伤害，既有 `damage_multiplier` 与调用方必须保持兼容。
+  - 新增三个已配置技能资源：御剑斩（ENEMY + DAMAGE，短冷却/低消耗）、护体真气（SELF + SHIELD，持续参数保留给后续 Effect System）、定身术（ENEMY + STUN，高消耗/长冷却）；三者不得只是同一伤害效果的不同数值。
+  - `PawnData` 继续通过 `active_skills` 使用同一资源实例；默认玩家预设保持最多 2 个有效主动技能且 Build 校验不因新增字段失败，其余技能资源可供测试与后续 Build 选择。
+  - 单元/集成测试覆盖字段默认值、负数归一化、三个资源的类型差异、默认玩家 Build 容量与资源引用；不得只断言“资源能加载”。
+- 范围：`game/shared/resources/active_skill_definition.gd`、`game/pawns/data/*.tres`、必要的单元测试与数据契约回归。
+- 非范围：目标选择 UI、真实 Effect 结算、Stun 状态机、Build 装配界面、正式图标、VFX、Buff 编辑器与复杂 Effect[]。
+- 依赖：`INC-PAWNS-013`、`INC-COMBAT-003`（均已验收）。
+- 检索证据：已执行 `git status --short --branch`（`main...origin/main`，仅 `docs/build-mvp.md` 未跟踪）、`git diff --unified=0 -- agent-plan/`（空）、`git diff --cached --unified=0 -- agent-plan/`（暂存区为空）、`git log -3 --oneline -- agent-plan/`（最新计划提交 `73a256f`）与 `git grep -n -E "INC-(PAWNS|COMBAT|UI|CORE|CROSS|TESTING)-[0-9]{3}" -- agent-plan/`；当前最高编号为 PAWNS-013、COMBAT-004、UI-011、CORE-005、CROSS-011、TESTING-003。`graphify-out/` 缺失，本 Increment 以 Godot MCP 场景树与定向源码读取补足结构基线；`ActiveSkillDefinition` 当前只有伤害倍率，`player_pawn.tres` 只有御剑斩。
+- 风险：新增字段必须兼容旧 `.tres` 与既有测试；`effect_value` 与 `damage_multiplier` 不能形成两个互相漂移的伤害真相；默认玩家只有 2 个主动槽，必须用测试构造三种组合而不能把默认 Build 配成超容量。
+- 实现说明：数据层只描述目标与效果，不在 `ActiveSkillDefinition` 内执行结算；旧 `damage_multiplier` 继续作为伤害兼容字段，新增效果的运行时语义由 `INC-COMBAT-005/006` 统一消费。
+- 变更文件：`docs/build-mvp.md`（来源文档）、`game/shared/resources/active_skill_definition.gd`、`game/pawns/data/player_sword_skill.tres`、`game/pawns/data/player_guard_skill.tres`（新增）、`game/pawns/data/player_binding_skill.tres`（新增）、`game/pawns/data/player_pawn.tres`、`test/unit/active_skill_definition_test.gd`、`test/unit/tactical_skill_catalog_test.gd`（新增）、`test/unit/pawn_info_model_test.gd`、`test/integration/pawn_build_test.gd`、`test/gameplay/main_scene_gameplay_test.gd`。
+- 测试证据：统一门禁 `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` 通过：GdUnit4 unit 87 / integration 58 / gameplay 26，共 171 cases、0 failures；headless 10 suites、549 assertions、0 failing suites。定向用例：`active_skill_definition_test.gd`（新字段默认值、负数归一化、SELF 施法距离、默认玩家两技能）、`tactical_skill_catalog_test.gd`（御剑斩 / 护体真气 / 定身术的目标类型与效果类型差异）、`pawn_info_model_test.gd` 与 `pawn_build_test.gd`（默认 Build 主动 2/2 基线）。Godot MCP `validate` 对 `active_skill_definition.gd` 与两个新增测试脚本通过；`git diff --check` 通过。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T17:34:51+08:00
+- 已知问题：Effect System 尚未落地，`effect_value` / `effect_duration` 目前只作为数据契约存在；护体真气与定身术暂不进入默认 Build，供测试与后续 Build 选择使用。
+- 用户验收：已验收
+- 验收时间：2026-09-25T17:34:51+08:00
+- Git：`main` / `65a494d`
+- 备注：父 Increment 为 `INC-CROSS-012`；本 Increment 只建立三种战术技能的静态契约与资源，不宣称目标选择或效果结算已经完成。验收依据：用户 2026-09-25T17:31+08:00 回复“验收通过，分increment提交”。

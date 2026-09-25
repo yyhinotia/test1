@@ -297,6 +297,29 @@
 - Git：`main` / `200e822`、`70a09f1`、`3938038`、`84d5ef7`、`182190b`、`cecc91d`
 - 备注：六个子 Increment 均已验证并按 Increment 拆分提交；最终计划回写提交记录在 `_index.md` v4.6。
 
+### INC-CROSS-012：三种战术技能与 Build → Combat 玩法闭环
+
+- 状态：in_progress
+- 创建时间：2026-09-25T17:31:30+08:00
+- 最后修改：2026-09-25T17:31:30+08:00
+- 来源：`docs/build-mvp.md`（用户要求按 docs 新需求细化 Increment 并开发）。
+- 目标：把目前的“多技能工程链”推进为最小可验证玩法闭环：三种真正不同的技能效果（输出 / 生存 / 控制）、Self/Ally/Enemy 目标类型、最小 Effect System、鼠标目标选择和两槽 Build 实战差异同时成立。
+- 子 Increment：`INC-PAWNS-014`、`INC-COMBAT-005`、`INC-COMBAT-006`、`INC-UI-012`、`INC-CORE-006`、`INC-TESTING-004`。
+- 实施顺序：PAWNS-014 → COMBAT-005 → COMBAT-006 → UI-012 → CORE-006 → TESTING-004；高冲突文件 `main.tscn`、`main.gd`、`project.godot`、`pawn.tscn`、`_index.md` 串行写入。
+- 验收标准与证据：
+  - 御剑斩、护体真气、定身术在数据层分别声明 DAMAGE / SHIELD / STUN 与 ENEMY / SELF / ENEMY 目标，三者不是同一伤害效果换数值。
+  - 玩家可以点击技能格进入目标选择，点击合法目标确认；Self 技能立即施放；右键/Escape 可取消；非法目标不能产生资源、冷却或伤害副作用。
+  - 治疗、护盾、眩晕能在真实战斗状态中观察到；眩晕期间目标不能移动/攻击/施法，持续时间到期后恢复。
+  - 两槽 Build 至少形成输出+生存、输出+控制、生存+控制三种不同战斗过程，自动化测试能给出轨迹差异证据。
+  - 完成时必须有 Godot MCP validate、统一测试门禁、专项 integration/gameplay 证据与 `git diff --check`；不把“三个按钮可点击”当作玩法闭环完成。
+- 非范围：完整 Buff 编辑器、Effect[]/Condition/Trigger/Modifier、AOE/地面指示器、正式数值平衡、技能升级、存档、网络同步、复杂 AI 与正式 VFX。
+- 依赖：`INC-CROSS-011` 已验收；`docs/build-mvp.md` 为需求来源。
+- 风险：目标类型会改变旧控制器的“默认敌方目标”假设；Effect System 容易膨胀；Stun 容易与暂停/冷却混用；目标选择 UI 会增加主场景与 Pawn 场景的几何回归面。
+- 验证结论：待子 Increment 完成。
+- 验收时间：待用户明确验收
+- Git：待验收后提交
+- 备注：父 Increment 只有全部子 Increment 验证通过且用户明确验收后才能进入 `accepted`；当前先实现静态技能契约与目标规则。
+
 ## 活跃 Increment
 
 | ID | 父 Increment | 主题 | 状态 | 摘要 | 最后修改 | 验证 | 验收 | Git |
@@ -353,6 +376,13 @@
 | `INC-UI-011` | `INC-CROSS-011` | ui | `accepted` | SkillBar 动态技能栏与左下角 HUD 起点 | 2026-09-25T17:17:48+08:00 | 通过 | 已验收 | `main` / `84d5ef7` |
 | `INC-CORE-005` | `INC-CROSS-011` | core | `accepted` | 主场景技能栏接入与 1~6 快捷键 | 2026-09-25T17:17:48+08:00 | 通过 | 已验收 | `main` / `182190b` |
 | `INC-TESTING-003` | `INC-CROSS-011` | testing | `accepted` | 技能栏与左下角布局证据 | 2026-09-25T17:17:48+08:00 | 通过 | 已验收 | `main` / `cecc91d` |
+| `INC-CROSS-012` | - | cross | `in_progress` | 三种战术技能与 Build → Combat 玩法闭环 | 2026-09-25T17:31:30+08:00 | 未验证 | 待验收 | 待验收后提交 |
+| `INC-PAWNS-014` | `INC-CROSS-012` | pawns | `accepted` | 三种战术主动技能与数据契约 | 2026-09-25T17:34:51+08:00 | 验证通过 | 已验收 | `main` / `65a494d` |
+| `INC-COMBAT-005` | `INC-CROSS-012` | combat | `accepted` | 技能目标类型与控制器目标解析 | 2026-09-25T17:34:51+08:00 | 验证通过 | 已验收 | `main` / `df36f24` |
+| `INC-COMBAT-006` | `INC-CROSS-012` | combat | `planned` | 最小 Skill Effect System（Damage/Heal/Shield/Stun） | 2026-09-25T17:31:30+08:00 | 未验证 | 待验收 | 待验收后提交 |
+| `INC-UI-012` | `INC-CROSS-012` | ui | `planned` | 技能目标选择交互状态与合法目标高亮 | 2026-09-25T17:31:30+08:00 | 未验证 | 待验收 | 待验收后提交 |
+| `INC-CORE-006` | `INC-CROSS-012` | core | `planned` | 主场景技能目标选择与取消路由 | 2026-09-25T17:31:30+08:00 | 未验证 | 待验收 | 待验收后提交 |
+| `INC-TESTING-004` | `INC-CROSS-012` | testing | `planned` | 三种技能战术差异与 Build 变化证据 | 2026-09-25T17:31:30+08:00 | 未验证 | 待验收 | 待验收后提交 |
 
 ## 已完成 Increment
 
@@ -387,6 +417,8 @@
 
 | 版本 | 时间 | 变更 |
 |---|---|---|
+| v4.8 | 2026-09-25T17:35:46+08:00 | 完成并验收 `INC-CROSS-012` 前两个子 Increment：`INC-PAWNS-014`（技能数据契约与御剑斩 / 护体真气 / 定身术三份资源，`65a494d`）与 `INC-COMBAT-005`（SELF / ALLY / ENEMY 目标解析，`df36f24`）；统一门禁 GdUnit4 unit 87 / integration 58 / gameplay 26、headless 10 suites 549 assertions 全通过；`INC-COMBAT-006`、`INC-UI-012`、`INC-CORE-006`、`INC-TESTING-004` 仍为 planned，待后续开发 |
+| v4.7 | 2026-09-25T17:31:30+08:00 | 按 `docs/build-mvp.md` 细化并启动 `INC-CROSS-012`：把三种战术技能、Self/Ally/Enemy 目标解析、Damage/Heal/Shield/Stun Effect System、技能目标选择与两槽 Build 战斗差异拆成 6 个可独立验证的 Increment；先启动 `INC-PAWNS-014` 建立技能数据契约与三份技能资源 |
 | v4.6 | 2026-09-25T17:17:48+08:00 | 完成 `INC-CROSS-011` 六个子 Increment 并验收落库：多主动技能、SkillSlot 状态读模型、固定技能格、动态 SkillBar/左下 Dock、主场景 1~6/点击接线与真实窗口布局证据；GdUnit4 160 cases、0 failures，headless 549 assertions、0 failing；按 Increment 拆分 6 个功能/测试提交（`200e822`、`70a09f1`、`3938038`、`84d5ef7`、`182190b`、`cecc91d`），随后执行本计划回写提交 |
 | v4.5 | 2026-09-25T17:01:58+08:00 | 启动 `INC-CROSS-011`（战斗技能栏与左下角 HUD 布局，来源 `docs/战斗技能ui.md`）：按 pawns → combat → ui → core → testing 顺序登记六个子 Increment，先建立多主动技能数据/命令、冷却与灵力状态读模型和固定 SkillSlot，再实现动态 SkillBar、左下 Dock 与主场景 1~6/点击接线 |
 | v4.4 | 2026-09-25T16:51:32+08:00 | 用户验收通过 `INC-CROSS-003`~`INC-CROSS-010`（含独立 Increment `INC-COMBAT-003`、`INC-PAWNS-006`、`INC-PAWNS-009`）并按 Increment 回溯拆分提交：12 个功能/测试提交 + 1 个文档回写提交，工作区自 `3bd28fb` 起累积的全部待验收变更落库；被多个 Increment 共同修改的文件按其最终内容归入首次引入它的提交 |

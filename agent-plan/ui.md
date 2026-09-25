@@ -464,3 +464,32 @@
 - 验收时间：2026-09-25T17:17:48+08:00
 - Git：`main` / `84d5ef7`
 - 备注：父 Increment 为 `INC-CROSS-011`。
+
+
+## INC-UI-012：技能目标选择交互状态与合法目标高亮
+
+- 状态：planned
+- 创建时间：2026-09-25T17:31:30+08:00
+- 最后修改：2026-09-25T17:31:30+08:00
+- 主题：ui
+- 来源：`docs/build-mvp.md` MVP-4。
+- 目标：在不引入复杂瞄准器的前提下，让技能格能表达 NORMAL / SELECTED / TARGETING 交互状态，并为合法目标提供可点击、可取消、可高亮的反馈；施法可行性仍由既有状态读模型负责。
+- 验收标准：
+  - SkillSlot 的游戏可施放状态与交互状态分离：可施放状态继续使用 READY/COOLDOWN/NO_RESOURCE/DISABLED，交互状态使用 NORMAL/SELECTED/TARGETING；两者不得互相冒充。
+  - 点击需要目标的技能后，SkillSlot 进入 TARGETING 高亮；点击 SELF 技能不进入 TARGETING；右键或 Escape 取消后所有技能格回到 NORMAL。
+  - 合法目标悬停时提供明确高亮，非法目标不显示可确认状态；目标高亮不得覆盖生命条、选中框或暂停遮罩。
+  - UI 只发 `targeting_started` / `targeting_cancelled` / `cast_requested` 请求，不修改 Pawn 的资源、冷却或 controller 命令。
+  - 集成/玩法测试覆盖三种技能进入或跳过 TARGETING、取消、重新选择技能以及合法目标高亮。
+- 范围：`game/ui/skill_slot.gd`、`game/ui/skill_bar.gd`、必要场景节点与 `game/pawns/pawn.tscn` 目标高亮节点、对应 UI 测试。
+- 非范围：AOE、施法范围指示器、方向/地面选择、复杂鼠标指针、正式技能图标。
+- 依赖：`INC-PAWNS-014`、`INC-COMBAT-005`、`INC-COMBAT-006`。
+- 检索证据：待前置 Increment 计划落库后按 Git Diff 复核；当前 SkillSlot 只有 SELECTED 状态常量，主场景没有 TARGETING 路由，Pawn 场景只有选中框没有目标悬停框。
+- 风险：悬停高亮不能通过永久设置 `set_selected()` 冒充选中；Container 重排不得改变 64×64 技能格；新增 Pawn 场景节点必须保持暂停遮罩绘制顺序与真实窗口布局证据。
+- 实现说明：交互状态由 SkillBar/SkillSlot 持有，目标合法性由战斗层查询；UI 不复制阵营或距离规则。
+- 变更文件：待实现回填。
+- 测试证据：待实现回填。
+- 验证状态：未验证
+- 已知问题：待实现回填。
+- 用户验收：待验收
+- Git：待验收后提交
+- 备注：父 Increment 为 `INC-CROSS-012`；本 Increment 不接主场景输入，输入路由由 `INC-CORE-006` 完成。
