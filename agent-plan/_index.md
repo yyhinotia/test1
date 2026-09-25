@@ -379,7 +379,7 @@
 | `INC-CROSS-012` | - | cross | `in_progress` | 三种战术技能与 Build → Combat 玩法闭环 | 2026-09-25T17:31:30+08:00 | 未验证 | 待验收 | 待验收后提交 |
 | `INC-PAWNS-014` | `INC-CROSS-012` | pawns | `accepted` | 三种战术主动技能与数据契约 | 2026-09-25T17:34:51+08:00 | 验证通过 | 已验收 | `main` / `65a494d` |
 | `INC-COMBAT-005` | `INC-CROSS-012` | combat | `accepted` | 技能目标类型与控制器目标解析 | 2026-09-25T17:34:51+08:00 | 验证通过 | 已验收 | `main` / `df36f24` |
-| `INC-COMBAT-006` | `INC-CROSS-012` | combat | `planned` | 最小 Skill Effect System（Damage/Heal/Shield/Stun） | 2026-09-25T17:31:30+08:00 | 未验证 | 待验收 | 待验收后提交 |
+| `INC-COMBAT-006` | `INC-CROSS-012` | combat | `accepted` | 最小 Skill Effect System（Damage/Heal/Shield/Stun） | 2026-09-25T17:39:59+08:00 | 验证通过 | 已验收 | 待提交 |
 | `INC-UI-012` | `INC-CROSS-012` | ui | `planned` | 技能目标选择交互状态与合法目标高亮 | 2026-09-25T17:31:30+08:00 | 未验证 | 待验收 | 待验收后提交 |
 | `INC-CORE-006` | `INC-CROSS-012` | core | `planned` | 主场景技能目标选择与取消路由 | 2026-09-25T17:31:30+08:00 | 未验证 | 待验收 | 待验收后提交 |
 | `INC-TESTING-004` | `INC-CROSS-012` | testing | `planned` | 三种技能战术差异与 Build 变化证据 | 2026-09-25T17:31:30+08:00 | 未验证 | 待验收 | 待验收后提交 |

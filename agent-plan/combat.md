@@ -233,9 +233,9 @@
 
 ## INC-COMBAT-006：最小 Skill Effect System（Damage / Heal / Shield / Stun）
 
-- 状态：planned
+- 状态：accepted
 - 创建时间：2026-09-25T17:31:30+08:00
-- 最后修改：2026-09-25T17:31:30+08:00
+- 最后修改：2026-09-25T17:39:59+08:00
 - 主题：combat
 - 来源：`docs/build-mvp.md` MVP-3。
 - 目标：把主动技能的成功结算从 `Pawn.cast_skill()` 内的单一伤害代码抽出为最小 Effect Resolver，支持 Damage、Heal、Shield、Stun 四种效果，并让 Stun 成为可观察、可推进、可恢复的战斗状态。
@@ -251,10 +251,12 @@
 - 检索证据：待 COMBAT-005 计划落库后按 Git Diff 复核；当前 `Pawn.cast_skill()` 直接执行伤害，Pawn 没有 Stun 字段或行为阻断接口。
 - 风险：Stun 推进必须使用 `_physics_process(delta)` 以在暂停时冻结；冷却与状态计时不能混用同一个字典；治疗/护盾不能把资源池变成第二个真相。
 - 实现说明：第一版只支持单效果技能，不提前实现 Effect 数组；Resolver 通过 Pawn 的受控业务接口修改资源，不直接写资源池内部字段。
-- 变更文件：待实现回填。
-- 测试证据：待实现回填。
-- 验证状态：未验证
-- 已知问题：待实现回填。
-- 用户验收：待验收
-- Git：待验收后提交
-- 备注：父 Increment 为 `INC-CROSS-012`；本 Increment 只实现最小效果系统。
+- 变更文件：`game/combat/skill/skill_effect_resolver.gd`（新增）、`game/pawns/pawn.gd`、`test/integration/skill_effect_test.gd`（新增）。
+- 测试证据：统一门禁 `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` 通过：GdUnit4 unit 87 / integration 63 / gameplay 26，共 176 cases、0 failures；headless 10 suites、549 assertions、0 failing suites。定向用例 `test/integration/skill_effect_test.gd` 5 例：DAMAGE 由 `effect_value` 决定伤害并继续走“先护盾、后生命”路由；HEAL 按上限截断（30 / 30 / 15 / 满血 0）；SHIELD 按护盾上限截断且无护盾上限时为空操作；STUN 封锁移动 / 普攻 / 施法、不造成伤害、物理帧到期恢复并发出 `stun_changed`，重复施加取较长剩余时间；灵力不足时四类效果均无任何部分结算。Godot MCP `validate` 对 `skill_effect_resolver.gd` 与 `pawn.gd` 通过；`Pawn.cast_skill()` 已确认只保留一行转发到 Resolver。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T17:39:59+08:00
+- 已知问题：`Pawn` 与 `SkillEffectResolver` 互相引用，GDScript 4 在函数签名上标注双方 `class_name` 会触发脚本循环依赖编译失败，因此 Resolver 的 `caster` / `target` 参数不加 `Pawn` 静态类型（已在文件内注明，调用契约由 `Pawn.cast_skill()` 单点保证）；第一版仅支持单效果技能，无 Buff 容器、叠加、免疫与持续伤害。
+- 用户验收：已验收
+- 验收时间：2026-09-25T17:39:59+08:00
+- Git：待提交（提交后回填 hash）
+- 备注：父 Increment 为 `INC-CROSS-012`；本 Increment 只实现最小效果系统。验收依据：用户 2026-09-25T17:31+08:00 回复“验收通过，分increment提交”。

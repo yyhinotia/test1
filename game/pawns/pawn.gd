@@ -11,6 +11,7 @@ signal attack_performed(target: Pawn)
 signal skill_cast(pawn: Pawn, skill: ActiveSkillDefinition, target: Pawn)
 signal skill_cooldown_changed(pawn: Pawn, skill_id: StringName, remaining: float)
 signal died(pawn: Pawn)
+signal stun_changed(pawn: Pawn, remaining: float, active: bool)
 
 enum State {
 	IDLE,
@@ -64,6 +65,9 @@ var _attack_state_remaining: float = 0.0
 var _visual_tween: Tween
 var _selected: bool = false
 var _skill_cooldowns: Dictionary = {}
+
+## 眩晕只封锁行动：持续期间不能移动、普通攻击或施放技能，不修改生命与其它资源。
+var _stun_remaining: float = 0.0
 
 var state: int:
 	get:
@@ -250,6 +254,7 @@ func _physics_process(delta: float) -> void:
 	if is_dead():
 		return
 	_advance_skill_cooldowns(delta)
+	_advance_stun(delta)
 
 	_attack_cooldown = maxf(_attack_cooldown - delta, 0.0)
 	if _attack_state_remaining > 0.0:
@@ -267,10 +272,10 @@ func is_dead() -> bool:
 	return not is_alive()
 
 func can_move() -> bool:
-	return is_alive()
+	return is_alive() and not is_stunned()
 
 func can_attack() -> bool:
-	return is_alive() and _attack_cooldown <= 0.0
+	return is_alive() and not is_stunned() and _attack_cooldown <= 0.0
 
 func move_towards(target_position: Vector2) -> void:
 	if not can_move():
@@ -333,7 +338,7 @@ func restore_spirit(amount: float) -> float:
 func can_cast_skill(skill: ActiveSkillDefinition, target: Pawn) -> bool:
 	if skill == null or not skill.is_configured() or data == null:
 		return false
-	if not is_alive():
+	if not is_alive() or is_stunned():
 		return false
 	if not is_valid_skill_target(skill, target):
 		return false
@@ -362,22 +367,64 @@ func is_valid_skill_target(skill: ActiveSkillDefinition, target: Pawn) -> bool:
 		_:
 			return false
 
-## 执行一次主动技能。成功时依次扣除灵力、造成伤害、记录冷却并发出信号。
+## 执行一次主动技能：本方法只做薄转发，结算顺序统一由 `SkillEffectResolver` 负责
+## （目标与条件校验 → 灵力原子扣除 → 按 effect_type 应用效果 → 记录冷却并广播）。
 func cast_skill(skill: ActiveSkillDefinition, target: Pawn) -> bool:
-	if not can_cast_skill(skill, target):
-		return false
-	var cost: float = skill.get_normalized_spirit_cost()
-	if cost > 0.0 and not try_spend_spirit(cost):
-		return false
-	var damage: float = maxf(1.0, data.attack * skill.get_normalized_damage_multiplier())
-	target.take_damage(damage)
+	return SkillEffectResolver.resolve(self, skill, target)
+
+
+## 由 `SkillEffectResolver` 在效果生效后调用：记录冷却并广播技能结算信号。
+func commit_skill_cast(skill: ActiveSkillDefinition, target: Pawn) -> void:
 	var cooldown: float = skill.get_normalized_cooldown()
 	if cooldown > 0.0:
 		_skill_cooldowns[skill.id] = cooldown
-	skill_cast.emit(self, skill, target)
-	if cooldown > 0.0:
 		skill_cooldown_changed.emit(self, skill.id, cooldown)
-	return true
+	skill_cast.emit(self, skill, target)
+
+
+## 治疗入口：经 HealthComponent 兼容门面增加生命（按上限截断，已归零单位不复活），返回实际恢复量。
+func restore_health(amount: float) -> float:
+	if health == null:
+		return 0.0
+	var before: float = current_health
+	health.heal(amount)
+	return maxf(current_health - before, 0.0)
+
+
+## 护盾入口：按护盾上限截断，返回实际增加量；`max_shield <= 0` 时是空操作。
+func grant_shield(amount: float) -> float:
+	if health == null:
+		return 0.0
+	var before: float = current_shield
+	health.grant_shield(amount)
+	return maxf(current_shield - before, 0.0)
+
+
+## 施加眩晕：立即停止移动并记录剩余时间；重复施加取较长剩余时间，不做叠加。
+func apply_stun(duration: float) -> float:
+	if not is_alive() or not is_finite(duration) or duration <= 0.0:
+		return 0.0
+	_stun_remaining = maxf(_stun_remaining, duration)
+	stop_moving()
+	stun_changed.emit(self, _stun_remaining, true)
+	return _stun_remaining
+
+
+func is_stunned() -> bool:
+	return _stun_remaining > 0.0
+
+
+func get_stun_remaining() -> float:
+	return _stun_remaining
+
+
+## 眩晕计时只由 `_physics_process` 推进；暂停时 Pawn 不处理物理帧，眩晕自然冻结。
+func _advance_stun(delta: float) -> void:
+	if delta <= 0.0 or _stun_remaining <= 0.0:
+		return
+	_stun_remaining = maxf(_stun_remaining - delta, 0.0)
+	if _stun_remaining <= 0.0:
+		stun_changed.emit(self, 0.0, false)
 
 func is_skill_ready(skill: ActiveSkillDefinition) -> bool:
 	if skill == null or not skill.is_configured():
@@ -430,6 +477,8 @@ func set_selected(value: bool) -> void:
 	selection_indicator.visible = _selected
 
 func get_state_label() -> String:
+	if is_stunned():
+		return "眩晕"
 	match _state:
 		State.IDLE:
 			return "待命"
