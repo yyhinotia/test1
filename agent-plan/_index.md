@@ -42,7 +42,7 @@
 | `INC-CROSS-015` | `accepted` | `INC-WORLD-001`、`INC-WORLD-002`、`INC-UI-014`、`INC-CORE-008`、`INC-TESTING-007` | 秘境遭遇入口：把敌人威胁档案变成玩家可进入的遭遇（选择 → 战斗 → 结果 → 重选） | 通过 | 已验收 | 2026-09-25T18:52:41+08:00 |
 | `INC-CROSS-017` | `accepted` | `INC-SECT-001`、`INC-SECT-002`、`INC-SECT-003`、`INC-PAWNS-018`、`INC-UI-016`、`INC-CORE-010`、`INC-WORLD-005`、`INC-TESTING-009` | 最小宗门（MVP-⑤）：把秘境灵石收益变成可升级的宗门设施，产出修为 / 灵草 / 丹药 / 功法 / 强化武器，形成「回去修炼 / 制作 / 强化，然后再次出发」的闭环 | 通过 | 已验收 | 2026-09-25T20:05:25+08:00 |
 | `INC-CROSS-018` | `in_progress` | `INC-CULT-005`、`INC-PAWNS-019`、`INC-WORLD-006`、`INC-UI-017`、`INC-CORE-011`、`INC-TESTING-010` | 突破 → Build 重构：突破执行、运行时境界覆盖、跨遭遇延续、玩家入口与再战证据 | 进行中（4/6 子项已验收） | 待验收 | 2026-09-25T20:39:32+08:00 |
-| `INC-CROSS-019` | `in_progress` | `INC-COMBAT-009`、`INC-PAWNS-021`、`INC-WORLD-007`、`INC-UI-018`、`INC-TESTING-011`、`INC-TESTING-012`（已实现前置：`INC-PAWNS-020` 多单位运行时；已退役：`INC-CORE-012`） | 1v1 → 1vN Build 玩法验证（Build Gameplay Validation） | 待验证 | 待验收 | 2026-09-25T21:45:00+08:00 |
+| `INC-CROSS-019` | `in_progress` | `INC-COMBAT-009`、`INC-PAWNS-021`、`INC-WORLD-007`、`INC-UI-018`、`INC-TESTING-011`、`INC-TESTING-012`（已实现前置：`INC-PAWNS-020` 多单位运行时；已退役：`INC-CORE-012`） | 1v1 → 1vN Build 玩法验证（Build Gameplay Validation） | 待验证 | 待验收 | 2026-09-25T21:50:38+08:00 |
 
 ### INC-CROSS-001：第一个 Pawn MVP
 
@@ -437,11 +437,11 @@
 | `INC-UI-017` | `INC-CROSS-018` | ui | `accepted` | 突破入口与突破后容量预览 | 2026-09-25T20:39:32+08:00 | 验证通过 | 已验收 | `main` / `8de54d9` |
 | `INC-PAWNS-020` | `INC-CROSS-019` | pawns | `awaiting_acceptance` | 多单位运行时（队伍契约 + 1vN 敌人集合；多玩家部分冻结） | 2026-09-25T21:45:00+08:00 | 验证通过（unit 12 / integration 8 / encounter 10，统一门禁 PASS） | 待验收 | `develop` / `4513e65` |
 | `INC-PAWNS-021` | `INC-CROSS-019` | pawns | `awaiting_acceptance` | 最小运行时 Skill Loadout（技能学习与 Build 重配） | 2026-09-25T21:45:00+08:00 | 验证通过（unit 7 / integration 4 / capacity 5，统一门禁 368 cases + 549 assertions PASS） | 待验收 | `develop` / `4e92091` |
-| `INC-COMBAT-009` | `INC-CROSS-019` | combat | `planned` | 1v1 战斗问题窗口与轻量 CombatEvent | 2026-09-25T21:45:00+08:00 | 待验证 | 待验收 | 待提交 |
-| `INC-WORLD-007` | `INC-CROSS-019` | world | `planned` | 固定 1v1 / 1v2 / 1v3 遭遇与首通定身术解锁 | 2026-09-25T21:45:00+08:00 | 待验证 | 待验收 | 待提交 |
+| `INC-COMBAT-009` | `INC-CROSS-019` | combat | `planned` | 1v1 战斗问题窗口与轻量 CombatEvent | 2026-09-25T21:50:38+08:00 | 待验证 | 待验收 | 待提交 |
+| `INC-WORLD-007` | `INC-CROSS-019` | world | `planned` | 固定 1v1 / 1v2 / 1v3 遭遇与首通定身术解锁 | 2026-09-25T21:50:38+08:00 | 待验证 | 待验收 | 待提交 |
 | `INC-CORE-012` | `INC-CROSS-019` | core | `superseded` | 多单位选择、编组命令与暂停战术路由（4v4 冻结退役） | 2026-09-25T21:45:00+08:00 | 未验证 | 未验收（已退役） | 无提交 |
 | `INC-UI-018` | `INC-CROSS-019` | ui | `planned` | 最小 Build A/B 切换面板 | 2026-09-25T21:45:00+08:00 | 待验证 | 待验收 | 待提交 |
-| `INC-TESTING-011` | `INC-CROSS-019` | testing | `planned` | Build Replay 实验记录（自动化证据 + 人工三问） | 2026-09-25T21:45:00+08:00 | 待验证 | 待验收 | 待提交 |
+| `INC-TESTING-011` | `INC-CROSS-019` | testing | `planned` | Build Replay 实验记录（自动化证据 + 人工三问） | 2026-09-25T21:50:38+08:00 | 待验证 | 待验收 | 待提交 |
 | `INC-TESTING-012` | `INC-CROSS-019` | testing | `planned` | 场景化测试入口拆分到 `tests/` | 2026-09-25T21:45:00+08:00 | 待验证 | 待验收 | 待提交 |
 | `INC-SECT-001` | `INC-CROSS-017` | sect | `accepted` | 宗门设施静态定义与六座设施数据 | 2026-09-25T19:38:41+08:00 | 通过 | 已验收 | `main` / `c25ffbc` |
 | `INC-SECT-002` | `INC-CROSS-017` | sect | `accepted` | SectState 运行时：库存 / 设施等级 / 升级 / 修炼 / 收获 | 2026-09-25T19:38:41+08:00 | 通过 | 已验收 | `main` / `8c65ff1` |
@@ -609,6 +609,7 @@
 
 | 版本 | 时间 | 变更 |
 |---|---|---|
+| v5.16 | 2026-09-25T21:50:38+08:00 | 按外部设计评审意见对 `INC-CROSS-019` 做增量调整（不新增 Increment、不改玩法数值）：① 新增 **Gate 0（技术成立前置门）** 与「Gate 0 → Gate A/B → Gate C/D/E」判定顺序，Gate 0 未成立时人工结论无效；② 修正 `INC-COMBAT-009` 的终局判定为 1vN 语义（敌方全灭才判胜、玩家单位死亡即失败、主目标单独死亡不提前结束），对齐 `INC-PAWNS-020` 与 `encounter_session.gd` 遗留的「终局判定交给 `INC-COMBAT-009` 接线」约定；③ `INC-WORLD-007` 明确 1v3 的第三名敌人必须是 1v1 的同一个核心 Boss，且 1v2 / 1v3 在全灭判胜落地前不得进入人工验收；④ `INC-TESTING-011` 增加 Round 1 / Round 2 危险窗口应对序列的客观对照判据（Round 1 无 `skill_cancelled`、Round 2 必须出现 `skill_stunned` → `skill_cancelled` 且伤害不结算；序列相同即判 Failure 4），并把 Gate D 改为「原话 + 事件佐证」双证据；⑤ 保留三问硬门，另加非门控问题 Q4「如果这次没有拿到新能力，你还会主动再打一轮吗？」。同步更新 `docs/build-gameplay-validation.md` 的 §6 / §8 / §9 / §10 / §13 与新增修订记录 |
 | v5.15 | 2026-09-25T21:45:00+08:00 | 按用户 objective 把 `INC-CROSS-019` 从 4v4 Vertical Slice 重定义为 **1v1 → 1vN Build 玩法验证**（Build Gameplay Validation）：唯一问题改为「战斗问题 → 新能力 → 主动 Build 重构 → 再战并改变打法」，单一变量改为「定身术」且第一轮奖励不含灵石 / 装备 / 强化 / 随机掉落，验收口径改为 Gate A~E 与 Failure 1~5，人工提问改为开放式三问并保留原话；子 Increment 重定义为 `INC-COMBAT-009`（1v1 问题窗口 + CombatEvent）、`INC-PAWNS-021`（最小运行时 Skill Loadout，编号因 `INC-PAWNS-020` 已被 4v4 队伍契约占用而顺延）、`INC-WORLD-007`（固定 1v1 / 1v2 / 1v3 遭遇）、`INC-UI-018`（最小 Build A/B 切换面板）、`INC-TESTING-011`（Build Replay 实验记录）、`INC-TESTING-012`（`tests/` 场景入口）；`INC-CORE-012` 按 §3.2 标记 `superseded`，4v4 / 队友 / 队伍 HUD / 多选 / 编队 / 仇恨 / AOE / 技能树等按 objective §28 冻结 |
 | v5.14 | 2026-09-25T21:28:47+08:00 | 按评审收紧后的 Gate A / Gate B 口径完成并推送 `INC-PAWNS-020`（`4513e65`，`develop`）：`SquadDefinition` 队伍静态契约（成员 id 唯一、站位数量一致、默认偏移生成）、`SquadResourceSnapshot` / `SquadProgressSnapshot` 按成员 id 捕获与写回、`EncounterDefinition` 新增可选 `enemy_squad` / `player_count`（旧 `enemy_profile` 行为不变）、`EncounterSession` 多单位集合与主单位代理（终局仍单点，团队胜负留给 `INC-COMBAT-009`）；新增 unit 12 / integration 8 / encounter 10 用例，unit 层 20/20 套件与统一门禁 357 cases + 549 assertions `RESULT: PASS`；`main` 保持不动，等待用户验收后再并入 |
 | v5.13 | 2026-09-25T21:14:43+08:00 | 按 4v4 玩法验证评审收紧 INC-CROSS-019：父 Increment 拆成 Gate A（技术 Slice）与 Gate B（玩法假设），把「玩家想重构」与「重构后战斗真的发生决策变化」设为两个独立检查点；45 灵石与定身术解锁解耦，Gate B 只重打同一个 4v4 Boss 而不重播 2v2 / 3v3；人工验收从二元「会 / 不会」升级为五问 + 保留原话 + Failure A~D；新增 §5.1 / §12.6 的 `tests/` 场景化测试入口目录规范，并登记 `INC-TESTING-012` |
@@ -705,7 +706,7 @@
 
 - 状态：in_progress
 - 创建时间：2026-09-25T20:47:54+08:00
-- 最后修改：2026-09-25T21:45:00+08:00
+- 最后修改：2026-09-25T21:50:38+08:00
 - 重定义说明：本父 Increment 原为「4v4 Vertical Slice 玩法验证（Gate A + Gate B）」，2026-09-25T21:45:00+08:00 按用户 objective（`INC-CROSS-019：1v1 → 1vN Build 玩法验证`）重定义为当前的 Build 玩法验证实验；4v4 专用范围（队友、队伍 HUD、多单位选择、编队、仇恨、玩家队伍快照）按 objective §28 冻结延后。原定义原文保留在 Git 历史 `b36e9c0`（`develop`）。
 - 目标：用一个最小实验装置回答唯一玩法问题——当玩家在战斗中遇到一个明确的问题、并获得一个可以解决该问题的新技能后，玩家是否会主动重构自己的 Build 并再次进入战斗，而且第二轮真的采用了不同的解决方案。
 - 唯一玩法问题：不是「奖励 → 更强 → 再打一遍」，而是「奖励 → 新策略 → 重构 → 新的战斗过程」。判定必须来自玩家原话，不能由自动化断言代替。
@@ -716,7 +717,9 @@
   - Stage 3 — Build Replay：用同一 Boss、一致行为模式重打同一问题，观察玩家是否主动使用定身术改变战斗过程。
 - Build 差异设计：Build A = 御剑斩 + 护体真气（降低问题造成的损失，被动处理问题）；Build B = 御剑斩 + 定身术（改变问题本身，主动选择何时阻止危险技能）。两者不是 DPS 差异。
 - 变量控制：第一轮奖励只有定身术（`game/pawns/data/player_binding_skill.tres`），不得同时给灵石 / 装备 / 强化 / 随机掉落；45 灵石等经济奖励不进入本实验。Build 只做两套固定预设，禁止自动切换，玩家必须主动点击「使用 Build B」。
-- 五个 Gate（全部成立才允许父级 `accepted`）：
+- Gate 0（技术成立前置门，未通过不得进入人工验收）：1v1 危险窗口可稳定复现；1v2 / 1v3 采用「敌方全灭才判胜、玩家单位死亡即失败」的终局判定；定身可真实打断危险技能（`skill_stunned` → `skill_cancelled` 且该次伤害不结算）；Build A / B 均可加载并当帧影响 SkillBar；同一遭遇可重复挑战且事件序列不跨局污染；`tests/` 场景入口可独立启动。
+- 判定顺序（不可颠倒）：Gate 0 技术成立 → Stage 1 判 Gate A / Gate B → Stage 3 判 Gate C / Gate D / Gate E。Gate 0 未成立时人工结论无效，不得记入 Gate A~E；Gate D 必须同时具备玩家原话与 CombatEvent 客观佐证（`skill_cancelled`），两者冲突时以事件序列为准。
+- 五个玩法 Gate（全部成立才允许父级 `accepted`）：
   - Gate A：玩家能描述第一轮中的具体战斗问题（不是「挺难的」这类泛化描述）。
   - Gate B：玩家能理解「定身 → 可以解决第一轮的问题」这一关联。
   - Gate C：玩家在没有强制要求的情况下主动选择 Build B。
@@ -728,9 +731,10 @@
   - Failure 3：换 Build 的原因是「因为你让我试试」，而不是第一轮的问题。
   - Failure 4：Build A / B 的实际战斗体验几乎完全一样。
   - Failure 5：玩家只关注伤害更高 / 数值更大，不关心技能交互与战术选择。
-- 人工验收剧本（三问，开放式提问、保留原话、不得诱导）：① 用 Build A 打完 1v1 → ② 首通获得定身术 → ③ 玩家自行决定是否切换 Build → ④ 用当前 Build 重打同一个 1v1。Q1 第一轮战斗中，你觉得最麻烦的问题是什么？Q2 拿到定身术后，你为什么选择 / 不选择换 Build？Q3 第二次战斗和第一次相比，你具体改变了什么？归档标签为 `ReplayIntent` / `BuildChange` / `Reason` / `PerceivedImpact`，但必须同时保留原话。
+- 人工验收剧本（三问，开放式提问、保留原话、不得诱导）：① 用 Build A 打完 1v1 → ② 首通获得定身术 → ③ 玩家自行决定是否切换 Build → ④ 用当前 Build 重打同一个 1v1。Q1 第一轮战斗中，你觉得最麻烦的问题是什么？Q2 拿到定身术后，你为什么选择 / 不选择换 Build？Q3 第二次战斗和第一次相比，你具体改变了什么？归档标签为 `ReplayIntent` / `BuildChange` / `Reason` / `PerceivedImpact`，但必须同时保留原话。可附加记录非门控问题 Q4「如果这次没有拿到新能力，你还会主动再打一轮吗？」，该问题不参与 Gate 判定，仍须保留原话。
 - 技术验收标准：
-  - 1v1 / 1v2 / 1v3 遭遇均可稳定运行，且 1v1 为固定核心 Boss、行为模式在两次对照中保持一致。
+  - 1v1 / 1v2 / 1v3 遭遇均可稳定运行，且 1v1 为固定核心 Boss、行为模式在两次对照中保持一致；1v3 的第三名敌人与 1v1 为同一个 Boss。
+  - 1vN 终局判定为「敌方全灭才判胜、玩家单位死亡即失败」，主目标单独死亡不提前结束战斗（由 `INC-COMBAT-009` 实现）。
   - 技能可以学习并进入运行时 Loadout；Build A / B 可以切换；定身可以真实改变敌人状态并取消被覆盖的危险技能。
   - 同一遭遇可以重复挑战且不残留上一局单位 / 事件；CombatEvent 可以记录关键行为。
   - `main.tscn` 只保留正式入口职责，测试场景入口拆分到 `tests/`；`test/` 自动化断言与 `tests/` 场景入口边界清晰。
@@ -741,7 +745,7 @@
 - 非范围（objective §28 明确禁止）：4v4、队友、队伍 HUD、多单位选择、编队、仇恨系统、复杂 AI、装备系统、随机掉落、多套 Build 保存、Build 编辑器、技能树、五行、AOE、大量新技能 / 敌人 / 职业。
 - 推荐开发顺序：`INC-COMBAT-009` → `INC-PAWNS-021` → `INC-WORLD-007` → `INC-UI-018` → `INC-TESTING-011`。每个子 Increment 都不追求完整系统，它们共同组成一个实验装置。
 - 依赖：`INC-CROSS-018` 已验收部分（运行时境界 / Build 延续）；设计基线 `docs/build-gameplay-validation.md`。
-- 检索证据：2026-09-25T21:45:00+08:00 执行 `git status --short`（`INC-PAWNS-021` 的 6 个脚本改动与 2 个新测试文件；`AGENTS.md` 编辑器噪音已还原）、`git diff --unified=0 -- agent-plan/`（读取本批重定义内容）、`git diff --cached --unified=0 -- agent-plan/`（空）、`git log --oneline -- agent-plan/`（`1dbdba5` → `4513e65` → `b36e9c0`）与 `git grep -n -E "INC-[A-Z]+-[0-9]{3}" -- agent-plan/`；`INC-COMBAT-009` / `INC-WORLD-007` / `INC-UI-018` / `INC-TESTING-011` / `INC-TESTING-012` 均为未实现的 `planned`，可安全重定义；`INC-PAWNS-020` 已被 4v4 队伍契约占用并提交，故 objective 中的「最小运行时 Skill Loadout」顺延为 `INC-PAWNS-021`。
+- 检索证据：2026-09-25T21:50:38+08:00 执行 `git status --short`（工作区干净）、`git diff --unified=0 -- agent-plan/` / `git diff --cached --unified=0 -- agent-plan/`（调整前均为空）、`git log --oneline -- agent-plan/`（HEAD `0f8fb41`）与 `git grep -n -E "INC-(COMBAT-009|WORLD-007|TESTING-011)" -- agent-plan/`；结论：本次只调整已存在且未实现的 `planned` 子 Increment，编号不变、不新增 Increment。历史记录（2026-09-25T21:45:00+08:00）执行 `git status --short`（`INC-PAWNS-021` 的 6 个脚本改动与 2 个新测试文件；`AGENTS.md` 编辑器噪音已还原）、`git diff --unified=0 -- agent-plan/`（读取本批重定义内容）、`git diff --cached --unified=0 -- agent-plan/`（空）、`git log --oneline -- agent-plan/`（`1dbdba5` → `4513e65` → `b36e9c0`）与 `git grep -n -E "INC-[A-Z]+-[0-9]{3}" -- agent-plan/`；`INC-COMBAT-009` / `INC-WORLD-007` / `INC-UI-018` / `INC-TESTING-011` / `INC-TESTING-012` 均为未实现的 `planned`，可安全重定义；`INC-PAWNS-020` 已被 4v4 队伍契约占用并提交，故 objective 中的「最小运行时 Skill Loadout」顺延为 `INC-PAWNS-021`。
 - 风险：最大风险是一次引入过多变量（多单位、编队、队伍 HUD、复杂 AI）导致「玩家想再打一轮」无法归因，因此本阶段必须严格禁止 4v4 与队友系统。第二大风险是奖励不纯（定身术 + 灵石同时到账），必须坚持「奖励 = 新能力」单一变量。第三大风险是自动化替代人工结论，必须坚持 Gate A~E 由玩家原话判定。
 - 退出规则：任一 Failure 1~5 命中，或人工回答显示玩家只是「被要求换」而不是因为战斗问题换，则禁止继续加技能 / 加秘境 / 加职业，必须回到战斗核心重设 Increment。
 - 实现说明：`INC-PAWNS-021`（最小运行时 Skill Loadout）已实现并验证通过，等待用户验收；其余子 Increment 待实现。设计基线 `docs/build-gameplay-validation.md` 随本批新增，`docs/4v4-vertical-slice.md` 标记为冻结延后。
@@ -753,4 +757,5 @@
 - 用户验收：待验收
 - 验收时间：待验收
 - Git：`INC-PAWNS-021` 已提交到 `develop` / `4e92091`；`INC-PAWNS-020` 已在 `develop` / `4513e65`
+- 调整记录（2026-09-25T21:50:38+08:00）：按外部设计评审意见做 5 处增量调整（只改计划与设计基线，不新增 Increment、不改玩法数值）：① 新增 Gate 0（技术成立前置门）与「Gate 0 → Gate A/B → Gate C/D/E」判定顺序；② `INC-COMBAT-009` 终局判定修正为 1vN 全灭判胜（对齐 `INC-PAWNS-020` 与 `game/world/encounter_session.gd` 注释中的既有约定）；③ `INC-WORLD-007` 明确 1v3 第三名敌人 = 1v1 同一个 Boss，且 1v2 / 1v3 在全灭判胜落地前不得进入人工验收；④ `INC-TESTING-011` 增加 Round 1 / Round 2 危险窗口应对序列的客观对照判据，并把 Gate D 改为「原话 + 事件佐证」双证据；⑤ 保留三问硬门，新增非门控问题 Q4。
 - 备注：本父 Increment 只有把「4v4 Vertical Slice」重定义为「Build Gameplay Validation」这一件事，它验证的是**Build 是否值得继续做**，而不是秘境 / 宗门 / 队伍系统是否完整。闭环成立之后，`1vN → NvN → 4v4` 才是逐步增加 Build 决策空间，而不是在猜玩法。

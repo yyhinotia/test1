@@ -391,10 +391,11 @@
 
 - 状态：planned
 - 创建时间：2026-09-25T20:47:54+08:00
-- 最后修改：2026-09-25T21:45:00+08:00
+- 最后修改：2026-09-25T21:50:38+08:00
 - 主题：testing
 - 重定义说明：本 Increment 原定义「4v4 闭环证据、同 Boss 再战对照与人工玩法验收剧本」于 2026-09-25T21:45:00+08:00 按用户 objective 重定义为「1v1 → 1vN 的 Build Replay 实验记录」；4v4 专用证据口径退役，原定义原文保留在 Git 历史 `b36e9c0`（`develop`）。
-- 目标：把父 Increment `INC-CROSS-019` 的五个 Gate 变成可复核证据——自动化只证明机制成立（能学、能装、能切、定身能真实改变敌人状态、同遭遇可重复挑战、事件可记录），人工三问只采集玩家原话，回答「问题是否被描述、奖励是否与问题关联、是否主动重构、行为是否改变、能否解释原因」。
+- 调整说明（2026-09-25T21:50:38+08:00）：按外部设计评审意见做两处收紧——① 把「重构后战斗是否真的发生变化」从只靠玩家自述改为「原话 + CombatEvent 客观对照判据」（Round 1 不得出现 `skill_cancelled`；Round 2 必须出现 `skill_stunned` → `skill_cancelled`，且该次危险技能伤害不结算；两轮序列相同即判 Failure 4）；② 保留三问硬门不变，新增非门控问题 Q4，用于观察「奖励是否是再战动机」。
+- 目标：把父 Increment `INC-CROSS-019` 的 Gate 0 与五个玩法 Gate 变成可复核证据——自动化只证明机制成立（能学、能装、能切、定身能真实改变敌人状态、同遭遇可重复挑战、事件可记录），人工三问只采集玩家原话，回答「问题是否被描述、奖励是否与问题关联、是否主动重构、行为是否改变、能否解释原因」。
 - 验收标准：
   - 机制证据（自动化，不替代人工结论）：
     - 技能可以学习并进入 known skills，可以进入 equipped skills；Build A 与 Build B 均可加载。
@@ -405,14 +406,18 @@
   - 实验记录证据（Round 1 / Round 2 对照）：
     - 产出 `build_replay_record`：Round 1（Build A）与 Round 2（Build B）分别记录 CombatEvent 序列（`danger_window_opened` → `skill_hit` / `skill_cancelled` 等）、承伤合计与战斗时长。
     - 明确记录「第二轮不要求更快或更少掉血」，只要求玩家采用了不同的解决方案；不得把时长 / 承伤优劣写成通过条件。
+    - 客观对照判据（与玩家原话并列，不得只凭自述判定）：Round 1 处理危险窗口的事件序列为 `danger_window_opened` → `skill_hit`（或 `skill_blocked`），不得出现 `skill_cancelled`；Round 2 在 Build B 下处理同一窗口必须出现 `skill_stunned` → `skill_cancelled`，且该次危险技能伤害未结算。两轮应对序列相同即判定 Failure 4，即使玩家自述「换了打法」。
+    - Gate D 证据口径：Gate D 必须同时满足「玩家原话说明用定身解决第一轮问题」与「CombatEvent 出现 `skill_cancelled`」；两者冲突时以事件序列为准，并记入已知问题。
     - 奖励记录只有定身术；灵石 / 装备 / 强化 / 随机掉落不得出现在第一轮奖励字段中。
   - 人工验收剧本（三问，开放提问、保留原话、不得诱导）：
     - 步骤：① 用 Build A 打完 1v1 → ② 首通获得定身术 → ③ 玩家自行决定是否切换 Build → ④ 用当前 Build 重打同一个 1v1。
     - Q1 第一轮战斗中，你觉得最麻烦的问题是什么？
     - Q2 拿到定身术后，你为什么选择 / 不选择换 Build？
     - Q3 第二次战斗和第一次相比，你具体改变了什么？
+    - Q4（附加、非门控、可选记录）：如果这次没有拿到新能力，你还会主动再打一轮吗？该问题不参与 Gate 判定，仅作参考，仍须保留原话。
     - 记录格式：`ReplayIntent`（yes / no）、`BuildChange`（none / A→B / other）、`Reason`（tactical / numerical / curiosity / completion / other）、`PerceivedImpact`（none / low / medium / high）仅作为归档标签，必须同时保留玩家原话；不得用打分替代原话。
-  - 五个 Gate（父 Increment 验收硬门，缺一不可）：
+  - Gate 0（技术成立前置门，必须先成立；未通过不得进入人工验收）：1v1 危险窗口可稳定复现；1v2 / 1v3 为「敌方全灭才判胜、玩家单位死亡即失败」；定身可真实打断危险技能（`skill_stunned` → `skill_cancelled` 且伤害不结算）；Build A / B 可加载并当帧影响 SkillBar；同一遭遇可重复挑战且事件不跨局污染；`tests/` 场景入口可独立启动。
+  - 五个玩法 Gate（父 Increment 验收硬门，缺一不可）：
     - Gate A 玩家能描述第一轮的具体战斗问题（不是「挺难的」这类泛化描述）。
     - Gate B 玩家能理解定身术与第一轮问题的关联。
     - Gate C 玩家在没有强制要求的情况下主动选择 Build B。
@@ -428,7 +433,7 @@
 - 范围：`tests/` 下的 1v1 Build Replay 场景入口与取证脚本、`test/gameplay/` 下的真实主场景机制闭环用例、`test/README.md` 与 `tests/README.md` 的索引说明、人工验收记录归档。
 - 非范围：替代人工验收、1v2 / 1v3 的多目标决策结论（属于 `INC-CROSS-019` Stage 2）、正式平衡测试、随机化压力测试、AOE / 仇恨 / 存档 / 联网测试。
 - 依赖：`INC-COMBAT-009`、`INC-PAWNS-021`、`INC-WORLD-007`、`INC-UI-018`、`INC-TESTING-012`；父 Increment `INC-CROSS-019`。
-- 检索证据：2026-09-25T21:45:00+08:00 执行 `git status --short`（工作区为 `INC-PAWNS-021` 实现与本批 plan 调整）、`git diff --unified=0 -- agent-plan/`（读取本批重定义）、`git log --oneline -5 -- agent-plan/`（最新 `1dbdba5`）与 `git grep -n "INC-TESTING-011"`；现有 gameplay 证据覆盖单单位宗门闭环、秘境闭环与 Build 决策对照，但没有「首通解锁 → 主动重构 → 同遭遇再战 → 行为变化」的实验记录。
+- 检索证据：2026-09-25T21:50:38+08:00 执行 `git status --short`（工作区干净）、`git diff --unified=0 -- agent-plan/`（空）、`git diff --cached --unified=0 -- agent-plan/`（空）、`git log --oneline -- agent-plan/`（HEAD `0f8fb41`）与 `git grep -n -E "INC-(COMBAT-009|WORLD-007|TESTING-011)" -- agent-plan/`；结论：三个 Increment 均为 `planned`、未实现，可安全调整；`game/world/encounter_session.gd` 头部注释与 `_on_unit_died()` 仍为单点终局（敌人死亡即 PLAYER_WIN），证明 1vN 全灭判胜确实未实现。历史记录（2026-09-25T21:45:00+08:00） `git status --short`（工作区为 `INC-PAWNS-021` 实现与本批 plan 调整）、`git diff --unified=0 -- agent-plan/`（读取本批重定义）、`git log --oneline -5 -- agent-plan/`（最新 `1dbdba5`）与 `git grep -n "INC-TESTING-011"`；现有 gameplay 证据覆盖单单位宗门闭环、秘境闭环与 Build 决策对照，但没有「首通解锁 → 主动重构 → 同遭遇再战 → 行为变化」的实验记录。
 - 风险：真实主场景测试容易受暂停、自动隐藏与活动单位残留影响，必须在 `after_test()` 清理，否则用例之间互相污染。第二个风险是把人工结论自动化替代，必须坚持「自动化只证明机制」。第三个风险是提问诱导，必须保持 Q1~Q3 原文并避免在问题里提示定身术与危险技能的关系。
 - 实现说明：待实现。
 - 变更文件：待实现。

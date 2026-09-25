@@ -129,6 +129,8 @@ Round 1：Boss danger_window_opened → dangerous_skill_cast → dangerous_skill
 Round 2：Boss danger_window_opened → player_binding_cast → boss_stunned → dangerous_skill_cancelled
 ```
 
+两轮对照的客观判据：Round 1 不得出现 `skill_cancelled`；Round 2 必须出现 `skill_stunned` → `skill_cancelled` 且该次危险技能伤害未结算。两轮应对序列相同即判定 Failure 4，即使玩家自述「换了打法」。
+
 ## 7. 自动化与人工的边界
 
 自动化只证明机制成立：
@@ -137,7 +139,22 @@ Round 2：Boss danger_window_opened → player_binding_cast → boss_stunned →
 
 自动化**不得**判断「这个 Build 好不好玩」，也不得替代「玩家是否愿意重构」这一结论。
 
-## 8. 人工验收：五道 Gate
+## 8. 验收：Gate 0（技术）+ 五道玩法 Gate
+
+### Gate 0：技术成立（前置门，未通过不得进入人工验收）
+
+| 检查 | 通过条件 |
+|---|---|
+| 终局判定 | 1v1 / 1v2 / 1v3 均为「敌方全灭才判胜、玩家单位死亡即失败」，主目标单独死亡不提前结束 |
+| 问题窗口 | 1v1 危险窗口可稳定复现，且无控制手段时无法干预 |
+| 控制有效性 | 定身可真实打断危险技能：`skill_stunned` → `skill_cancelled`，该次伤害不结算 |
+| Build 生效 | Build A / B 均可加载，切换后 SkillBar / 信息卡当帧跟随 |
+| 可重复性 | 同一遭遇可重复挑战，单位与事件序列不跨局污染 |
+| 入口组织 | 每个测试场景在 `tests/` 有独立入口，`main.tscn` 只保留正式入口职责 |
+
+判定顺序：**Gate 0 → Gate A / B → Gate C / D / E**。Gate 0 未成立时人工验收结论无效，不得记入 Gate A~E。
+
+### 五道玩法 Gate
 
 | Gate | 通过条件 |
 |---|---|
@@ -152,6 +169,9 @@ Round 2：Boss danger_window_opened → player_binding_cast → boss_stunned →
 - Q1 第一轮战斗中，你觉得最麻烦的问题是什么？
 - Q2 拿到定身术后，你为什么选择 / 不选择换 Build？
 - Q3 第二次战斗和第一次相比，你具体改变了什么？
+- Q4（附加、非门控、可选记录）：如果这次没有拿到新能力，你还会主动再打一轮吗？
+
+Q1~Q3 是硬门提问；Q4 只作参考，不参与 Gate 判定，同样必须保留原话。
 
 归档标签：`ReplayIntent`（yes / no）、`BuildChange`（none / A→B / other）、`Reason`（tactical / numerical / curiosity / completion / other）、`PerceivedImpact`（none / low / medium / high）。标签只做归档，**必须同时保留玩家原话**。
 
@@ -162,10 +182,12 @@ Round 2：Boss danger_window_opened → player_binding_cast → boss_stunned →
 | Failure 1 | 「定身挺好的」但不想换 Build | 新能力没有产生重构欲望 |
 | Failure 2 | 换了 Build，但第二轮照第一次的方式打 | Build 没有真正改变玩法 |
 | Failure 3 | 换 Build 是因为「你让我试试」 | 行为来自实验指令而非玩家需求 |
-| Failure 4 | A / B 实际战斗体验几乎完全一样 | 技能系统存在，但 Build 不产生玩法差异 |
+| Failure 4 | A / B 实际战斗体验几乎完全一样 | 技能系统存在，但 Build 不产生玩法差异；客观判据：两轮危险窗口应对序列相同（Round 2 未出现 `skill_cancelled`），即使玩家自述换了打法 |
 | Failure 5 | 只关注伤害更高 / 数值更大 | 当前 Build 更接近数值成长而非战术构筑 |
 
 任一命中即禁止继续扩 Build 系统，必须回到战斗核心重设 Increment。
+
+Gate D 的判定证据为「玩家原话 + CombatEvent 客观佐证（`skill_cancelled`）」；两者冲突时以事件序列为准。
 
 ## 10. 最小技术实现与资源结构
 
@@ -190,6 +212,8 @@ game/
 不创建：`squad/`、`party/`、`formation/`、`multi_selection/`、`team_hud/`。
 
 场景化测试入口统一放在 `tests/`，每个测试场景一个独立 `.tscn`；`main.tscn` 只保留正式游戏入口职责。
+
+战斗终局判定：1v1 / 1v2 / 1v3 统一为「敌方全灭才判胜、玩家单位死亡即失败」（由 `INC-COMBAT-009` 实现），1v3 的第三名敌人与 1v1 为同一个核心 Boss。
 
 ## 11. Increment 拆分与顺序
 
@@ -226,7 +250,7 @@ INC-COMBAT-009 → INC-PAWNS-021 → INC-WORLD-007 → INC-UI-018 → INC-TESTIN
 
 只有以下条件全部满足，`INC-CROSS-019` 才能 `accepted`：
 
-- 技术：1v1 / 1v2 / 1v3 可稳定运行；技能可学习并可进入运行时 Loadout；Build A / B 可切换；定身可真实改变敌人状态；同一遭遇可重复挑战；CombatEvent 可记录关键行为。
+- 技术（Gate 0）：1v1 / 1v2 / 1v3 可稳定运行且终局为敌方全灭才判胜；技能可学习并可进入运行时 Loadout；Build A / B 可切换；定身可真实改变敌人状态；同一遭遇可重复挑战；CombatEvent 可记录关键行为。
 - 玩法：第一轮存在玩家可明确识别的问题；新技能与问题直接相关；玩家能理解新技能用途；玩家主动修改 Build；第二轮实际采用了不同的战斗策略；玩家能解释为什么修改 Build。
 
 真正的成功信号不是「测试 0 failures」，而是玩家说出：
@@ -240,3 +264,10 @@ Boss 准备大招 → 玩家主动定身 → 战斗方式发生变化
 ```
 
 即：**玩家不是因为系统要求而换 Build，而是因为战斗问题让他自己产生了 Build 需求。**
+
+## 14. 修订记录
+
+| 版本 | 时间 | 变更 |
+|---|---|---|
+| v2 | 2026-09-25T21:50:38+08:00 | 按外部设计评审意见做增量调整：新增 Gate 0（技术成立前置门）与判定顺序；明确 1vN「敌方全灭才判胜」；1v3 第三名敌人与 1v1 为同一 Boss；Round 1 / Round 2 危险窗口应对序列的客观对照判据（Failure 4 客观化）；Gate D 改为「原话 + 事件佐证」双证据；保留三问硬门并新增非门控问题 Q4 |
+| v1 | 2026-09-25T21:45:00+08:00 | 首次落盘：1v1 → 1vN Build 玩法验证设计基线（唯一问题、三阶段、奖励与 Build、CombatEvent、Gate A~E、Failure 1~5、资源结构与禁止扩展） |

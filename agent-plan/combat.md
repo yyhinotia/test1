@@ -350,9 +350,10 @@
 
 - 状态：planned
 - 创建时间：2026-09-25T20:47:54+08:00
-- 最后修改：2026-09-25T21:45:00+08:00
+- 最后修改：2026-09-25T21:50:38+08:00
 - 主题：combat
 - 重定义说明：本 Increment 原定义「四方战队遭遇、团队胜负与 AI 目标重选」于 2026-09-25T21:45:00+08:00 按用户 objective 重定义为「1v1 战斗问题窗口与轻量 CombatEvent」；原定义原文保留在 Git 历史 `b36e9c0`（`develop`）。重定义原因：父 Increment `INC-CROSS-019` 从 4v4 Vertical Slice 改为 1v1 → 1vN Build 玩法验证，4v4 专用范围冻结。
+- 调整说明（2026-09-25T21:50:38+08:00）：按外部设计评审意见（对 4v4 版 `INC-CROSS-019` 的评审第 8 节「Gate A：战斗技术成立」中的「敌方全灭胜利 / 主角死亡失败」条目），把本 Increment 的终局判定从「敌人死亡即胜利」修正为 1vN「敌方全灭才判胜」。修正原因：Stage 2 的 1v2 / 1v3 若沿用单点判胜，会在第一名敌人死亡时提前结束对局，Stage 2 无法成立。`agent-plan/pawns.md` 的 `INC-PAWNS-020` 已注明「主角死亡或敌方全灭的终局判定留给 `INC-COMBAT-009` 接线」，`game/world/encounter_session.gd` 头部注释写了同一约定，本次直接对齐该约定，不新增 Increment。
 - 目标：让 1v1 遭遇稳定产生一个玩家可识别、可描述、且只能靠 Build 变化才能改变处理方式的「危险技能窗口」，并用轻量 CombatEvent 记录该窗口与玩家应对，使 Build 对照有客观证据可查。
 - 验收标准：
   - 敌人按固定节奏打开危险窗口并释放危险技能（例：每 8 秒蓄力一次）；普通攻击与危险技能形成可区分的行为模式。
@@ -360,12 +361,13 @@
   - 成功施放控制效果（如 `binding_spell`）覆盖危险技能窗口时，事件流出现 `skill_stunned` → `skill_cancelled`，且该次危险技能的伤害不再结算。
   - 新增轻量 CombatEvent 记录，字段为 `timestamp` / `actor_id` / `target_id` / `event_type` / `skill_id`；至少覆盖 `danger_window_opened`、`skill_cast`、`skill_hit`、`skill_blocked`、`skill_stunned`、`skill_cancelled`、`unit_died`、`combat_end`。
   - 事件按时间顺序可导出为可复核列表；同一遭遇重复挑战产生独立事件序列，不跨局污染。
-  - 战斗终局沿用现有规则（玩家死亡失败 / 敌人死亡胜利），不引入团队胜负、仇恨表或多目标协同 AI。
+  - 战斗终局判定为 1vN 兼容语义：玩家单位全部死亡即失败；敌方单位全部死亡才胜利，1v2 / 1v3 中「主目标单独死亡」不得提前判定胜利；不引入团队胜负面板、仇恨表、多目标协同 AI 或队友单位。
+  - 1v1 / 1v2 / 1v3 共用同一终局判定；敌人数量为 1 时与既有单敌人语义等价，既有 `EncounterSession` 用例不得回归失败。
   - 集成测试覆盖：危险窗口周期、无控制时的承伤、有控制时的打断与零伤害、事件类型与顺序、重复开局的事件隔离。
 - 范围：`game/combat/` 下的危险技能调度与 CombatEvent 记录、敌人危险技能数据、`EncounterSession` 事件接线、相关 unit / integration 测试。
 - 非范围：团队胜负、AI 目标重选、仇恨表、阵型与寻路重写、AOE、召唤、Boss 分阶段、多敌人协同 AI。1vN 的敌人阵容数据由 `INC-WORLD-007` 提供，本 Increment 只保证单个敌人的问题窗口可复现。
 - 依赖：父 Increment `INC-CROSS-019`；设计基线 `docs/build-gameplay-validation.md`。无前置子 Increment。
-- 检索证据：2026-09-25T21:45:00+08:00 执行 `git status --short`（工作区为 `INC-PAWNS-021` 实现与本批 plan 调整）、`git diff --unified=0 -- agent-plan/`（读取本批重定义内容）、`git diff --cached --unified=0 -- agent-plan/`（空）、`git log --oneline -5 -- agent-plan/`（最新 `1dbdba5`）与 `git grep -n "INC-COMBAT-009"`；`INC-COMBAT-009` 仍为 `planned`、未实现，可安全重定义。现有 `Pawn` 已有 `stun` 状态与 `skill_cast` / `skill_blocked` 等信号，但没有危险窗口调度，也没有统一的 CombatEvent 记录层。
+- 检索证据：2026-09-25T21:50:38+08:00 执行 `git status --short`（工作区干净）、`git diff --unified=0 -- agent-plan/`（空）、`git diff --cached --unified=0 -- agent-plan/`（空）、`git log --oneline -- agent-plan/`（HEAD `0f8fb41`）与 `git grep -n -E "INC-(COMBAT-009|WORLD-007|TESTING-011)" -- agent-plan/`；结论：三个 Increment 均为 `planned`、未实现，可安全调整；`game/world/encounter_session.gd` 头部注释与 `_on_unit_died()` 仍为单点终局（敌人死亡即 PLAYER_WIN），证明 1vN 全灭判胜确实未实现。历史记录（2026-09-25T21:45:00+08:00） `git status --short`（工作区为 `INC-PAWNS-021` 实现与本批 plan 调整）、`git diff --unified=0 -- agent-plan/`（读取本批重定义内容）、`git diff --cached --unified=0 -- agent-plan/`（空）、`git log --oneline -5 -- agent-plan/`（最新 `1dbdba5`）与 `git grep -n "INC-COMBAT-009"`；`INC-COMBAT-009` 仍为 `planned`、未实现，可安全重定义。现有 `Pawn` 已有 `stun` 状态与 `skill_cast` / `skill_blocked` 等信号，但没有危险窗口调度，也没有统一的 CombatEvent 记录层。
 - 风险：危险窗口如果只造成数值压力而不改变可选解法，Gate A（玩家能描述具体问题）会直接失败，必须让「无法干预」在第一次战斗里被玩家亲身体感到。第二个风险是事件记录扩散成通用战斗日志系统，必须保持轻量字段与 `event_type` 白名单。
 - 实现说明：待实现。
 - 变更文件：待实现。
