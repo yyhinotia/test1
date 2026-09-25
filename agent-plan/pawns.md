@@ -1,6 +1,6 @@
 # Pawns 主题计划
 
-> 最后修改：2026-09-25T13:54:28+08:00  
+> 最后修改：2026-09-25T14:16:35+08:00
 > 主题：pawns  
 > 规则来源：`../AGENTS.md`
 
@@ -95,16 +95,53 @@
 - Git：分支 main，commit `e233120`（feat(ui): show pawn health bar on health change and auto-hide [INC-CROSS-002]）
 - 备注：父 Increment 为 `INC-CROSS-002`。
 
-## INC-PAWNS-003：抽取 HealthComponent（计划中）
+## INC-PAWNS-003：抽取 HealthComponent 作为生命状态单一数据源
 
-- 状态：planned
+- 状态：accepted
 - 创建时间：2026-09-25T13:54:28+08:00
-- 最后修改：2026-09-25T14:02:20+08:00
+- 最后修改：2026-09-25T14:16:35+08:00
 - 主题：pawns
-- 目标：把 Pawn 内的生命/护盾数据与信号抽取为独立 `HealthComponent`，作为多生命层（护体灵力/真元/气血/元神）以及治疗、护盾、持续伤害等状态效果的单一数据源。
-- 验收标准：待细化。方向是 `HealthComponent` 持有 `current_hp` / `max_hp` / `current_shield` / `max_shield` 与 `health_state_changed` 信号，Pawn 只做转发，HUD 与血条订阅同一信号源，并复跑 `INC-PAWNS-002`、`INC-UI-002` 的验收路径。
-- 范围：`game/pawns/health_component.gd`（新增）、`game/pawns/pawn.gd`、`game/pawns/pawn.tscn`、`game/main/main.tscn` 信号连接复核。
-- 非范围：分层生命的数值设计、状态效果（中毒/灼烧/吸血）实现。
-- 依赖：`INC-PAWNS-002`、`INC-COMBAT-001`。
-- 风险：会触碰已验收的战斗与 HUD 信号连接，需要独立验证与用户验收，不能与血条显示策略混在同一个 Increment。
-- 备注：来源为 `docs/血条ui需求.txt` 的“① HealthComponent”步骤；`INC-CROSS-002` 只实现“②③④⑤”与规则 1-4，未执行该抽取。
+- 目标：把 Pawn 内的生命/护盾运行时数值与变化信号抽取为独立 `HealthComponent`，作为多生命层（护体灵力/真元/气血/元神）以及治疗、护盾、持续伤害等状态效果的单一数据源，补齐 `docs/血条ui需求.txt` 的 MVP 步骤①。
+- 验收标准：
+  - `Pawn` 场景存在 `HealthComponent` 子节点，`game/pawns/health_component.gd` 持有 `max_health` / `max_shield` / `current_health` / `current_shield`；Pawn 不再自行维护这两项运行时数值。
+  - 组件对外提供 `health_state_changed`（规则 3：状态变化，而不是 `DamageTaken`）、`health_changed`、`shield_changed`、`depleted` 四类信号；伤害先扣护盾再扣生命，护盾完全吸收时不得发出 `health_changed`。
+  - `Pawn.take_damage(raw_attack)` 仍先按 `data.defense` 结算，再委托组件扣血；`Pawn.current_health` / `Pawn.current_shield` 改为读取组件的代理属性（只读）。
+  - 已验收的对外接口保持不变：`health_changed(pawn, current, max)`、`shield_changed(pawn, current, max)`、`state_changed`、`died` 的参数与发射顺序（先护盾、后生命）与 `INC-CROSS-001` 一致，`main.tscn` 的 HUD 连接无需改动且 HUD 仍能刷新。
+  - 组件提供 `heal(amount)` 与 `grant_shield(amount)` 两个状态变化入口，均按上限截断并触发 `health_state_changed`（对应规则 3 的“治疗/护盾生成”场景）；本 Increment 只提供组件能力，不实现任何技能。
+  - 生命归零时组件发出 `depleted`，Pawn 据此进入 `DEAD` 并只发出一次 `died`；归零后再受伤不产生额外信号。
+  - 回归：`INC-UI-002` 的 headless 断言（38 项）与三档分辨率血条渲染证据必须仍然通过。
+- 范围：`game/pawns/health_component.gd`（新增）、`game/pawns/pawn.gd`、`game/pawns/pawn.tscn`（新增 `HealthComponent` 子节点）、`game/shared/resources/pawn_data.gd`（仅注释措辞）、`test/headless/health_component_test.gd`（新增）、`agent-plan/pawns.md`、`agent-plan/_index.md`。
+- 非范围：分层生命（护体灵力/真元/气血/元神）的数值设计、状态效果（中毒/灼烧/吸血）、技能系统、存档序列化、复活机制、血条显示策略改动（已由 `INC-UI-002` 验收）。
+- 依赖：`INC-PAWNS-002`（统一入口与血条锚点）、`INC-COMBAT-001`（伤害/死亡闭环）、`INC-UI-002`（血条显示策略）。
+- 风险：改动触碰已验收的战斗与 HUD 信号路径。缓解方式：用 headless 断言锁定“信号参数 + 发射顺序 + 数值结果 + HUD 文本刷新”，并复跑 `INC-UI-002` 的 38 项断言与三档分辨率截图；`Pawn.current_health` / `current_shield` 由可写字段变为只读代理属性，属于接口收紧，已在上方验收标准中显式声明。
+- 实现说明：
+  - 新增 `game/pawns/health_component.gd`（`class_name HealthComponent extends Node`）：持有 `max_health` / `max_shield` / `current_health` / `current_shield`，提供 `configure()` / `reset()` / `apply_damage()` / `heal()` / `grant_shield()` / `is_alive()` / `is_depleted()`，发出 `health_state_changed` / `health_changed` / `shield_changed` / `depleted`。
+  - `configure()` 与 `reset()` 是静默初始化（不发信号），这是让 `INC-UI-002` 的“出生时血条初始隐藏”验收项继续成立的关键设计点；变化信号只在运行期数值真的改变时发出。
+  - 扣血顺序固定为“先护盾、后生命”；护盾完全吸收时不发 `health_changed`，与 `INC-CROSS-001` 的既有行为一致。
+  - `Pawn` 只做三件事：按 `data.defense` 结算伤害、把剩余伤害交给组件、把组件信号按 `(pawn, current, max)` 重新发出；`Pawn.current_health` / `current_shield` 改为读取组件的只读代理属性。
+  - `pawn.tscn` 在子节点列表末尾追加 `HealthComponent` 节点（不打乱既有子节点顺序），因此 `player_pawn.tscn` / `enemy_pawn.tscn` 对 `Controller` 的继承覆写仍然生效（已用断言锁定）。
+  - `heal()` / `grant_shield()` 只提供组件能力并计入上限，不实现任何技能；归零后不再接受治疗或加盾（复活为非范围）。
+  - 配置错误路径保持不变：`Pawn._ready()` 在 `data == null` 时调用 `health.configure(0.0, 0.0)`，使缺少 PawnData 的单位仍然视为“生命 0 / 已死亡”，而不是把组件默认上限当成存活单位（重构前该路径的 `current_health` 就是 0）。
+- 变更文件：
+  - `game/pawns/health_component.gd`（新增，生命/护盾单一数据源）
+  - `game/pawns/health_component.gd.uid`（新增，Godot 4.4+ 脚本 UID）
+  - `game/pawns/pawn.gd`（改用组件、只读代理属性、信号转发）
+  - `game/pawns/pawn.tscn`（新增 `HealthComponent` 子节点）
+  - `game/shared/resources/pawn_data.gd`（仅注释措辞：运行时数值不在 Resource 上）
+  - `test/headless/health_component_test.gd` 与 `.uid`（新增，55 项断言）
+  - `agent-plan/pawns.md`、`agent-plan/_index.md`
+- 测试证据：
+  - 替代原因：本会话 Godot MCP 仍不可用（工具调用返回 `unsupported call`），按 `AGENTS.md` §6 使用 Godot 4.7.2 CLI 做等价验证。
+  - 解析检查：`health_component.gd`、`pawn.gd`、`health_component_test.gd` 逐个 `--check-only` 退出码均为 0。
+  - 新增 headless 断言：`godot --headless --path . --script res://test/headless/health_component_test.gd` → 退出码 0，输出 `CHECKS=55 FAILURES=0` / `HEALTH_COMPONENT_TEST_OK`。覆盖：configure 静默、护盾优先且护盾吸收时不误发 `health_changed`、护盾破碎顺序（先护盾后生命）、归零只发一次 `depleted`、归零后伤害/治疗/加盾静默、治疗与加盾按上限截断并触发 `health_state_changed`、满值时不发信号、`Pawn.current_health`/`current_shield` 代理一致、`Controller` 继承覆写仍是 `PlayerController`、Pawn 转发信号的参数与顺序、死亡只发一次 `died` 且清空碰撞层、死亡后再受伤无信号、缺少 PawnData 时视为生命 0（该用例会刻意触发一次 `push_error`，日志里的 `ERROR: Pawn requires a PawnData resource` 是预期行为）、`main.tscn` HUD 仍能刷新为 `护盾：30 / 40`。
+  - 回归（`INC-UI-002` 验收路径）：`test/headless/health_bar_visibility_test.gd` → 退出码 0、`CHECKS=38 FAILURES=0`。
+  - 主场景冒烟：`godot --headless --path . --quit-after 600` → 退出码 0，无脚本错误或节点缺失。
+  - 视觉回归（真实窗口渲染，`test/tools/capture_health_bar_evidence.gd`）：`HIDE_ELAPSED_MS=1963`、`PAUSED_BAR_VISIBLE=true`、`RESUME_HIDE_ELAPSED_MS=2038`；16:9（1152x648）/ 16:10（1152x720）/ 窄屏（800x720 → 逻辑视口 1152x1036）三档 `BAR_RECT=(834,356,72,16)`、居中/在头顶/在视口内全为 true。
+  - 像素核验（与重构前对比，逐项一致）：idle 0 px、玩家受击 621 px（bbox `(834,362)-(902,370)`）、延迟后 0 px、暂停 513 px、三档分辨率 504 / 504 / 222 px。证据报告 `.mcp/godot-runtime/screenshots/health_bar_evidence_report.txt`。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T14:15:55+08:00
+- 已知问题：归零后不接受治疗/加盾（复活机制非范围）；`heal()` / `grant_shield()` 只有组件级验证，尚未接入任何技能或 UI；分层生命与状态效果仍未实现；`Pawn.current_health` / `current_shield` 由可写字段收紧为只读代理，已在验收标准中声明。
+- 用户验收：已验收
+- 验收时间：2026-09-25T14:16:35+08:00
+- Git：分支 main，commit 待创建后回写
+- 备注：来源为 `docs/血条ui需求.txt` 的“① HealthComponent”；`INC-CROSS-002` 已实现该文档的“②③④⑤”与规则 1-4，本 Increment 补齐①。用户已于 2026-09-25T14:16:35+08:00 验收通过；按流程提交。

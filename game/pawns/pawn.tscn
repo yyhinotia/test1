@@ -5,6 +5,7 @@
 
 [ext_resource type="PackedScene" path="res://game/ui/pawn_health_bar.tscn" id="3_jyj0u"]
 [ext_resource type="Script" path="res://game/pawns/controllers/pawn_controller.gd" id="4_aotyo"]
+[ext_resource type="Script" path="res://game/pawns/health_component.gd" id="5_health"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_npvev"]
 radius = 20.0
@@ -40,3 +41,6 @@ default_color = Color(1, 0.92, 0.22, 1)
 [node name="Controller" type="Node" parent="." unique_id=2018758486]
 process_mode = 1
 script = ExtResource("4_aotyo")
+
+[node name="HealthComponent" type="Node" parent="." unique_id=1704896231]
+script = ExtResource("5_health")

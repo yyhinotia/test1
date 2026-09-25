@@ -1,7 +1,7 @@
 class_name PawnData
 extends Resource
 
-## Static configuration for a Pawn. Runtime values must stay on Pawn itself.
+## Static configuration for a Pawn. Runtime values live on the runtime scene (`Pawn/HealthComponent`), never on this Resource.
 @export var id: StringName = &"pawn_000"
 @export var display_name: String = "Pawn"
 @export var faction: StringName = &"neutral"

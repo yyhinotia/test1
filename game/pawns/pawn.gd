@@ -18,12 +18,20 @@ enum State {
 
 @onready var visual: Sprite2D = $Visual/Sprite2D
 @onready var collision_shape: CollisionShape2D = $Collision/CollisionShape2D
+@onready var health: HealthComponent = $HealthComponent
 @onready var health_bar: PawnHealthBar = $HealthBarAnchor/HealthBar
 @onready var selection_indicator: CanvasItem = $SelectionIndicator
 @onready var controller: PawnController = $Controller
 
-var current_health: float = 0.0
-var current_shield: float = 0.0
+## 运行时生命数值由 `HealthComponent` 持有；这里只保留只读代理，
+## 让 HUD、测试等既有调用方继续用 `pawn.current_health` 读取。
+var current_health: float:
+	get:
+		return (health.current_health if health != null else 0.0)
+
+var current_shield: float:
+	get:
+		return (health.current_shield if health != null else 0.0)
 
 var _state: int = State.IDLE
 var _attack_cooldown: float = 0.0
@@ -38,12 +46,20 @@ var state: int:
 func _ready() -> void:
 	if data == null:
 		push_error("Pawn requires a PawnData resource: %s" % get_path())
+		# 保持配置错误时的旧行为：没有 PawnData 的单位视为生命为 0（已死亡），
+		# 而不是把组件默认上限当成存活单位。
+		health.configure(0.0, 0.0)
 		return
 
-	current_health = data.max_health
-	current_shield = data.max_shield
+	health.health_changed.connect(_on_health_changed)
+	health.shield_changed.connect(_on_shield_changed)
+	health.health_state_changed.connect(_on_health_state_changed)
+	health.depleted.connect(_on_health_depleted)
+	# 静默初始化：出生时不触发血条显示。
+	health.configure(data.max_health, data.max_shield)
+
 	visual.modulate = data.display_color
-	health_bar.set_values(current_health, data.max_health, current_shield, data.max_shield)
+	health_bar.set_values(health.current_health, health.max_health, health.current_shield, health.max_shield)
 	set_selected(false)
 	_set_state(State.IDLE)
 
@@ -107,33 +123,21 @@ func try_attack(target: Pawn) -> bool:
 	_play_attack_pulse()
 	return true
 
+## 伤害入口：先按 `data.defense` 结算，再把剩余伤害交给 HealthComponent。
+## 组件负责“先护盾、后生命”的扣减与变化信号。
 func take_damage(raw_attack: float) -> void:
 	if is_dead():
 		return
 
 	var remaining_damage: float = maxf(1.0, raw_attack - data.defense)
+	health.apply_damage(remaining_damage)
 
-	if current_shield > 0.0:
-		var absorbed: float = minf(current_shield, remaining_damage)
-		current_shield -= absorbed
-		remaining_damage -= absorbed
-		shield_changed.emit(self, current_shield, data.max_shield)
-
-	if remaining_damage > 0.0:
-		current_health = maxf(current_health - remaining_damage, 0.0)
-		health_changed.emit(self, current_health, data.max_health)
-
-	notify_health_state_changed()
-
-	if current_health <= 0.0:
-		die()
-
-## 生命状态变化的统一入口：伤害、护盾、治疗、死亡等状态变化都应通过它刷新血条。
-## 血条由这个入口驱动，而不是常驻显示，避免战场信息噪音。
+## 生命状态变化的统一入口：把组件里的最新数值转发给头顶血条。
+## 伤害、护盾、治疗、死亡都会经由 `HealthComponent` 的信号走到这里。
 func notify_health_state_changed() -> void:
-	if health_bar == null or data == null:
+	if health_bar == null or health == null:
 		return
-	health_bar.notify_health_state_changed(current_health, data.max_health, current_shield, data.max_shield)
+	health_bar.notify_health_state_changed(health.current_health, health.max_health, health.current_shield, health.max_shield)
 
 func die() -> void:
 	if _state == State.DEAD:
@@ -182,3 +186,16 @@ func _play_attack_pulse() -> void:
 	_visual_tween.set_trans(Tween.TRANS_QUAD)
 	_visual_tween.set_ease(Tween.EASE_OUT)
 	_visual_tween.tween_property(visual, "scale", Vector2.ONE, 0.14)
+
+## 以下转发保持 `INC-CROSS-001` 已验收的对外信号签名与发射顺序（先护盾、后生命）。
+func _on_health_changed(current_value: float, max_value: float) -> void:
+	health_changed.emit(self, current_value, max_value)
+
+func _on_shield_changed(current_value: float, max_value: float) -> void:
+	shield_changed.emit(self, current_value, max_value)
+
+func _on_health_state_changed(_component: HealthComponent) -> void:
+	notify_health_state_changed()
+
+func _on_health_depleted(_component: HealthComponent) -> void:
+	die()
