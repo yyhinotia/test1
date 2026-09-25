@@ -616,3 +616,31 @@
 - 验收时间：2026-09-25T19:38:32+08:00
 - Git：`main` / `cc1c2b9`
 - 备注：父 Increment 为 `INC-CROSS-017`；本 Increment 是玩家可见层，数值权威仍在 `SectState`。
+
+## INC-UI-017：突破入口与突破后容量预览
+
+- 状态：planned
+- 创建时间：2026-09-25T20:11:34+08:00
+- 最后修改：2026-09-25T20:11:34+08:00
+- 主题：UI
+- 目标：在选中修士的信息卡中暴露“修为已满 → 可突破”的明确入口，并在突破前展示下一境界的 Build 容量预览，让突破的玩法价值在 UI 上可见。
+- 验收标准：
+  - `PawnInfoPanel` 新增 `breakthrough_requested(pawn: Pawn)` 信号和 `BreakthroughButton`；按钮只在 `cultivation.ready == true` 且存在下一境界时可用，未就绪 / 终点境界禁用且不发送信号。
+  - 信息卡新增“突破后容量：功法 x / 武器 x / 主动 x / 被动 x”预览行；容量数字来自下一境界 `RealmDefinition`，UI 不硬编码境界表。
+  - `PawnInfoModel` 使用运行时境界覆盖静态 `PawnData.realm`，突破后名称、Build 容量与 `build_tag` 保持一致；无数据 / 无下一境界安全降级。
+  - 集成用例用真实 `player_pawn.tscn` 和 `pawn_info_panel.tscn` 驱动按钮，证明未就绪不发请求、就绪只发一次 `breakthrough_requested`，并断言预览文本来自下一境界容量。
+- 范围：`game/ui/pawn_info_panel.gd`、`game/ui/pawn_info_panel.tscn`、`game/ui/pawn_info_model.gd`、`test/unit/pawn_info_model_test.gd`、`test/integration/pawn_info_panel_test.gd`。
+- 非范围：突破结算（`INC-CULT-005` / `INC-PAWNS-019`）、主场景信号转发（`INC-CORE-011`）、洗点 / 重新配装 UI、动画 / 特效。
+- 依赖：`INC-PAWNS-019`、既有 `INC-UI-008` / `INC-UI-009` 信息卡。
+- 检索证据：同 `INC-CULT-005`；`game/ui/pawn_info_panel.gd` 当前只有 `refreshed(snapshot)`，没有玩家意图信号；`pawn_info_model.gd:75` 仍直接读 `data.realm`，确认运行时境界覆盖与突破入口均为缺口。
+- 风险：面板已有只读边界，按钮若直接修改 Pawn 会把 UI 变成业务入口；本 Increment 只发 `breakthrough_requested(pawn)`，由主场景转发。容量预览若从静态 `PawnData.realm.next_realm` 读取会绕过 Pawn 的运行时链，必须使用 Pawn 的只读查询结果。
+- 实现说明：待实现。
+- 变更文件：待实现。
+- 测试证据：待实现。
+- 验证状态：待验证
+- 验证时间：待验证
+- 已知问题：待实现。
+- 用户验收：待验收
+- 验收时间：待验收
+- Git：待提交
+- 备注：父 Increment 为 `INC-CROSS-018`；本 Increment 将突破从内部能力提升为玩家可见的 Build 决策节点。

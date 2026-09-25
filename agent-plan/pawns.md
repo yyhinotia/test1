@@ -702,3 +702,31 @@
 - 验收时间：2026-09-25T19:38:16+08:00
 - Git：`main` / `626c9c8`
 - 备注：父 Increment 为 `INC-CROSS-017`；本 Increment 是「宗门产出能落到修士身上」的运行时前提。
+
+## INC-PAWNS-019：运行时境界覆盖层与突破入口
+
+- 状态：planned
+- 创建时间：2026-09-25T20:11:34+08:00
+- 最后修改：2026-09-25T20:11:34+08:00
+- 主题：Pawns
+- 目标：让 Pawn 的当前境界成为可推进的运行时状态；突破后 Build 容量、境界门槛校验、技能容量投影和信息卡读模型看到的是新境界，同时静态 `PawnData.realm` 与 `RealmDefinition` 资源保持不变。
+- 验收标准：
+  - `get_realm()` 优先返回 `CultivationProgressComponent` 的运行时境界；组件未就绪时回落到 `PawnData.realm`，新增 `get_base_realm()` 明确读取静态基线。
+  - `try_breakthrough() -> bool` 只委托组件 `advance_realm()`；成功后 Pawn 发出一次 `realm_changed(pawn, previous, current)` 与一次 `build_changed(pawn)`，并重算 `get_build_loadout()` 的 `realm`、四类容量和 `get_active_skill_capacity()`。
+  - 新增 `restore_realm(realm, exp) -> bool`：只允许恢复 `PawnData.realm` 可达链上的境界，拒绝越级、倒退和无关资源；成功恢复必须保持静态资源零污染。
+  - 集成用例证明炼气 Pawn 补满修为后突破到筑基，容量从功法 1 / 主动 2 / 被动 1 变为 2 / 3 / 2，`PawnData.realm` 与真实 `.tres` 仍为炼气；未就绪突破和不可达恢复均零副作用。
+- 范围：`game/pawns/pawn.gd`、`test/unit/pawn_runtime_realm_test.gd`（新增，含 `.uid`）、`test/integration/cultivation_progress_pawn_test.gd`。
+- 非范围：突破执行状态机（`INC-CULT-005`）、跨遭遇延续（`INC-WORLD-006`）、UI 按钮（`INC-UI-017`）、主场景路由（`INC-CORE-011`）、属性加成、免费洗点 / Build 编辑器。
+- 依赖：`INC-CULT-005`、`INC-PAWNS-018`（运行时 Build 覆盖层，已验收）。
+- 检索证据：同 `INC-CULT-005`；当前 `game/pawns/pawn.gd:165` 的 `get_realm()` 直接返回 `data.realm`，`get_build_loadout()` 也直接写 `loadout.realm = data.realm`，确认运行时境界覆盖层不存在；候选编号未被 `agent-plan/` 占用。
+- 风险：若 Pawn 复制一份 `_realm_override`，组件与 Pawn 会出现两个事实源；本 Increment 以组件的 `_realm` 为唯一运行时状态，Pawn 只读代理。另一个风险是突破后 `get_build_loadout()` 的容量变化被 UI 静态 `data.realm` 覆盖，故本 Increment 同时要求在信息卡读模型用运行时境界覆盖静态境界。
+- 实现说明：待实现。
+- 变更文件：待实现。
+- 测试证据：待实现。
+- 验证状态：待验证
+- 验证时间：待验证
+- 已知问题：待实现。
+- 用户验收：待验收
+- 验收时间：待验收
+- Git：待提交
+- 备注：父 Increment 为 `INC-CROSS-018`；本 Increment 负责把“能突破”变成“突破后 Build 空间真的变化”。

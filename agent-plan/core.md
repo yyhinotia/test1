@@ -370,3 +370,31 @@
 - 验收时间：2026-09-25T19:52:42+08:00
 - Git：`main` / `224b7f6`
 - 备注：父 Increment 为 `INC-CROSS-017`；本 Increment 是父级唯一允许修改 `main.gd` / `main.tscn` 的接线项。
+
+## INC-CORE-011：主场景突破接线与宗门门槛刷新
+
+- 状态：planned
+- 创建时间：2026-09-25T20:11:34+08:00
+- 最后修改：2026-09-25T20:11:34+08:00
+- 主题：核心
+- 目标：把信息卡突破请求转发给当前玩家 Pawn，并在突破成功后刷新 HUD、信息卡与宗门面板，使境界门槛与 Build 容量立即使用新境界。
+- 验收标准：
+  - `main.gd` 只连接 `PawnInfoPanel.breakthrough_requested` 并调用对应 Pawn 的 `try_breakthrough()`；不在主场景复制突破裁决。
+  - 只有当前玩家 Pawn 能通过入口突破；未就绪、敌人 / 非当前选中单位、已退场单位均保持零副作用。
+  - 成功突破后刷新 `info_panel`、`skill_bar`、HUD Build 行与 `sect_panel`，宗门设施的境界门槛立即按新 tier 重算。
+  - 新增 gameplay 集成用例通过真实 `main.tscn` 与真实按钮路径完成一次突破，断言主场景引用仍指向同一 Pawn、新境界与容量生效、宗门界面无断链；失败路径不改变任何数值。
+- 范围：`game/main/main.gd`、`test/gameplay/main_scene_breakthrough_test.gd`（新增，含 `.uid`），必要时只读复用 `game/ui/sect_panel.gd` 的公开刷新入口。
+- 非范围：突破规则、属性公式、Build 编辑操作、宗门设施数值、存档。
+- 依赖：`INC-UI-017`、`INC-PAWNS-019`、`INC-CORE-010`。
+- 检索证据：同 `INC-CULT-005`；`game/main/main.gd` 当前没有 `breakthrough` 路由，`_connect_sect_signals()` 只接宗门七类意图，HUD 与信息卡只消费 Pawn 信号。
+- 风险：主场景持有 `_selected_pawn`、`info_panel`、`skill_bar` 和宗门状态四套引用；突破后必须走既有统一刷新入口，不能各自新开状态流。宗门面板的重建由状态刷新触发，需避免在信号发射中销毁正在处理的面板节点。
+- 实现说明：待实现。
+- 变更文件：待实现。
+- 测试证据：待实现。
+- 验证状态：待验证
+- 验证时间：待验证
+- 已知问题：待实现。
+- 用户验收：待验收
+- 验收时间：待验收
+- Git：待提交
+- 备注：父 Increment 为 `INC-CROSS-018`；本 Increment 是「玩家可见突破入口」到「真实主场景」的最后接线。

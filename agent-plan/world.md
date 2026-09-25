@@ -177,3 +177,31 @@
 - 验收依据：用户指令「分批increment单独推送后继续开发」（2026-09-25），授权本批次按 Increment 分批提交并逐一推送。
 - Git：`main` / `6f0be8c`
 - 备注：父 Increment 为 `INC-CROSS-017`；这是「宗门产出 → 修士成长 → 再战」闭环的会话层延续补丁，不改变第一间房资源满状态起局的既有设计。
+
+## INC-WORLD-006：跨遭遇延续运行时境界
+
+- 状态：planned
+- 创建时间：2026-09-25T20:11:34+08:00
+- 最后修改：2026-09-25T20:11:34+08:00
+- 主题：世界
+- 目标：把已经通过 `INC-PAWNS-019` 建立的运行时境界覆盖纳入 EncounterSession 的修士进度延续，保证秘境换房 / 重开 / 换遭遇后不会回退到静态炼气期。
+- 验收标准：
+  - `_capture_player_progress()` 在旧玩家退场前采集运行时 `RealmDefinition` 与当前境界修为。
+  - `_apply_player_progress()` 先按可达链恢复境界，再写入该境界内的修为；恢复失败时保持新单位初始境界并安全降级。
+  - 集成用例证明「补满 → 突破 → 重新 begin」后新 Pawn 的境界、容量、修为与突破前一致，且静态 `PawnData.realm` 未被改写。
+  - 不改变 `PawnResourceSnapshot` 对生命 / 护盾 / 灵力的既有语义，不扩展敌人进度延续。
+- 范围：`game/world/encounter_session.gd`、`test/integration/encounter_session_test.gd`。
+- 非范围：存档落盘、跨进程持久化、`DungeonRun` 奖励规则、宗师 / 宗门规则、敌人境界推进。
+- 依赖：`INC-PAWNS-019`、`INC-WORLD-005`（修为 / Build 延续，已验收）。
+- 检索证据：同 `INC-CULT-005`；`game/world/encounter_session.gd` 的 `_capture_player_progress()` 当前只采集 `forge_level`、`techniques`、`cultivation_exp`，没有境界资源；`_apply_player_progress()` 当前只调用 `set_cultivation_exp()`，因此运行时境界无法跨 `begin_with_state()` 存活。
+- 风险：恢复境界必须发生在新 Pawn `_ready()` 配置之后、`encounter_started.emit()` 之前；否则 UI 会先读取炼气容量再被刷新，或者静态初始化覆盖恢复值。恢复 API 必须拒绝可达链外的境界，防止会话层意外越级。
+- 实现说明：待实现。
+- 变更文件：待实现。
+- 测试证据：待实现。
+- 验证状态：待验证
+- 验证时间：待验证
+- 已知问题：待实现。
+- 用户验收：待验收
+- 验收时间：待验收
+- Git：待提交
+- 备注：父 Increment 为 `INC-CROSS-018`；本 Increment 保证突破成果在同一代修士的多次遭遇之间不丢失。

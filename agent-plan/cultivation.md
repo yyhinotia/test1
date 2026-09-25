@@ -135,3 +135,32 @@
 - 验收时间：2026-09-25T16:50:57+08:00
 - Git：`main` / `c21d8ec`
 - 备注：父 Increment 为 `INC-CROSS-010`；本 Increment 只扩展静态容量契约，不改变任何运行时数值。
+
+## INC-CULT-005：突破执行与境界推进
+
+- 状态：planned
+- 创建时间：2026-09-25T20:11:34+08:00
+- 最后修改：2026-09-25T20:11:34+08:00
+- 主题：修炼
+- 目标：让已经达到突破阈值的 `CultivationProgressComponent` 能显式消费 `became_ready`，按 `RealmDefinition.next_realm` 推进到下一境界，并为后续 Pawn / UI / 会话延续提供唯一运行时境界状态源。
+- 验收标准：
+  - 新增 `advance_realm() -> bool` 与 `realm_advanced(component, previous_realm, new_realm)` 信号。
+  - 未就绪、无下一境界、终点境界、未配置境界时返回 `false`，修为、境界、信号全部零副作用。
+  - 就绪时把当前修为作为突破消耗，境界切到 `get_next_realm()`，当前修为归零，所需修为切到新境界的 `breakthrough_exp`，且每个成功突破只发一次 `realm_advanced`。
+  - `get_snapshot()` 的 `realm` / `realm_id` / `realm_name` / `next_realm_name` / `required_exp` / `ready` 全部反映突破后的状态；`configure()` 仍保持静默。
+  - 单元用例覆盖炼气 → 筑基、筑基 → 金丹门槛、终点境界拒绝、未就绪拒绝与“突破消耗而非结转”的语义。
+- 范围：`game/shared/core/cultivation_progress_component.gd`、`test/unit/cultivation_progress_component_test.gd`。
+- 非范围：Pawn 运行时境界覆盖与信号转发（`INC-PAWNS-019`）、跨遭遇延续（`INC-WORLD-006`）、突破 UI（`INC-UI-017`）、主场景入口（`INC-CORE-011`）、境界属性加成、突破失败率 / 丹药 / 任务前置。
+- 依赖：`INC-CULT-003`（境界链与突破阈值，已验收）、`INC-CULT-004`（容量链，已验收）。
+- 检索证据：`git status --short` 为空；`git diff --unified=0 -- agent-plan/`、`git diff --cached --unified=0 -- agent-plan/` 均为空；`git log --oneline -- agent-plan/` 最新为 `c22f226`；`git grep -n -E "INC-CULT-005|INC-PAWNS-019|INC-WORLD-006|INC-UI-017|INC-CORE-011|INC-TESTING-010|INC-CROSS-018" -- agent-plan/` 无匹配。`CultivationProgressComponent` 当前只有配置 / 增加 / 设置与只读快照，`became_ready` 没有消费者，因此本 Increment 是突破执行的唯一新增写入者。
+- 风险：突破语义若同时承担“重置”和“结转”，会与现有 `set_current_exp()` 的阈值截断规则冲突；本 Increment 明确选择“消耗全部当前修为、下一境界从 0 开始”，不保留溢出。另一个风险是组件直接改 `_realm` 后旧监听方只看 `progress_changed`，所以必须额外发布专用 `realm_advanced` 信号并由 Pawn 转发。
+- 实现说明：待实现。
+- 变更文件：待实现。
+- 测试证据：待实现。
+- 验证状态：待验证
+- 验证时间：待验证
+- 已知问题：待实现。
+- 用户验收：待验收
+- 验收时间：待验收
+- Git：待提交
+- 备注：父 Increment 为 `INC-CROSS-018`；这是「突破 → Build 重构」的第一个运行时前置。
