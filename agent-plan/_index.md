@@ -380,7 +380,7 @@
 | `INC-PAWNS-014` | `INC-CROSS-012` | pawns | `accepted` | 三种战术主动技能与数据契约 | 2026-09-25T17:34:51+08:00 | 验证通过 | 已验收 | `main` / `65a494d` |
 | `INC-COMBAT-005` | `INC-CROSS-012` | combat | `accepted` | 技能目标类型与控制器目标解析 | 2026-09-25T17:34:51+08:00 | 验证通过 | 已验收 | `main` / `df36f24` |
 | `INC-COMBAT-006` | `INC-CROSS-012` | combat | `accepted` | 最小 Skill Effect System（Damage/Heal/Shield/Stun） | 2026-09-25T17:39:59+08:00 | 验证通过 | 已验收 | 待提交 |
-| `INC-UI-012` | `INC-CROSS-012` | ui | `planned` | 技能目标选择交互状态与合法目标高亮 | 2026-09-25T17:31:30+08:00 | 未验证 | 待验收 | 待验收后提交 |
+| `INC-UI-012` | `INC-CROSS-012` | ui | `accepted` | 技能目标选择交互状态与合法目标高亮 | 2026-09-25T17:43:37+08:00 | 验证通过 | 已验收 | 实现与计划随本次 UI-012 提交落库 |
 | `INC-CORE-006` | `INC-CROSS-012` | core | `planned` | 主场景技能目标选择与取消路由 | 2026-09-25T17:31:30+08:00 | 未验证 | 待验收 | 待验收后提交 |
 | `INC-TESTING-004` | `INC-CROSS-012` | testing | `planned` | 三种技能战术差异与 Build 变化证据 | 2026-09-25T17:31:30+08:00 | 未验证 | 待验收 | 待验收后提交 |
 
@@ -417,6 +417,7 @@
 
 | 版本 | 时间 | 变更 |
 |---|---|---|
+| v4.9 | 2026-09-25T17:43:37+08:00 | 完成并验收 `INC-UI-012`：SkillSlot 分离 NORMAL / SELECTED / TARGETING 交互状态，SkillBar 按目标类型路由 SELF 直发或 TARGETING，并新增取消清理与 Pawn 合法目标高亮；GdUnit4 unit 87 / integration 67 / gameplay 26（180 cases、0 failures）、headless 10 suites / 549 assertions 全部通过 |
 | v4.8 | 2026-09-25T17:35:46+08:00 | 完成并验收 `INC-CROSS-012` 前两个子 Increment：`INC-PAWNS-014`（技能数据契约与御剑斩 / 护体真气 / 定身术三份资源，`65a494d`）与 `INC-COMBAT-005`（SELF / ALLY / ENEMY 目标解析，`df36f24`）；统一门禁 GdUnit4 unit 87 / integration 58 / gameplay 26、headless 10 suites 549 assertions 全通过；`INC-COMBAT-006`、`INC-UI-012`、`INC-CORE-006`、`INC-TESTING-004` 仍为 planned，待后续开发 |
 | v4.7 | 2026-09-25T17:31:30+08:00 | 按 `docs/build-mvp.md` 细化并启动 `INC-CROSS-012`：把三种战术技能、Self/Ally/Enemy 目标解析、Damage/Heal/Shield/Stun Effect System、技能目标选择与两槽 Build 战斗差异拆成 6 个可独立验证的 Increment；先启动 `INC-PAWNS-014` 建立技能数据契约与三份技能资源 |
 | v4.6 | 2026-09-25T17:17:48+08:00 | 完成 `INC-CROSS-011` 六个子 Increment 并验收落库：多主动技能、SkillSlot 状态读模型、固定技能格、动态 SkillBar/左下 Dock、主场景 1~6/点击接线与真实窗口布局证据；GdUnit4 160 cases、0 failures，headless 549 assertions、0 failing；按 Increment 拆分 6 个功能/测试提交（`200e822`、`70a09f1`、`3938038`、`84d5ef7`、`182190b`、`cecc91d`），随后执行本计划回写提交 |

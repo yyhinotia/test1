@@ -63,3 +63,10 @@ script = ExtResource("8_bnn2l")
 
 [node name="Shield" type="Node" parent="Resources" unique_id=767754512]
 script = ExtResource("8_bnn2l")
+
+[node name="TargetIndicator" type="Line2D" parent="."]
+visible = false
+points = PackedVector2Array(-26, 0, 0, -26, 26, 0, 0, 26)
+closed = true
+width = 2.5
+default_color = Color(0.35, 0.95, 1, 1)

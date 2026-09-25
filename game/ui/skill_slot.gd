@@ -6,6 +6,18 @@ extends Control
 
 signal cast_requested(skill: ActiveSkillDefinition)
 
+## 交互状态与「可施放状态」分离：`SkillSlotState` 回答“现在能不能放”，
+## 本枚举回答“玩家当前选中/正在瞄准哪个格子”，两者不得互相冒充。
+enum InteractionState {
+	NORMAL,
+	SELECTED,
+	TARGETING,
+}
+
+const INTERACTION_NORMAL: StringName = &"NORMAL"
+const INTERACTION_SELECTED: StringName = &"SELECTED"
+const INTERACTION_TARGETING: StringName = &"TARGETING"
+
 const SLOT_SIZE: float = 64.0
 const EMPTY_ICON_TEXT: String = "—"
 const COLOR_BG_EMPTY: Color = Color(0.05, 0.06, 0.08, 0.92)
@@ -23,11 +35,12 @@ const COLOR_COST_EMPHASIS: Color = Color(1.0, 0.42, 0.25, 1.0)
 @onready var cost_label: Label = $CostLabel
 @onready var hotkey_label: Label = $HotkeyLabel
 @onready var state_highlight: Panel = $StateHighlight
+@onready var targeting_highlight: Panel = $TargetingHighlight
 
 var _pawn: Pawn
 var _skill: ActiveSkillDefinition
 var _hotkey_text: String = ""
-var _selected: bool = false
+var _interaction_state: int = InteractionState.NORMAL
 var _snapshot: Dictionary = {}
 
 func _ready() -> void:
@@ -50,7 +63,7 @@ func show_empty(hotkey_text: String = "") -> void:
 	_pawn = null
 	_skill = null
 	_hotkey_text = hotkey_text
-	_selected = false
+	_interaction_state = InteractionState.NORMAL
 	_snapshot = _empty_snapshot()
 	_apply_snapshot(_snapshot)
 
@@ -58,12 +71,45 @@ func set_hotkey(hotkey_text: String) -> void:
 	_hotkey_text = hotkey_text
 	_apply_snapshot(_snapshot)
 
+## 兼容入口：SELECTED / NORMAL 的旧语义，等价于 set_interaction_state()。
 func set_selected(value: bool) -> void:
-	_selected = value
-	state_highlight.visible = _selected and _skill != null and _skill.is_configured()
+	set_interaction_state(InteractionState.SELECTED if value else InteractionState.NORMAL)
 
 func is_selected() -> bool:
-	return _selected
+	return _interaction_state == InteractionState.SELECTED
+
+## 交互状态只改变格子自身的表现，不读取也不修改 Pawn 的资源、冷却或控制器命令。
+func set_interaction_state(state: int) -> void:
+	if state != InteractionState.NORMAL and state != InteractionState.SELECTED and state != InteractionState.TARGETING:
+		state = InteractionState.NORMAL
+	if _interaction_state == state:
+		_apply_interaction_state()
+		return
+	_interaction_state = state
+	_apply_interaction_state()
+
+func get_interaction_state() -> int:
+	return _interaction_state
+
+func get_interaction_state_name() -> StringName:
+	match _interaction_state:
+		InteractionState.SELECTED:
+			return INTERACTION_SELECTED
+		InteractionState.TARGETING:
+			return INTERACTION_TARGETING
+		_:
+			return INTERACTION_NORMAL
+
+func is_targeting() -> bool:
+	return _interaction_state == InteractionState.TARGETING
+
+## 选中框与瞄准框分离：瞄准必须能被一眼区分，且只在技能格内部绘制。
+func _apply_interaction_state() -> void:
+	var configured: bool = has_skill()
+	if state_highlight != null:
+		state_highlight.visible = configured and _interaction_state == InteractionState.SELECTED
+	if targeting_highlight != null:
+		targeting_highlight.visible = configured and _interaction_state == InteractionState.TARGETING
 
 func has_skill() -> bool:
 	return _skill != null and _skill.is_configured()
@@ -100,7 +146,7 @@ func _apply_snapshot(snapshot: Dictionary) -> void:
 	cooldown_label.visible = not cooldown_label.text.is_empty()
 	cooldown_overlay.visible = state_name == SkillSlotState.STATE_COOLDOWN and ratio > 0.0
 	cooldown_overlay.offset_bottom = SLOT_SIZE * ratio
-	state_highlight.visible = _selected and configured
+	_apply_interaction_state()
 	_apply_state_tint(state_name)
 	cost_label.add_theme_color_override(
 		"font_color",

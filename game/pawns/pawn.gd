@@ -20,6 +20,9 @@ enum State {
 	DEAD,
 }
 
+## 目标高亮是纯表现层：合法目标才显示，非法目标不显示“可确认”状态。
+const TARGET_HIGHLIGHT_LEGAL_COLOR: Color = Color(0.35, 0.95, 1.0, 1.0)
+
 const SPIRIT_RESOURCE_ID: StringName = &"spirit"
 const SPIRIT_DISPLAY_NAME: String = "灵力"
 const SPIRIT_POOL_NAME: StringName = &"Spirit"
@@ -35,6 +38,7 @@ const SPIRIT_POOL_NAME: StringName = &"Spirit"
 @onready var cultivation_progress: CultivationProgressComponent = $CultivationProgress
 @onready var status_bars: PawnStatusBars = $HealthBarAnchor/StatusBars
 @onready var selection_indicator: CanvasItem = $SelectionIndicator
+@onready var target_indicator: Line2D = $TargetIndicator
 @onready var controller: PawnController = $Controller
 
 ## 灵力池只在 `max_spirit > 0` 时创建，因此没有灵力配置的单位这里为 null。
@@ -64,6 +68,7 @@ var _attack_cooldown: float = 0.0
 var _attack_state_remaining: float = 0.0
 var _visual_tween: Tween
 var _selected: bool = false
+var _target_highlight_visible: bool = false
 var _skill_cooldowns: Dictionary = {}
 
 ## 眩晕只封锁行动：持续期间不能移动、普通攻击或施放技能，不修改生命与其它资源。
@@ -77,6 +82,8 @@ func _ready() -> void:
 	# 资源池必须先注册并绑定到兼容门面，之后的数值只有一个数据源。
 	_register_resource_pools()
 	_setup_cultivation_progress()
+	# 目标高亮是纯表现节点：出生时必须隐藏，避免继承场景残留可见状态。
+	set_target_highlight(false)
 
 	if data == null:
 		push_error("Pawn requires a PawnData resource: %s" % get_path())
@@ -462,6 +469,7 @@ func die() -> void:
 
 	velocity = Vector2.ZERO
 	set_selected(false)
+	set_target_highlight(false)
 	_set_state(State.DEAD)
 	collision_shape.set_deferred("disabled", true)
 	collision_layer = 0
@@ -475,6 +483,21 @@ func set_selected(value: bool) -> void:
 		return
 	_selected = value
 	selection_indicator.visible = _selected
+
+
+## 目标悬停高亮：`legal = false` 或单位已死亡时不显示，只有合法目标才给出可确认反馈。
+## 该节点是 Pawn 自身子节点，绘制顺序低于头顶状态条与 HUD CanvasLayer（layer = 10），
+## 因此不会覆盖生命条、选中框或暂停遮罩。
+func set_target_highlight(value: bool, legal: bool = true) -> void:
+	_target_highlight_visible = value and legal and is_alive()
+	if target_indicator == null:
+		return
+	target_indicator.visible = _target_highlight_visible
+	target_indicator.default_color = TARGET_HIGHLIGHT_LEGAL_COLOR
+
+
+func is_target_highlight_visible() -> bool:
+	return _target_highlight_visible
 
 func get_state_label() -> String:
 	if is_stunned():

@@ -86,19 +86,34 @@ func test_configured_skills_are_bound_in_order() -> void:
 		assert_str((slots[index].get_node("Icon") as Label).text).is_equal("技")
 
 
-func test_slot_click_is_forwarded_as_skill_request() -> void:
+## 点击槽位的路由（INC-UI-012 起）：需要目标的技能进入 TARGETING，SELF 技能才直接转发施法请求。
+func test_slot_click_is_routed_to_targeting_or_direct_request() -> void:
 	var bar: SkillBar = _spawn_bar()
-	var pawn: Pawn = _spawn_pawn(_make_data_for_capacity(2, 1))
+	var pawn: Pawn = _spawn_pawn(_make_data_for_capacity(2, 2))
 	await await_idle_frame()
 	bar.bind_pawn(pawn)
 
 	var requests: Array[ActiveSkillDefinition] = []
+	var targeting: Array[ActiveSkillDefinition] = []
 	bar.skill_requested.connect(func(skill: ActiveSkillDefinition) -> void: requests.append(skill))
-	var first_skill: ActiveSkillDefinition = pawn.data.get_active_skills()[0]
-	bar.get_slots()[0].cast_requested.emit(first_skill)
+	bar.targeting_started.connect(func(skill: ActiveSkillDefinition) -> void: targeting.append(skill))
 
+	var enemy_skill: ActiveSkillDefinition = pawn.data.get_active_skills()[0]
+	var self_skill: ActiveSkillDefinition = pawn.data.get_active_skills()[1]
+	self_skill.target_type = ActiveSkillDefinition.SkillTargetType.SELF
+
+	# 默认 ENEMY 技能：只进入目标选择，不直接请求施法。
+	bar.get_slots()[0].cast_requested.emit(enemy_skill)
+	assert_int(requests.size()).is_zero()
+	assert_int(targeting.size()).is_equal(1)
+	assert_object(targeting[0]).is_same(enemy_skill)
+	assert_bool(bar.is_targeting()).is_true()
+
+	# SELF 技能：跳过目标选择，直接请求施法。
+	bar.get_slots()[1].cast_requested.emit(self_skill)
 	assert_int(requests.size()).is_equal(1)
-	assert_object(requests[0]).is_same(first_skill)
+	assert_object(requests[0]).is_same(self_skill)
+	assert_bool(bar.is_targeting()).is_false()
 
 
 func test_spirit_change_refreshes_slot_to_no_resource() -> void:

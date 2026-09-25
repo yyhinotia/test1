@@ -468,9 +468,9 @@
 
 ## INC-UI-012：技能目标选择交互状态与合法目标高亮
 
-- 状态：planned
+- 状态：accepted
 - 创建时间：2026-09-25T17:31:30+08:00
-- 最后修改：2026-09-25T17:31:30+08:00
+- 最后修改：2026-09-25T17:43:37+08:00
 - 主题：ui
 - 来源：`docs/build-mvp.md` MVP-4。
 - 目标：在不引入复杂瞄准器的前提下，让技能格能表达 NORMAL / SELECTED / TARGETING 交互状态，并为合法目标提供可点击、可取消、可高亮的反馈；施法可行性仍由既有状态读模型负责。
@@ -483,13 +483,13 @@
 - 范围：`game/ui/skill_slot.gd`、`game/ui/skill_bar.gd`、必要场景节点与 `game/pawns/pawn.tscn` 目标高亮节点、对应 UI 测试。
 - 非范围：AOE、施法范围指示器、方向/地面选择、复杂鼠标指针、正式技能图标。
 - 依赖：`INC-PAWNS-014`、`INC-COMBAT-005`、`INC-COMBAT-006`。
-- 检索证据：待前置 Increment 计划落库后按 Git Diff 复核；当前 SkillSlot 只有 SELECTED 状态常量，主场景没有 TARGETING 路由，Pawn 场景只有选中框没有目标悬停框。
+- 检索证据：`git diff -- agent-plan/` 确认 UI-012 在 CROSS-012 子项登记后保持 planned；SkillSlot 原来只有 SELECTED 布尔状态，SkillBar 原来把点击直接转发为 `skill_requested`，Pawn 场景没有独立目标高亮节点。
 - 风险：悬停高亮不能通过永久设置 `set_selected()` 冒充选中；Container 重排不得改变 64×64 技能格；新增 Pawn 场景节点必须保持暂停遮罩绘制顺序与真实窗口布局证据。
-- 实现说明：交互状态由 SkillBar/SkillSlot 持有，目标合法性由战斗层查询；UI 不复制阵营或距离规则。
-- 变更文件：待实现回填。
-- 测试证据：待实现回填。
-- 验证状态：未验证
-- 已知问题：待实现回填。
-- 用户验收：待验收
-- Git：待验收后提交
+- 实现说明：SkillSlot 新增 NORMAL / SELECTED / TARGETING 交互状态，SkillBar 统一负责 `request_skill()`、SELF 直发与非 SELF `begin_targeting()`；取消、解绑和刷新会清理瞄准状态。Pawn 新增独立 `TargetIndicator`，只对存活且合法目标显示。UI 仍只发请求，不扣灵力、不推进冷却、不写 controller 命令。
+- 变更文件：`game/ui/skill_slot.gd`、`game/ui/skill_slot.tscn`、`game/ui/skill_bar.gd`、`game/pawns/pawn.gd`、`game/pawns/pawn.tscn`、`test/integration/skill_targeting_ui_test.gd`、`test/integration/skill_targeting_ui_test.gd.uid`、`test/integration/skill_bar_test.gd`、`test/gameplay/main_scene_gameplay_test.gd`。
+- 测试证据：`pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` 于 2026-09-25T17:43:37+08:00 通过：GdUnit4 unit 87 / integration 67 / gameplay 26，共 180 cases、0 failures；headless 10 suites、549 assertions、0 failing；`git diff --check` 无输出。
+- 验证状态：验证通过（2026-09-25T17:43:37+08:00）
+- 已知问题：主场景鼠标/右键/Escape 输入确认与取消由 `INC-CORE-006` 接入；本 Increment 只提供 UI 状态与请求信号。
+- 用户验收：已验收（2026-09-25T17:31:30+08:00，用户授权“验收通过，分increment提交”）
+- Git：实现与计划随本次 UI-012 提交落库。
 - 备注：父 Increment 为 `INC-CROSS-012`；本 Increment 不接主场景输入，输入路由由 `INC-CORE-006` 完成。

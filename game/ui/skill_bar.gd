@@ -5,12 +5,16 @@ extends HBoxContainer
 ## SkillBar 只转发点击请求，不执行施法、不扣除灵力、不推进冷却。
 
 signal skill_requested(skill: ActiveSkillDefinition)
+## 需要目标的技能不直接请求施法，而是先进入 TARGETING；目标由主场景输入路由提供。
+signal targeting_started(skill: ActiveSkillDefinition)
+signal targeting_cancelled()
 
 const SLOT_SCENE_PATH: String = "res://game/ui/skill_slot.tscn"
 const MAX_SLOTS: int = 6
 
 var _pawn: Pawn
 var _slots: Array[SkillSlot] = []
+var _targeting_skill: ActiveSkillDefinition
 
 func _ready() -> void:
 	add_theme_constant_override("separation", 6)
@@ -21,12 +25,15 @@ func bind_pawn(pawn: Pawn) -> void:
 	if _pawn == pawn and pawn != null:
 		refresh()
 		return
+	# 绑定对象切换时旧瞄准必然失效，先回到 NORMAL 再重建槽位。
+	cancel_targeting()
 	_disconnect_pawn_signals()
 	_pawn = pawn
 	_connect_pawn_signals()
 	refresh()
 
 func unbind() -> void:
+	cancel_targeting()
 	_disconnect_pawn_signals()
 	_pawn = null
 	_clear_slots()
@@ -41,6 +48,58 @@ func get_slots() -> Array[SkillSlot]:
 func get_slot_count() -> int:
 	return _slots.size()
 
+func is_targeting() -> bool:
+	return _targeting_skill != null
+
+
+func get_targeting_skill() -> ActiveSkillDefinition:
+	return _targeting_skill
+
+
+## 点击槽位的唯一入口：SELF 技能不需要玩家再点目标，其余技能进入 TARGETING。
+## 本方法只发请求信号与改自身交互状态，绝不施法、扣灵力或推进冷却。
+func request_skill(skill: ActiveSkillDefinition) -> void:
+	if skill == null or not skill.is_configured():
+		return
+	if skill.target_type == ActiveSkillDefinition.SkillTargetType.SELF:
+		cancel_targeting()
+		skill_requested.emit(skill)
+		return
+	begin_targeting(skill)
+
+
+## 进入目标选择：同一时间只允许一个技能处于 TARGETING。
+func begin_targeting(skill: ActiveSkillDefinition) -> bool:
+	if skill == null or not skill.is_configured():
+		return false
+	if _pawn != null and not _is_known_skill(skill):
+		return false
+	_targeting_skill = skill
+	_apply_interaction_states()
+	targeting_started.emit(skill)
+	return true
+
+
+## 取消目标选择；没有进行中的瞄准时返回 false 且不发信号。
+func cancel_targeting() -> bool:
+	if _targeting_skill == null:
+		return false
+	_targeting_skill = null
+	_apply_interaction_states()
+	targeting_cancelled.emit()
+	return true
+
+
+## 交互状态只落在槽位自身；可施放状态仍由每个 SkillSlot 的读模型决定。
+func _apply_interaction_states() -> void:
+	for slot: SkillSlot in _slots:
+		if slot == null or not is_instance_valid(slot):
+			continue
+		var is_targeting_slot: bool = _targeting_skill != null and slot.get_skill() == _targeting_skill
+		slot.set_interaction_state(
+			SkillSlot.InteractionState.TARGETING if is_targeting_slot else SkillSlot.InteractionState.NORMAL
+		)
+
 ## 只读刷新：境界容量与技能列表决定槽位；冷却、灵力与死亡状态由每个 SkillSlot 自行读取。
 func refresh() -> void:
 	if _pawn == null or not is_instance_valid(_pawn) or _pawn.data == null:
@@ -48,6 +107,9 @@ func refresh() -> void:
 		visible = false
 		return
 	visible = true
+	# 技能列表变化后原瞄准对象可能已失效，必须自动取消并清掉 TARGETING。
+	if _targeting_skill != null and not _is_known_skill(_targeting_skill):
+		cancel_targeting()
 	var capacity: int = 0
 	var realm: RealmDefinition = _pawn.get_realm()
 	if realm != null:
@@ -61,6 +123,16 @@ func refresh() -> void:
 			slot.bind_skill(_pawn, skills[index], str(index + 1))
 		else:
 			slot.show_empty(str(index + 1))
+
+## 瞄准对象必须仍属于当前 Pawn 的技能列表，避免 UI 用任意资源绕过 Build 配置。
+func _is_known_skill(skill: ActiveSkillDefinition) -> bool:
+	if skill == null or _pawn == null or _pawn.data == null:
+		return false
+	for candidate: ActiveSkillDefinition in _pawn.data.get_active_skills():
+		if candidate == skill:
+			return true
+	return false
+
 
 func _ensure_slot_count(count: int) -> void:
 	while _slots.size() < count:
@@ -83,7 +155,7 @@ func _clear_slots() -> void:
 	_slots.clear()
 
 func _on_slot_cast_requested(skill: ActiveSkillDefinition) -> void:
-	skill_requested.emit(skill)
+	request_skill(skill)
 
 func _connect_pawn_signals() -> void:
 	if _pawn == null:

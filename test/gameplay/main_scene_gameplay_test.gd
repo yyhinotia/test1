@@ -388,8 +388,9 @@ func test_number_key_routes_specific_skill_and_q_keeps_default() -> void:
 	assert_bool(order_label.text.contains(player.data.get_primary_active_skill().display_name)).is_true()
 
 
-## 技能栏点击与数字键共用路由；点击第二个槽位后记录第二个技能且不提前扣灵力。
-func test_skill_bar_click_routes_to_specific_skill() -> void:
+## 技能栏点击（INC-UI-012 起）：需要目标的技能先进入 TARGETING 并锁定被点击的那个技能；
+## 只发请求、不提前扣灵力，确认目标由 INC-CORE-006 的主场景路由完成。
+func test_skill_bar_click_enters_targeting_for_specific_skill() -> void:
 	var main: Node2D = _spawn_main_with_player_data(_make_two_skill_data())
 	await await_idle_frame()
 
@@ -397,17 +398,19 @@ func test_skill_bar_click_routes_to_specific_skill() -> void:
 	var enemy: Pawn = main.get_node("Pawns/EnemyPawn")
 	enemy.global_position = player.global_position + Vector2(400.0, 0.0)
 	var bar: SkillBar = main.get_node("HUD/BottomLeftDock/SkillBar")
-	var order_label: Label = main.get_node(ORDER_LABEL_PATH)
 	main.call("_set_selected_pawn", player)
 	main.call("_handle_command", main.get_canvas_transform() * enemy.global_position)
 	await await_idle_frame()
 	var spirit_before: float = player.current_spirit
+	var second_skill: ActiveSkillDefinition = player.data.get_active_skills()[1]
 
-	bar.get_slots()[1].cast_requested.emit(player.data.get_active_skills()[1])
+	bar.get_slots()[1].cast_requested.emit(second_skill)
 	await await_idle_frame()
 
-	assert_bool(order_label.text.contains("试炼爆炎")).is_true()
+	assert_bool(bar.is_targeting()).is_true()
+	assert_object(bar.get_targeting_skill()).is_same(second_skill)
 	assert_float(player.current_spirit).is_equal_approx(spirit_before, APPROX)
+	assert_float(player.get_skill_cooldown_remaining(second_skill.id)).is_zero()
 
 
 ## 无选中或无有效目标时，数字键/点击都不得扣灵力、进冷却或伪造命令。
