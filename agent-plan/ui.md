@@ -1,6 +1,6 @@
 # UI 主题计划
 
-> 最后修改：2026-09-25T18:52:41+08:00
+> 最后修改：2026-09-25T18:53:57+08:00
 > 主题：ui  
 > 规则来源：`../AGENTS.md`
 
@@ -554,3 +554,33 @@
 - 验收时间：2026-09-25T18:52:41+08:00
 - Git：`main` / `d4b8cd3`（+ `INC-CROSS-015` 计划回写提交）
 - 备注：父 Increment 为 `INC-CROSS-015`；本 Increment 只提供「选择入口」，流程编排在 `INC-CORE-008`。验收依据：用户 2026-09-25 指令「推送，保持本地远端一致」，按 `AGENTS.md` §4.1 与本仓库 `INC-CROSS-011`~ `INC-CROSS-014` 的既有约定记录为明确验收。
+
+## INC-UI-015：秘境进度面板（DungeonPanel）
+
+- 状态：accepted
+- 创建时间：2026-09-25T18:53:57+08:00
+- 最后修改：2026-09-25T19:07:39+08:00
+- 主题：ui
+- 目标：让「贪不贪」成为玩家可见可选的操作：显示当前深度 / 总层数、已累积灵石与潜在收益，并提供「继续深入 / 见好就收」两个入口；面板只发信号，不做收益或状态判断。
+- 验收标准：
+  - 新增 `game/ui/dungeon_panel.gd` + `game/ui/dungeon_panel.tscn`（节点：`TitleLabel` / `DepthLabel` / `RewardLabel` / `AdvanceButton` / `RetreatButton` / `RestartButton` / `StatusLabel`）。
+  - 信号：`advance_requested()`、`retreat_requested()` 与 `restart_requested()`；面板不持有 `DungeonRun`、不读取秘境定义以外的游戏状态、不改任何收益数值。
+  - API：`set_dungeon(dungeon)`、`set_depth(depth, room_count)`、`set_reward(earned_spirit_stones)`、`set_status(text)`、`set_awaiting_decision(value)`、`set_can_restart(value)`、`is_can_restart()`、`get_status_text()`、`get_depth_text()`、`get_reward_text()`、`is_awaiting_decision()`；`set_dungeon(null)` 与未配置秘境必须安全降级。
+  - 交互语义：「继续深入」与「见好就收」只在等待决策时可用；运行时禁用，且**程序化触发 `pressed` 也不转发**（沿用 `INC-UI-014` 的兜底写法）。「重新开始秘境」只在 `can_restart` 为真（本局已结算）时可用，程序化触发同样不转发；未设置秘境或未结算时不显示重启入口。未设置秘境时不显示深度与收益数字。
+  - 新增集成用例覆盖：未配置秘境降级；`set_depth()` / `set_reward()` 只改文本；非等待决策时两个按钮禁用且程序化触发不转发；等待决策时两个按钮可用且各自只发一次对应信号；结算后可重启且只发一次 `restart_requested`，未结算时重启按钮禁用且程序化触发不转发。
+- 范围：`game/ui/dungeon_panel.gd`（新增）、`game/ui/dungeon_panel.tscn`（新增）、`test/integration/dungeon_panel_test.gd`（新增）。
+- 非范围：秘境地图 / 房间列表可视化、动画、主题皮肤、手柄与键盘导航、存档、商店。
+- 依赖：`INC-WORLD-003`（房间链定义，用于读取总层数）、既有 Dock 布局（`INC-UI-011` / `INC-UI-014`，均已验收）。
+- 检索证据：同一轮检索（工作区干净、无 pending Increment）；`EncounterPanel`（`INC-UI-014`）已确立「UI 只发信号 + 未配置资源安全降级 + 程序化触发也拦」的写法，本 Increment 沿用同一模式，不引入第二种 UI 边界。
+- 风险：面板若自判「继续是否合法」或自行累加收益，会把 UI 变成第二个流程入口；因此本 Increment 只接收文本与布尔量，全部判断留在 `DungeonRun`。另一风险是左下 Dock 空间有限（已有 PawnInfoPanel / SkillBar / EncounterPanel），新增面板必须保持紧凑并复用既有容器布局，避免把已有面板挤出屏幕。
+- 实现说明：新增 `DungeonPanel`（`VBoxContainer`）：只接收文本与布尔量并广播 `advance_requested()` / `retreat_requested()` / `restart_requested()`，不持有 `DungeonRun`、不读取秘境定义以外的游戏状态、不累加任何收益。`set_dungeon()` 绑定秘境并把标题写成「名称（满额 N 灵石）」；`set_depth()` / `set_reward()` 只改文本；`set_awaiting_decision(true)` 打开「继续深入 / 见好就收」并关掉重开入口，`set_can_restart(true)` 反过来关掉决策入口，两者互斥，避免出现互相矛盾的可点状态。三个按钮都做自身兜底：未配置秘境、非等待决策、未结算时即使被程序化触发 `pressed` 也不转发信号。`RestartButton` 文案按「是否已产生进度」在「开始秘境 / 重新开始秘境」之间切换，未配置秘境时深度与收益显示占位符 `-`，不显示任何编造数字。
+- 变更文件：`game/ui/dungeon_panel.gd`（新增）、`game/ui/dungeon_panel.tscn`（新增）、`test/integration/dungeon_panel_test.gd`（新增）。
+- 测试证据：`pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` → PASS（GdUnit4 266 cases / 0 failures；headless 10 suites / 549 assertions / 0 failing；退出码 0），其中 integration 由 102 增至 108 cases。新增 6 个用例覆盖：未配置秘境时深度 / 收益为占位文本且三个入口禁用、程序化触发零转发；`set_depth()` / `set_reward()` 只改文本且不改秘境定义；非等待决策时决策按钮禁用且程序化触发不转发；等待决策时两个按钮各自只发一次对应信号、`restart` 保持零转发；结算后 `restart_requested` 只发一次、未结算时禁用且不转发；面板不自造单位（子树内 Pawn 数为 0）。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T19:07:39+08:00
+- 已知问题：面板只呈现深度 / 收益 / 状态与三个入口，不含房间列表、地图与动画；`RestartButton` 的「开始秘境」文案在 `_depth <= 0` 时生效，具体含义由主场景决定（第一次开局仍走开机入口）。键盘与手柄导航、主题皮肤属于非范围。
+- 用户验收：已验收（依据用户 2026-09-25 指令「验收通过，分increment提交」与「分批incre单独推送后继续开发」）
+- 验收时间：2026-09-25T19:07:39+08:00
+- Git：
+- 计划修订（2026-09-25T19:01:58+08:00）：在原有 `StatusLabel` 之外增加 `RestartButton` 与 `restart_requested()`，原因：结算后需要明确的「重新开始一次秘境」入口，而 `EncounterPanel` 的「重新挑战」语义属于单场遭遇，不能复用为秘境续局。
+- 备注：父 Increment 为 `INC-CROSS-016`；本 Increment 只提供「贪不贪」的两个入口，流程编排在 `INC-CORE-009`。

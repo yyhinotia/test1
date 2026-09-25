@@ -1,0 +1,47 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/ui/dungeon_panel.gd" id="1_dungeon_panel"]
+
+[node name="DungeonPanel" type="VBoxContainer"]
+custom_minimum_size = Vector2(190, 0)
+offset_right = 190.0
+offset_bottom = 354.0
+size_flags_vertical = 8
+theme_override_constants/separation = 6
+script = ExtResource("1_dungeon_panel")
+
+[node name="TitleLabel" type="Label" parent="."]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "秘境"
+
+[node name="DepthLabel" type="Label" parent="."]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "深度：-"
+
+[node name="RewardLabel" type="Label" parent="."]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "已获灵石：-"
+
+[node name="StatusLabel" type="Label" parent="."]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "秘境未开始"
+autowrap_mode = 2
+
+[node name="AdvanceButton" type="Button" parent="."]
+layout_mode = 2
+disabled = true
+text = "继续深入"
+
+[node name="RetreatButton" type="Button" parent="."]
+layout_mode = 2
+disabled = true
+text = "见好就收"
+
+[node name="RestartButton" type="Button" parent="."]
+layout_mode = 2
+disabled = true
+text = "重新开始秘境"
