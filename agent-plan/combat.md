@@ -1,6 +1,6 @@
 # Combat 主题计划
 
-> 最后修改：2026-09-26T02:16:27+08:00
+> 最后修改：2026-09-26T02:24:14+08:00
 > 主题：combat  
 > 规则来源：`../AGENTS.md`
 
@@ -423,9 +423,9 @@
 
 ## INC-COMBAT-011：敌人技能特征差异化（问题型敌人）
 
-- 状态：awaiting_acceptance
+- 状态：accepted
 - 创建时间：2026-09-26T01:56:11+08:00
-- 最后修改：2026-09-26T02:16:27+08:00
+- 最后修改：2026-09-26T02:24:14+08:00
 - 主题：combat
 - 目标：把「敌人变强」改成「敌人提出的问题不同」——在既有危险窗口机制之外，为 6~8 类敌人各自锁定一个可被特定技能回答的战斗问题（近战持续压力 / 远程压制 / 蓄力可打断 / 高爆发 / 高防御 / 召唤增援），使同一个 Build 面对不同阵容时表现出可测的差异。
 - 验收标准：
@@ -445,7 +445,35 @@
 - 验证状态：验证通过（问题标签 / 召唤契约 / 增援接线 / 终局判定 / 危险窗口不变四条链路均有单套件证据；同一 Build 对两类问题的可测差异由真实 PlayerController + AIController 驱动得出；统一门禁 PASS）
 - 验证时间：2026-09-26T02:16:27+08:00
 - 已知问题：① 增援只有单一「定时召唤」形态，没有落点碰撞校验（当前战场无静态碰撞体故未暴露）；② `problem_tag` 目前只被数据与测试消费，正式 HUD 尚未把敌人标签展示给玩家，玩家侧「换技能」的因果预期仍靠遭遇选择与实战体感（`INC-WORLD-008` / `INC-TESTING-019` 再解决编排与对照）；③ `problem_enemy_differentiation_test.gd` 只覆盖高防御 vs 高爆发一组对照，六类标签的完整交互矩阵留给 `INC-TESTING-019`；④ 既有 orphan 债务（integration / gameplay）与本次无关。
-- 用户验收：未验收
-- 验收时间：
+- 用户验收：已验收
+- 验收时间：2026-09-26T02:24:14+08:00
 - Git：develop / 5f5ffeb
 - 备注：父 Increment 为 `INC-CROSS-021`；本项是「不同敌人让不同技能价值变化」的敌人侧承载，先于秘境房间组合（`INC-WORLD-008`）落地。
+
+## INC-COMBAT-012：条件伤害（对受控目标的额外倍率）
+
+- 状态：planned
+- 创建时间：2026-09-26T02:19:07+08:00
+- 最后修改：2026-09-26T02:19:07+08:00
+- 主题：combat
+- 目标：让「控制」第一次能直接兑换成「输出窗口」——新增 `controlled_bonus_multiplier` 数据字段与 DAMAGE 路径的条件倍率语义：目标处于控制状态（`Pawn.is_stunned()`）时按额外倍率结算，未受控时完全按原倍率。这样「先控后打」是一个由数据表达的连招，而不是靠玩家自己脑补。
+- 验收标准：
+  - `ActiveSkillDefinition` 新增 `controlled_bonus_multiplier`（默认 1.0，归一化不小于 1.0）；默认值下所有既有技能的伤害与效果完全不变（回归零影响）。
+  - DAMAGE 技能对受控目标按 `effect_value × controlled_bonus_multiplier` 结算，对未受控目标只按 `effect_value` 结算；两者都沿用既有「攻击力 × 倍率、至少 1 点、防御减免、先护盾后生命」公式。
+  - 条件倍率只作用于 DAMAGE；AOE_DAMAGE / LIFESTEAL / DASH 的既有语义不变。
+  - 统一门禁 `RESULT: PASS`。
+- 范围：`game/shared/resources/active_skill_definition.gd`、`game/combat/skill/skill_effect_resolver.gd`、`test/unit/active_skill_definition_test.gd`、`test/integration/skill_effect_test.gd`。
+- 非范围：Buff / Debuff 容器、控制状态种类扩展（减速 / 沉默 / 击退）、抗性、暴击、多效果技能、技能升级、AI 使用条件技能的决策。
+- 依赖：`INC-COMBAT-010`（效果类型扩展）、`INC-COMBAT-009`（`Pawn.apply_stun()` / `is_stunned()` 已是既有状态事实）。
+- 检索证据：2026-09-26T02:19:07+08:00 在仓库根目录执行 `git grep -n -E "is_stunned|get_stun_remaining|apply_stun" -- game/pawns/pawn.gd`（确认控制状态由 `_stun_remaining` 单一事实提供，`Pawn` 已暴露 `apply_stun()` / `is_stunned()` / `get_stun_remaining()`）、`git grep -h -o -E "INC-COMBAT-[0-9]{3}" -- agent-plan/`（COMBAT 已用至 011，本项取 012）；读取 `game/combat/skill/skill_effect_resolver.gd` 全文确认 `get_damage_amount(caster, skill)` 只接收施法者与技能、无法表达任何依赖目标状态的条件倍率，`apply_effect()` 是唯一分派点。
+- 风险：① `get_damage_amount()` 新增可选目标参数会波及 DASH / AOE_DAMAGE / LIFESTEAL 的调用点，必须保证默认参数下行为逐字节不变；② 「受控」当前只等于 `is_stunned()`，若未来引入减速 / 沉默等其他控制类型，需要重新定义边界（本 Increment 不预设）；③ 条件倍率叠在 `effect_value` 之上容易出现「控制期一刀秒杀」的数值事故，本项只提供能力，倍率由技能资源定档，平衡留给 `INC-TESTING-019`。
+- 实现说明：
+- 变更文件：
+- 测试证据：
+- 验证状态：未验证
+- 验证时间：
+- 已知问题：
+- 用户验收：未验收
+- 验收时间：
+- Git：待提交
+- 备注：父 Increment 为 `INC-CROSS-021`；本项只提供「条件伤害」的表达能力，实际使用它的技能与数值由 `INC-PAWNS-023` 承担。

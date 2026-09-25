@@ -1,6 +1,6 @@
 # Pawns 主题计划
 
-> 最后修改：2026-09-26T02:01:11+08:00
+> 最后修改：2026-09-26T02:19:07+08:00
 > 主题：pawns  
 > 规则来源：`../AGENTS.md`
 
@@ -827,3 +827,32 @@
 - 验收时间：2026-09-26T02:01:11+08:00
 - Git：`develop` / `0f20ed2`
 - 备注：父 Increment 为 `INC-CROSS-021`；本 Increment 只提供「可选项变多」，是否真的形成 Build 由 `INC-TESTING-019` 的交互矩阵与人工轮回答。
+
+## INC-PAWNS-023：玩家技能池扩到 8 个（条件爆发 + 主动回复）
+
+- 状态：planned
+- 创建时间：2026-09-26T02:19:07+08:00
+- 最后修改：2026-09-26T02:19:07+08:00
+- 主题：pawns
+- 目标：把玩家技能池从 6 个扩到 8 个，补齐两条此前**没有任何技能使用**的轴——「条件爆发」（破军斩：只有目标被控住时才打得过基础输出）与「主动回复」（回春术：事后补血，与护体真气的预防式护盾互补）。目标是让「控制 + 爆发」与「护盾 + 回复」这两个组合在数据上真实存在，而不是继续加同轴的高倍率技能。炼气期保持 `active_skill_slots = 2`，C(8,2) = 28 种组合。
+- 验收标准：
+  - 新增 `player_breaking_slash.tres`（破军斩）：DAMAGE 技能，对未受控目标的倍率**低于**御剑斩，对受控目标（定身 / 眩晕）的总倍率**高于**御剑斩，且灵力与冷却都高于御剑斩——「单独使用」严格劣于御剑斩。
+  - 新增 `player_rejuvenation_skill.tres`（回春术）：HEAL 技能、SELF 目标，单次回复量高于血引术在常规目标上的单次吸血量，灵力与冷却为八技能中最高。
+  - 八个技能的数据契约可被静态核对：`id` 唯一、六个既有 `effect_type` 之外由条件字段引入的条件爆发轴可区分，全部可被 `Pawn.learn_active_skill()` 学习并进入 `set_active_skill_loadout()`。
+  - 两个新技能都不进入 `player_pawn.tres` 的初始装配，`qi_refining.tres` 的 `active_skill_slots` 保持 2。
+  - 统一门禁 `RESULT: PASS`。
+- 范围：`game/pawns/data/skills/player_breaking_slash.tres`（新增）、`game/pawns/data/skills/player_rejuvenation_skill.tres`（新增）、`test/unit/tactical_skill_catalog_test.gd`、`test/integration/runtime_active_skill_loadout_test.gd`。
+- 非范围：技能升级与等级、技能树、解锁来源与房间编排（`INC-WORLD-008`）、境界槽位曲线、技能图标与动画、AI 使用条件技能、技能栏视觉分组。
+- 依赖：`INC-COMBAT-012`（条件伤害语义）、`INC-PAWNS-022`（六技能编目与运行时装配链路）。
+- 检索证据：2026-09-26T02:19:07+08:00 在仓库根目录执行 `Get-ChildItem game/pawns/data/skills/*.tres, game/pawns/data/*skill.tres`（现有 6 个玩家技能：`player_sword_skill` / `player_guard_skill` / `player_binding_skill` / `player_dash_skill` / `player_sword_aoe_skill` / `player_lifesteal_skill`）、`git grep -n "SkillEffectType.HEAL\|effect_type = 1" -- game/`（HEAL 枚举自 `INC-COMBAT-006` 起就是已支持类型，但没有任何玩家技能资源使用它，「主动回复」是真实空轴）、`git grep -h -o -E "INC-PAWNS-[0-9]{3}" -- agent-plan/ | Sort-Object -Unique`（PAWNS 已用至 022，本项取 023）。
+- 风险：① 破军斩的价值完全依赖玩家肯先手控制，如果定身术 10s 冷却跟不上实战节奏，条件爆发会退化成没人用的技能——这属于 `INC-TESTING-019` 要回答的问题，本 Increment 不做数值保底；② 回春术 12s 冷却 + 45 灵力可能让它在长线战斗里不如血引术，同样留给交互矩阵判断；③ 两个新技能与 `INC-PAWNS-022` 的三个技能一样目前没有解锁来源，正常流程中还拿不到，解锁链路由 `INC-WORLD-008` 的房间链承担。
+- 实现说明：
+- 变更文件：
+- 测试证据：
+- 验证状态：未验证
+- 验证时间：
+- 已知问题：
+- 用户验收：未验收
+- 验收时间：
+- Git：待提交
+- 备注：父 Increment 为 `INC-CROSS-021`；本项只提供「可选项变多」，是否形成 Build 由 `INC-WORLD-008` 的编排与 `INC-TESTING-019` 的矩阵回答。
