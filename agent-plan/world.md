@@ -1,6 +1,6 @@
 # World 主题计划（地图 / 秘境 / 遭遇 / 事件 / 探索）
 
-> 最后修改：2026-09-25T18:53:44+08:00
+> 最后修改：2026-09-25T20:16:30+08:00
 > 主题：world
 > 规则来源：`../AGENTS.md`
 > 设计源：`../docs/project_summary.md` §十（秘境系统）、§十八 MVP ④（一个秘境 + 房间 + Boss）
@@ -180,9 +180,9 @@
 
 ## INC-WORLD-006：跨遭遇延续运行时境界
 
-- 状态：planned
+- 状态：accepted
 - 创建时间：2026-09-25T20:11:34+08:00
-- 最后修改：2026-09-25T20:11:34+08:00
+- 最后修改：2026-09-25T20:16:30+08:00
 - 主题：世界
 - 目标：把已经通过 `INC-PAWNS-019` 建立的运行时境界覆盖纳入 EncounterSession 的修士进度延续，保证秘境换房 / 重开 / 换遭遇后不会回退到静态炼气期。
 - 验收标准：
@@ -195,13 +195,13 @@
 - 依赖：`INC-PAWNS-019`、`INC-WORLD-005`（修为 / Build 延续，已验收）。
 - 检索证据：同 `INC-CULT-005`；`game/world/encounter_session.gd` 的 `_capture_player_progress()` 当前只采集 `forge_level`、`techniques`、`cultivation_exp`，没有境界资源；`_apply_player_progress()` 当前只调用 `set_cultivation_exp()`，因此运行时境界无法跨 `begin_with_state()` 存活。
 - 风险：恢复境界必须发生在新 Pawn `_ready()` 配置之后、`encounter_started.emit()` 之前；否则 UI 会先读取炼气容量再被刷新，或者静态初始化覆盖恢复值。恢复 API 必须拒绝可达链外的境界，防止会话层意外越级。
-- 实现说明：待实现。
-- 变更文件：待实现。
-- 测试证据：待实现。
-- 验证状态：待验证
-- 验证时间：待验证
-- 已知问题：待实现。
-- 用户验收：待验收
-- 验收时间：待验收
+- 实现说明：`_capture_player_progress()` 在旧 Pawn 退场前采集 `RealmDefinition` 与当前境界内修为；`_apply_player_progress()` 先调用 `restore_realm()` 恢复运行时境界和修为，再写强化与功法。若进度缺少有效 `RealmDefinition`，回落到既有 `set_cultivation_exp(..., &"encounter_carry")` 语义，保持旧存档 / 测试夹具兼容。
+- 变更文件：`game/world/encounter_session.gd`、`test/integration/encounter_session_test.gd`。
+- 测试证据：2026-09-25T20:15:50+08:00 执行 `godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://test/integration/encounter_session_test.gd -rd res://reports/inc_world_006 --ignoreHeadlessMode`，GdUnit4 报告 `15 test cases | 0 errors | 0 failures | 0 orphans`，`Exit code: 0`；MCP `validate` 对会话脚本与测试返回 `valid: true`。新增用例断言突破后的筑基境界、境界内 37 点修为、主动技能容量 3 与静态炼气基线均跨 `begin_with_state()` 存活。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T20:15:50+08:00
+- 已知问题：只延续玩家单位的运行时境界；敌人仍按档案重建。跨进程存档、技能冷却与负面状态延续不在本 Increment。
+- 用户验收：已验收（依据用户 2026-09-25 指令「验收通过，分increment提交」与「分批increment单独推送后继续开发」；验证通过后按该授权进入 Git）
+- 验收时间：2026-09-25T20:16:30+08:00
 - Git：待提交
 - 备注：父 Increment 为 `INC-CROSS-018`；本 Increment 保证突破成果在同一代修士的多次遭遇之间不丢失。

@@ -149,21 +149,22 @@ func begin_with_state(encounter: EncounterDefinition, state: PawnResourceSnapsho
 func capture_player_state() -> PawnResourceSnapshot:
 	return PawnResourceSnapshot.capture(_player)
 
-## 采集当前玩家单位的运行时进度（INC-WORLD-005）：强化等级、运行时领悟功法、修为当前值。
-## 与 `capture_player_state()` 的资源快照分开：资源快照由调用方决定是否延续，
-## 运行时进度属于同一代修士的身份，换房与重新开局都必须延续；空单位返回空字典。
+## 采集当前玩家单位的运行时进度（INC-WORLD-005 / INC-WORLD-006）：强化等级、运行时领悟功法、
+## 当前运行时境界与境界内修为。与 `capture_player_state()` 的资源快照分开：资源快照由调用方
+## 决定是否延续，运行时进度属于同一代修士的身份，换房与重新开局都必须延续；空单位返回空字典。
 func _capture_player_progress() -> Dictionary:
 	if _player == null or not is_instance_valid(_player):
 		return {}
 	return {
 		"forge_level": _player.get_forge_level(),
 		"techniques": _player.get_learned_techniques(),
+		"realm": _player.get_realm(),
 		"cultivation_exp": float(_player.get_cultivation_snapshot().get("current_exp", 0.0)),
 	}
 
 
-## 写回运行时进度：强化沿用 Pawn 的封顶规则逐级应用，功法依赖 Pawn 自身去重，
-## 修为按目标单位的突破阈值截断。空进度 / 空单位安全降级，不新建任何资源。
+## 写回运行时进度：先恢复运行时境界，再写入该境界内修为；强化沿用 Pawn 的封顶规则逐级应用，
+## 功法依赖 Pawn 自身去重。空进度 / 空单位安全降级，不新建任何资源。
 func _apply_player_progress(player: Pawn, progress: Dictionary) -> void:
 	if player == null or not is_instance_valid(player) or progress.is_empty():
 		return
@@ -174,9 +175,14 @@ func _apply_player_progress(player: Pawn, progress: Dictionary) -> void:
 		for technique: Variant in techniques:
 			if technique is TechniqueDefinition:
 				player.learn_technique(technique)
-	player.set_cultivation_exp(
-		float(progress.get("cultivation_exp", 0.0)), &"encounter_carry"
-	)
+
+	var cultivation_exp: float = float(progress.get("cultivation_exp", 0.0))
+	var carried_realm: Variant = progress.get("realm")
+	if carried_realm is RealmDefinition:
+		# 境界恢复失败时保持新单位的静态起始境界；不要把一个境界的修为写进另一个境界。
+		player.restore_realm(carried_realm as RealmDefinition, cultivation_exp)
+	else:
+		player.set_cultivation_exp(cultivation_exp, &"encounter_carry")
 
 
 ## 重新挑战当前遭遇；没有当前遭遇时返回 false，不隐式开局。

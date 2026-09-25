@@ -299,3 +299,28 @@ func test_carried_cultivation_is_clamped_by_target_realm() -> void:
 
 func _cultivation_exp(pawn: Pawn) -> float:
 	return float(pawn.get_cultivation_snapshot().get("current_exp", 0.0))
+
+## INC-WORLD-006：运行时境界与境界内修为跨 `begin_with_state()` 延续，容量不回退。
+func test_runtime_realm_and_capacity_survive_begin_with_state() -> void:
+	var session: EncounterSession = _spawn_session()
+	var encounter: EncounterDefinition = _load_encounter(TRIAL_ENCOUNTER_PATH)
+	assert_bool(session.begin(encounter)).is_true()
+
+	var player: Pawn = session.get_player_pawn()
+	var static_data: PawnData = player.data
+	player.set_cultivation_exp(100.0, &"test_breakthrough")
+	assert_bool(player.try_breakthrough()).is_true()
+	player.set_cultivation_exp(37.0, &"test_post_breakthrough")
+	var capacity_before: int = player.get_build_loadout().get_capacity(RealmDefinition.KIND_ACTIVE_SKILL)
+	var snapshot: PawnResourceSnapshot = session.capture_player_state()
+
+	assert_bool(session.begin_with_state(encounter, snapshot)).is_true()
+	var next_player: Pawn = session.get_player_pawn()
+	assert_object(next_player).is_not_same(player)
+	assert_str(String(next_player.get_realm().id)).is_equal("foundation_establishment")
+	assert_str(String(next_player.get_base_realm().id)).is_equal("qi_refining")
+	assert_float(_cultivation_exp(next_player)).is_equal_approx(37.0, APPROX)
+	assert_int(next_player.get_build_loadout().get_capacity(RealmDefinition.KIND_ACTIVE_SKILL)).is_equal(capacity_before)
+	assert_int(capacity_before).is_equal(3)
+	assert_str(String(static_data.realm.id)).is_equal("qi_refining")
+	await await_idle_frame()
