@@ -1,6 +1,6 @@
 # Pawns 主题计划
 
-> 最后修改：2026-09-25T13:43:51+08:00  
+> 最后修改：2026-09-25T13:54:28+08:00  
 > 主题：pawns  
 > 规则来源：`../AGENTS.md`
 
@@ -56,3 +56,44 @@
 - 验收时间：2026-09-25T13:43:51+08:00
 - Git：分支 main，commit d7c2e1e（feat(pawns): add pawn MVP with movement, combat, HUD and pause [INC-CROSS-001]）
 - 备注：此 Increment 是 `INC-CROSS-001` 的子 Increment。
+## INC-PAWNS-002：Pawn 生命状态变化统一入口与血条挂载结构
+
+- 状态：in_progress
+- 创建时间：2026-09-25T13:54:28+08:00
+- 最后修改：2026-09-25T13:54:28+08:00
+- 主题：pawns
+- 目标：让 Pawn 提供唯一的“生命状态变化”入口，使血条显示与伤害、护盾、死亡解耦，并把血条改为“独立场景 + 头顶锚点”的可复用结构。
+- 验收标准：
+  - `Pawn.notify_health_state_changed()` 是生命状态变化通知血条的唯一入口，`take_damage()` 与 `die()` 都通过它。
+  - Pawn 场景结构为 `HealthBarAnchor(Node2D) > HealthBar(pawn_health_bar.tscn 实例)`，不再内联血条节点与血条脚本。
+  - 初始血条隐藏；伤害、护盾变化、死亡后同一帧显示。
+  - 对外信号 `health_changed` / `shield_changed` / `state_changed` / `died` 的参数与时序不变，HUD 与 `main.tscn` 连接不受影响。
+  - 不引入解析错误、场景加载错误和信号断链；`player_pawn.tscn`、`enemy_pawn.tscn` 实例仍可正常加载。
+- 范围：`game/pawns/pawn.gd`、`game/pawns/pawn.tscn`。
+- 非范围：HealthComponent 抽取（`INC-PAWNS-003`）、治疗/护盾/吸血技能、分层生命（护体灵力/真元/气血/元神）、寻路与 AI 决策。
+- 依赖：`INC-PAWNS-001`、`INC-UI-002`。
+- 风险：节点路径由 `Pawn/HealthBar` 变为 `Pawn/HealthBarAnchor/HealthBar`，会影响继承该场景的 `player_pawn.tscn` / `enemy_pawn.tscn`；本次在静态验证与运行态断言中一并检查新路径。
+- 实现说明：待实现完成后填写。
+- 变更文件：待填写。
+- 测试证据：待填写。
+- 验证状态：未验证
+- 验证时间：
+- 已知问题：Pawn 仍直接持有 `current_health` / `current_shield`，尚未抽取为独立组件；该工作登记为 `INC-PAWNS-003`。
+- 用户验收：未验收
+- 验收时间：
+- Git：
+- 备注：父 Increment 为 `INC-CROSS-002`。
+
+## INC-PAWNS-003：抽取 HealthComponent（计划中）
+
+- 状态：planned
+- 创建时间：2026-09-25T13:54:28+08:00
+- 最后修改：2026-09-25T13:54:28+08:00
+- 主题：pawns
+- 目标：把 Pawn 内的生命/护盾数据与信号抽取为独立 `HealthComponent`，作为多生命层（护体灵力/真元/气血/元神）以及治疗、护盾、持续伤害等状态效果的单一数据源。
+- 验收标准：待细化。方向是 `HealthComponent` 持有 `current_hp` / `max_hp` / `current_shield` / `max_shield` 与 `health_state_changed` 信号，Pawn 只做转发，HUD 与血条订阅同一信号源，并复跑 `INC-PAWNS-002`、`INC-UI-002` 的验收路径。
+- 范围：`game/pawns/health_component.gd`（新增）、`game/pawns/pawn.gd`、`game/pawns/pawn.tscn`、`game/main/main.tscn` 信号连接复核。
+- 非范围：分层生命的数值设计、状态效果（中毒/灼烧/吸血）实现。
+- 依赖：`INC-PAWNS-002`、`INC-COMBAT-001`。
+- 风险：会触碰已验收的战斗与 HUD 信号连接，需要独立验证与用户验收，不能与血条显示策略混在同一个 Increment。
+- 备注：来源为 `docs/血条ui需求.txt` 的“① HealthComponent”步骤；`INC-CROSS-002` 只实现“②③④⑤”与规则 1-4，未执行该抽取。

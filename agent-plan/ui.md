@@ -1,6 +1,6 @@
 # UI 主题计划
 
-> 最后修改：2026-09-25T13:43:51+08:00  
+> 最后修改：2026-09-25T13:54:22+08:00  
 > 主题：ui  
 > 规则来源：`../AGENTS.md`
 
@@ -52,3 +52,33 @@
 - 验收时间：2026-09-25T13:43:51+08:00
 - Git：分支 main，commit d7c2e1e（feat(pawns): add pawn MVP with movement, combat, HUD and pause [INC-CROSS-001]）
 - 备注：此 Increment 是 `INC-CROSS-001` 的子 Increment。
+## INC-UI-002：血条改为生命状态变化时显示并延迟自动隐藏
+
+- 状态：in_progress
+- 创建时间：2026-09-25T13:54:22+08:00
+- 最后修改：2026-09-25T13:54:22+08:00
+- 主题：ui
+- 目标：按 `docs/血条ui需求.txt` 的方案，把 Pawn 头顶血条由“常驻显示”改成“生命状态变化时立即显示、最后一次变化后 2 秒无变化再隐藏”，减少战场 UI 噪音（当前 2 个单位，目标战斗规模为 4v4 / 4-8 单位）。
+- 验收标准：
+  - 场景启动后，所有 Pawn 的头顶血条初始隐藏（`visible == false`）。
+  - 生命值或护盾发生变化时，对应 Pawn 的血条在同一帧变为可见，并显示最新数值。
+  - 最后一次生命状态变化后 2.0 秒（`auto_hide_delay`，可配置）无新变化，血条自动隐藏，且不做渐隐（需求文档规则 4：MVP 先直接隐藏）。
+  - 连续变化会重置隐藏计时：t=0/1/2 秒连续变化时，直到 t=4 秒才隐藏。
+  - 护盾变化（不只是掉血）同样触发显示；死亡也触发显示，之后按同一规则隐藏。
+  - 血条仍固定在 Pawn 头顶锚点（`Pawn/HealthBarAnchor/HealthBar`），Pawn 移动时跟随。
+  - 暂停期间血条不因暂停消失（隐藏计时随 `SceneTree.paused` 冻结）。
+  - 不引入 GDScript 解析错误、场景加载错误和信号断链。
+- 范围：`game/ui/pawn_health_bar.gd`、`game/ui/pawn_health_bar.tscn`（新增）、`game/pawns/pawn.tscn` 中的 `HealthBarAnchor/HealthBar` 结构、`test/headless/health_bar_visibility_test.gd`（新增，自建 headless 验证）。
+- 非范围：渐隐/闪烁动画（需求文档列为第二阶段）、治疗与护盾技能、HUD 信息面板改造、正式血条美术、HealthComponent 抽取（见 `INC-PAWNS-003`）。
+- 依赖：`INC-UI-001`（常驻血条现状）、`INC-PAWNS-001`、`INC-PAWNS-002`（生命状态变化统一入口）。
+- 风险：可见性由常驻改为事件驱动，若未来有代码绕过统一入口直接修改 `current_health`，血条不会出现；通过 `Pawn.notify_health_state_changed()` 单一入口降低风险，并写入已知问题。
+- 实现说明：待实现完成后填写。
+- 变更文件：待填写。
+- 测试证据：待填写。
+- 验证状态：未验证
+- 验证时间：
+- 已知问题：“同一帧显示”依赖伤害帧内的同步信号链，需要运行态证据确认；需求文档的“① HealthComponent”未在本 Increment 实现，已登记 `INC-PAWNS-003`。
+- 用户验收：未验收
+- 验收时间：
+- Git：
+- 备注：父 Increment 为 `INC-CROSS-002`；本 Increment 取代 `INC-UI-001` 中“每个 Pawn 常驻显示生命条”的表现约定，数值刷新与选中 HUD 行为保持不变。

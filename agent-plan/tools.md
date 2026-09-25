@@ -6,9 +6,9 @@
 
 ## INC-TOOLS-001：初始化 Git 仓库并配置 origin
 
-- 状态：awaiting_acceptance
+- 状态：accepted
 - 创建时间：2026-09-25T13:14:56+08:00
-- 最后修改：2026-09-25T13:39:23+08:00
+- 最后修改：2026-09-25T13:55:35+08:00
 - 主题：tools
 - 目标：将 `test_1` 初始化为 Git 仓库，默认分支为 `main`，并配置 GitHub origin 地址。
 - 验收标准：
@@ -31,17 +31,17 @@
   - 复验（上游关联）：branch.main.remote=origin、branch.main.merge=refs/heads/main 已写入 .git/config，首次 git push 无需额外参数。
 - 验证状态：验证通过
 - 验证时间：2026-09-25T13:39:23+08:00
-- 已知问题：尚未创建首次提交；尚未 push。SSH 连通性已复验通过。
-- 用户验收：未验收
-- 验收时间：
-- Git：分支 `main` / remote `origin` / 暂无提交
+- 已知问题：无。首次提交与 push 已于 2026-09-25T13:52:23+08:00 完成（origin/main = 567b6e7）。
+- 用户验收：已验收
+- 验收时间：2026-09-25T13:45:00+08:00（用户答复验收通过，按分钟记录）
+- Git：分支 `main` / remote `origin` / 已 push，origin/main = `567b6e7`
 - 备注：用户验收前不执行首次提交和 push；本轮未改动任何 Godot 业务文件。
 
 ## INC-TOOLS-002：首次提交基线与素材入库策略
 
-- 状态：awaiting_acceptance
+- 状态：accepted
 - 创建时间：2026-09-25T13:41:00+08:00
-- 最后修改：2026-09-25T13:44:10+08:00
+- 最后修改：2026-09-25T13:55:35+08:00
 - 主题：tools
 - 目标：在用户验收 INC-CROSS-001 后，把已验收的实现与 agent-plan 记录一次性纳入 Git 稳定版本，并在提交前确定 art/ 素材的入库策略。
 - 验收标准：
@@ -71,7 +71,7 @@
 - 验证状态：验证通过
 - 验证时间：2026-09-25T13:43:51+08:00
 - 已知问题：art/EverRogueTileset 2.0 缺许可证、FREE RPG SKILL ICONS 16x16 非 CC0、像素素材过滤未统一为 Nearest，均不在本 Increment 处理。
-- 用户验收：未验收
-- 验收时间：
-- Git：分支 `main`，commit `d7c2e1e`，尚未 push
+- 用户验收：已验收
+- 验收时间：2026-09-25T13:45:00+08:00（用户答复验收通过，按分钟记录）
+- Git：分支 `main`，commit `d7c2e1e`、`ad6237a`、`567b6e7`；2026-09-25T13:52:23+08:00 已 push 到 `origin/main`
 - 备注：本 Increment 不修改任何业务代码，只处理版本入库策略与记录。

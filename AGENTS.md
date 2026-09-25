@@ -4,7 +4,7 @@
 > 项目定位：修仙 RPG + 宗门经营 + 秘境探索 + 暂停式实时战术战斗  
 > 设计源：`docs/project_summary.md`  
 > 引擎版本：Godot `4.7.2.stable`  
-> 文档最后修改：`2026-09-25T13:44:31+08:00`
+> 文档最后修改：`2026-09-25T13:55:10+08:00`
 
 ## 0. 指令优先级
 
@@ -420,6 +420,13 @@ res://
 - `stop_project`：结束运行时并释放会话。
 - `check_project`：检查项目与运行时状态。
 
+如果 Godot MCP 在当前会话不可用（工具调用返回 unsupported，或桥接端口无法连接），允许改用等价的 Godot CLI headless 验证，但必须在 Increment 中写明替代原因和影响范围：
+
+- 脚本与场景加载：运行 `godot --headless --path <项目目录> --quit-after <帧数>`，退出码 0 视为加载通过；也可以运行 `test/` 下的自建 headless 测试脚本，退出码 0 视为通过，非 0 必须把输出摘录进 Increment。
+- 逻辑与计时验证：优先写成可重复执行的 headless 断言脚本，而不是只靠人工观察。
+- 使用 CLI 替代 MCP 时，“测试证据”必须同时记录：替代原因、执行命令、退出码和关键输出。
+- 本仓库文档不得写入 Godot 可执行文件的本地绝对路径，只记录调用方式。
+
 如果某个验证无法执行，必须在 Increment 中写明“未执行原因、影响范围和补偿验证”。
 
 ---
@@ -478,7 +485,10 @@ res://
 - 像素素材过滤策略需要统一为 Nearest：project.godot 目前未设置 rendering/textures/canvas_textures/default_texture_filter，仍是引擎默认线性过滤；MVP 场景只使用占位 SVG，因此不影响本次验收。
 - `EverRogueTileset 2.0` 缺少许可证。
 - `agent-plan/` 已建立 `_index.md`、`_template.md`、`pawns.md`、`combat.md`、`ui.md`、`core.md` 和 `tools.md`。
-- 首个 Pawn MVP（`INC-CROSS-001` 及 `INC-PAWNS-001/COMBAT-001/UI-001/CORE-001`）已通过用户验收，并在 `main` 上提交为 `d7c2e1e`；尚未 push 到 origin，push 前需用户授权。
+- 首个 Pawn MVP（`INC-CROSS-001` 及 `INC-PAWNS-001/COMBAT-001/UI-001/CORE-001`）已通过用户验收，并在 `main` 上提交为 `d7c2e1e`。
+- 2026-09-25T13:52:23+08:00 已按用户授权完成首次 push：`origin/main` = `567b6e7`；`INC-TOOLS-001`、`INC-TOOLS-002` 已登记验收。
+- `docs/血条ui需求.txt` 是用户提供的血条 UI 需求输入（“变化时显示 + 延迟自动隐藏”），对应父 Increment `INC-CROSS-002`；需求文档中的“① HealthComponent”登记为 `INC-PAWNS-003`（planned）。
+- 2026-09-25T13:55 起本会话 Godot MCP 工具调用返回 unsupported，改用 Godot CLI headless 与 `test/headless/` 自建脚本验证；MCP 恢复后应优先回到 MCP。
 - 这些是已知基线问题，不得在无对应 Increment 的情况下顺手修复。
 
 ---
