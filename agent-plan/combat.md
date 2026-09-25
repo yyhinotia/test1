@@ -286,5 +286,5 @@
 - 已知问题：无新增阻塞。控制器只消费 Pawn 容量投影，不复制规则。
 - 用户验收：已验收
 - 验收时间：2026-09-25T18:10:00+08:00
-- Git：`main` / 待本轮分 Increment 提交后回写 hash
+- Git：`main` / `1fb0b2f`
 - 备注：父 Increment 为 `INC-CROSS-013`；本 Increment 不改变技能效果规则。

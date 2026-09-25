@@ -275,5 +275,5 @@
 - 已知问题：无新增阻塞。主场景只调用 Pawn / SkillBar 的既有裁决，不复制容量计算。
 - 用户验收：已验收
 - 验收时间：2026-09-25T18:10:00+08:00
-- Git：`main` / 待本轮分 Increment 提交后回写 hash
+- Git：`main` / `fcd5c65`
 - 备注：父 Increment 为 `INC-CROSS-013`。

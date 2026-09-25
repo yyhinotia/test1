@@ -612,5 +612,5 @@
 - 已知问题：无新增阻塞。无境界或无效境界单位保持无界兼容；完整原始 loadout 仍保留给 BuildValidator。
 - 用户验收：已验收
 - 验收时间：2026-09-25T18:10:00+08:00
-- Git：`main` / 待本轮分 Increment 提交后回写 hash
+- Git：`main` / `a8e1ea1`
 - 备注：父 Increment 为 `INC-CROSS-013`。
