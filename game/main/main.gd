@@ -13,7 +13,8 @@ const PAWN_CLICK_RADIUS: float = 30.0
 @onready var build_label: Label = $HUD/HudMargin/HudPanel/HudContent/BuildLabel
 @onready var pause_state_label: Label = $HUD/PauseStateLabel
 @onready var pause_overlay: Control = $HUD/PauseOverlay
-@onready var info_panel: PawnInfoPanel = $HUD/PawnInfoPanel
+@onready var info_panel: PawnInfoPanel = $HUD/BottomLeftDock/PawnInfoPanel
+@onready var skill_bar: SkillBar = $HUD/BottomLeftDock/SkillBar
 
 var _selected_pawn: Pawn
 
@@ -22,6 +23,8 @@ func _ready() -> void:
 	ai_controller.bind(enemy_pawn)
 	ai_controller.set_target(player_pawn)
 
+	if not skill_bar.skill_requested.is_connected(_on_skill_bar_skill_requested):
+		skill_bar.skill_requested.connect(_on_skill_bar_skill_requested)
 	_set_paused(false)
 	_update_hud()
 
@@ -30,6 +33,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		_set_paused(not get_tree().paused)
 		get_viewport().set_input_as_handled()
 		return
+
+	for index: int in range(1, 7):
+		if event.is_action_pressed("cast_skill_%d" % index):
+			_handle_cast_skill_slot(index - 1)
+			get_viewport().set_input_as_handled()
+			return
 
 	if event.is_action_pressed("cast_skill"):
 		_handle_cast_skill()
@@ -62,7 +71,7 @@ func _handle_command(screen_position: Vector2) -> void:
 		player_controller.order_move(_screen_to_world(screen_position))
 	_update_hud()
 
-## Q 键技能入口：只有选中存活的玩家 Pawn 且存在有效敌方目标时才记录技能命令。
+## Q 键技能入口：保持既有兼容行为，默认选择第一个已配置主动技能。
 ## 命令记录在控制器里，暂停期间也可下达，恢复运行后由控制器接近并施放。
 func _handle_cast_skill() -> void:
 	if _selected_pawn != player_pawn or not player_pawn.is_alive():
@@ -70,6 +79,26 @@ func _handle_cast_skill() -> void:
 	if not player_controller.order_skill():
 		return
 	_update_hud()
+
+## 数字键技能入口：按技能栏顺序解析具体技能，对不存在/未配置的槽位保持完全无操作。
+func _handle_cast_skill_slot(index: int) -> void:
+	if player_pawn.data == null:
+		return
+	var skills: Array[ActiveSkillDefinition] = player_pawn.data.get_active_skills()
+	if index < 0 or index >= skills.size():
+		return
+	_request_selected_skill(skills[index])
+
+## 技能栏点击与数字键共用唯一命令路由；控制器负责目标、冷却与灵力的最终裁决。
+func _request_selected_skill(skill: ActiveSkillDefinition) -> void:
+	if _selected_pawn != player_pawn or not player_pawn.is_alive():
+		return
+	if not player_controller.order_skill_instance(skill):
+		return
+	_update_hud()
+
+func _on_skill_bar_skill_requested(skill: ActiveSkillDefinition) -> void:
+	_request_selected_skill(skill)
 
 func _pawn_at_screen_position(screen_position: Vector2) -> Pawn:
 	var world_position: Vector2 = _screen_to_world(screen_position)
@@ -90,9 +119,11 @@ func _set_selected_pawn(new_selection: Pawn) -> void:
 	if _selected_pawn != null and is_instance_valid(_selected_pawn) and _selected_pawn.is_alive():
 		_selected_pawn.set_selected(true)
 		info_panel.bind_pawn(_selected_pawn)
+		skill_bar.bind_pawn(_selected_pawn)
 	else:
 		_selected_pawn = null
 		info_panel.unbind()
+		skill_bar.unbind()
 	_update_hud()
 
 ## 暂停是唯一接入点：暂停时信息卡给完整信息，战斗中给精简信息。
@@ -104,7 +135,7 @@ func _set_paused(value: bool) -> void:
 	_update_hud()
 
 func _update_hud() -> void:
-	instructions_label.text = "左键：选择玩家 Pawn    右键：移动/攻击目标    Q：主动技能    空格：暂停/恢复"
+	instructions_label.text = "左键：选择玩家 Pawn    右键：移动/攻击目标    1~6：主动技能    Q：默认技能    空格：暂停/恢复"
 	if _selected_pawn == null:
 		selected_label.text = "未选中单位"
 		order_label.text = "指令：-"
@@ -172,9 +203,9 @@ func _on_player_state_changed(_changed_pawn: Pawn, _new_state: int) -> void:
 ## HUD 技能行完全只读：技能名、Q 键位、灵力消耗、剩余冷却与不可用原因。
 ## 资源与冷却数值仍由 Pawn / ResourcePoolComponent 持有，这里只做展示。
 func _describe_active_skill(pawn: Pawn) -> String:
-	if pawn == null or pawn.data == null or pawn.data.active_skill == null:
+	if pawn == null or pawn.data == null or pawn.data.get_primary_active_skill() == null:
 		return "技能：无"
-	var skill: ActiveSkillDefinition = pawn.data.active_skill
+	var skill: ActiveSkillDefinition = pawn.data.get_primary_active_skill()
 	if not skill.is_configured():
 		return "技能：无"
 

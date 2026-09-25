@@ -5,6 +5,7 @@
 [ext_resource type="Script" uid="uid://dy1qqrpvay2d4" path="res://game/ui/arena_backdrop.gd" id="2_8y833"]
 [ext_resource type="PackedScene" path="res://game/pawns/enemy_pawn.tscn" id="2_enemy_pawn"]
 [ext_resource type="PackedScene" path="res://game/ui/pawn_info_panel.tscn" id="3_info_panel"]
+[ext_resource type="PackedScene" path="res://game/ui/skill_bar.tscn" id="4_skill_bar"]
 
 [node name="Main" type="Node2D" unique_id=539579646]
 process_mode = 3
@@ -90,8 +91,22 @@ theme_override_font_sizes/font_size = 18
 text = "实时运行中"
 horizontal_alignment = 2
 
-[node name="PawnInfoPanel" parent="HUD" unique_id=1365103856 instance=ExtResource("3_info_panel")]
-layout_mode = 3
+[node name="BottomLeftDock" type="HBoxContainer" parent="HUD" unique_id=1418483885]
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = -370.0
+offset_right = 16.0
+offset_bottom = -16.0
+grow_vertical = 0
+theme_override_constants/separation = 8
+
+[node name="PawnInfoPanel" parent="HUD/BottomLeftDock" unique_id=275076184 instance=ExtResource("3_info_panel")]
+layout_mode = 2
+
+[node name="SkillBar" parent="HUD/BottomLeftDock" unique_id=672815287 instance=ExtResource("4_skill_bar")]
+layout_mode = 2
 
 [node name="PauseOverlay" type="Control" parent="HUD" unique_id=535022588]
 visible = false

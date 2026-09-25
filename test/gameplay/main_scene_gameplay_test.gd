@@ -8,7 +8,7 @@ const SELECTED_LABEL_PATH: String = "HUD/HudMargin/HudPanel/HudContent/SelectedL
 const ORDER_LABEL_PATH: String = "HUD/HudMargin/HudPanel/HudContent/OrderLabel"
 const SKILL_LABEL_PATH: String = "HUD/HudMargin/HudPanel/HudContent/SkillLabel"
 const BUILD_LABEL_PATH: String = "HUD/HudMargin/HudPanel/HudContent/BuildLabel"
-const INFO_PANEL_PATH: String = "HUD/PawnInfoPanel"
+const INFO_PANEL_PATH: String = "HUD/BottomLeftDock/PawnInfoPanel"
 
 ## 面板内部节点路径（相对 PawnInfoPanel 根节点）。
 const INFO_PANEL_SHIELD_LABEL_PATH: String = "Margin/Panel/Content/VitalSection/ShieldRow/ValueLabel"
@@ -29,6 +29,34 @@ func _spawn_main() -> Node2D:
 func after_test() -> void:
 	if get_tree() != null:
 		get_tree().paused = false
+
+
+## 主场景内技能栏/快捷键用例需要两份主动技能；在进入树之前替换 PawnData，确保 Pawn._ready 按新数据建池。
+func _spawn_main_with_player_data(data: PawnData) -> Node2D:
+	var scene: PackedScene = load(MAIN_SCENE_PATH)
+	var main: Node2D = scene.instantiate()
+	var player: Pawn = main.get_node("Pawns/PlayerPawn")
+	player.data = data
+	auto_free(main)
+	add_child(main)
+	return main
+
+
+func _make_two_skill_data() -> PawnData:
+	var data: PawnData = (load(PLAYER_DATA_PATH) as PawnData).duplicate(true) as PawnData
+	var first: ActiveSkillDefinition = data.get_primary_active_skill()
+	var second: ActiveSkillDefinition = ActiveSkillDefinition.new()
+	second.id = &"test_burst"
+	second.display_name = "试炼爆炎"
+	second.spirit_cost = 15.0
+	second.cooldown = 3.0
+	second.cast_range = 110.0
+	second.damage_multiplier = 1.2
+	var skills: Array[ActiveSkillDefinition] = []
+	skills.append(first)
+	skills.append(second)
+	data.active_skills = skills
+	return data
 
 
 ## 把敌人移到视口外，避免 AI 在断言期间改变玩家数值，保证用例可重复。
@@ -283,6 +311,128 @@ func test_skill_label_shows_none_for_pawn_without_skill() -> void:
 	await await_idle_frame()
 
 	assert_str(skill_label.text).is_equal("技能：无")
+
+
+## 数字键 1~6 必须由 InputMap 唯一提供，主场景不得硬编码物理按键。
+func test_cast_skill_slots_are_mapped_to_number_keys() -> void:
+	var expected_keys: Array[Key] = [KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6]
+	for index: int in range(1, 7):
+		var action: String = "cast_skill_%d" % index
+		assert_bool(InputMap.has_action(action)).is_true()
+		var matched: bool = false
+		for event: InputEvent in InputMap.action_get_events(action):
+			var key_event: InputEventKey = event as InputEventKey
+			if key_event != null and key_event.keycode == expected_keys[index - 1]:
+				matched = true
+		assert_bool(matched).is_true()
+
+
+## 选中玩家后技能栏绑定并显示境界容量槽位；取消选中后立即解绑并清空。
+func test_skill_bar_follows_selection_lifecycle() -> void:
+	var main: Node2D = _spawn_main()
+	_park_enemy(main)
+	await await_idle_frame()
+
+	var player: Pawn = main.get_node("Pawns/PlayerPawn")
+	var bar: SkillBar = main.get_node("HUD/BottomLeftDock/SkillBar")
+	assert_bool(bar.visible).is_false()
+	assert_int(bar.get_slot_count()).is_zero()
+
+	main.call("_set_selected_pawn", player)
+	await await_idle_frame()
+	assert_object(bar.get_bound_pawn()).is_same(player)
+	assert_bool(bar.visible).is_true()
+	assert_int(bar.get_slot_count()).is_equal(player.get_realm().get_slot_capacity(RealmDefinition.KIND_ACTIVE_SKILL))
+
+	main.call("_set_selected_pawn", null)
+	await await_idle_frame()
+	assert_object(bar.get_bound_pawn()).is_null()
+	assert_int(bar.get_slot_count()).is_zero()
+	assert_bool(bar.visible).is_false()
+
+
+## 左下 Dock 只负责排列方向与绘制顺序：信息卡在左、技能栏在右，暂停遮罩仍最后绘制。
+func test_bottom_left_dock_structure_and_draw_order() -> void:
+	var main: Node2D = _spawn_main()
+	var dock: HBoxContainer = main.get_node("HUD/BottomLeftDock")
+	var panel: PawnInfoPanel = dock.get_node("PawnInfoPanel") as PawnInfoPanel
+	var bar: SkillBar = dock.get_node("SkillBar") as SkillBar
+	var overlay: Control = main.get_node("HUD/PauseOverlay")
+
+	assert_object(panel).is_not_null()
+	assert_object(bar).is_not_null()
+	assert_int(dock.grow_horizontal).is_equal(Control.GROW_DIRECTION_END)
+	assert_int(dock.grow_vertical).is_equal(Control.GROW_DIRECTION_BEGIN)
+	assert_int(dock.get_index()).is_less(overlay.get_index())
+
+
+## 数字键 2 路由到第二个具体技能，而不是永远回退第一个；Q 仍保持默认第一个技能。
+func test_number_key_routes_specific_skill_and_q_keeps_default() -> void:
+	var main: Node2D = _spawn_main_with_player_data(_make_two_skill_data())
+	await await_idle_frame()
+
+	var player: Pawn = main.get_node("Pawns/PlayerPawn")
+	var enemy: Pawn = main.get_node("Pawns/EnemyPawn")
+	enemy.global_position = player.global_position + Vector2(400.0, 0.0)
+	var order_label: Label = main.get_node(ORDER_LABEL_PATH)
+	main.call("_set_selected_pawn", player)
+	main.call("_handle_command", main.get_canvas_transform() * enemy.global_position)
+	await await_idle_frame()
+
+	_press_key(main, KEY_2)
+	await await_idle_frame()
+	assert_bool(order_label.text.contains("试炼爆炎")).is_true()
+
+	_press_key(main, KEY_Q)
+	await await_idle_frame()
+	assert_bool(order_label.text.contains(player.data.get_primary_active_skill().display_name)).is_true()
+
+
+## 技能栏点击与数字键共用路由；点击第二个槽位后记录第二个技能且不提前扣灵力。
+func test_skill_bar_click_routes_to_specific_skill() -> void:
+	var main: Node2D = _spawn_main_with_player_data(_make_two_skill_data())
+	await await_idle_frame()
+
+	var player: Pawn = main.get_node("Pawns/PlayerPawn")
+	var enemy: Pawn = main.get_node("Pawns/EnemyPawn")
+	enemy.global_position = player.global_position + Vector2(400.0, 0.0)
+	var bar: SkillBar = main.get_node("HUD/BottomLeftDock/SkillBar")
+	var order_label: Label = main.get_node(ORDER_LABEL_PATH)
+	main.call("_set_selected_pawn", player)
+	main.call("_handle_command", main.get_canvas_transform() * enemy.global_position)
+	await await_idle_frame()
+	var spirit_before: float = player.current_spirit
+
+	bar.get_slots()[1].cast_requested.emit(player.data.get_active_skills()[1])
+	await await_idle_frame()
+
+	assert_bool(order_label.text.contains("试炼爆炎")).is_true()
+	assert_float(player.current_spirit).is_equal_approx(spirit_before, APPROX)
+
+
+## 无选中或无有效目标时，数字键/点击都不得扣灵力、进冷却或伪造命令。
+func test_skill_slot_requests_without_target_are_no_ops() -> void:
+	var main: Node2D = _spawn_main_with_player_data(_make_two_skill_data())
+	_park_enemy(main)
+	await await_idle_frame()
+
+	var player: Pawn = main.get_node("Pawns/PlayerPawn")
+	var skill: ActiveSkillDefinition = player.data.get_active_skills()[1]
+	var spirit_before: float = player.current_spirit
+
+	# 未选中：数字键不生效。
+	_press_key(main, KEY_2)
+	await await_idle_frame()
+	assert_float(player.current_spirit).is_equal_approx(spirit_before, APPROX)
+
+	# 已选中但无目标：点击技能栏也不生效。
+	main.call("_set_selected_pawn", player)
+	await await_idle_frame()
+	main.call("_on_skill_bar_skill_requested", skill)
+	await await_idle_frame()
+	assert_float(player.current_spirit).is_equal_approx(spirit_before, APPROX)
+	assert_float(player.get_skill_cooldown_remaining(skill.id)).is_zero()
+	assert_str((main.get_node(ORDER_LABEL_PATH) as Label).text).is_equal("指令：待命")
 
 ## HUD Build 行初始态：未选中单位显示占位文案，选中玩家后显示境界与各槽位占用 / 容量。
 func test_build_label_initial_and_player_capacity_row() -> void:
