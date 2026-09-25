@@ -99,7 +99,7 @@ theme_override_constants/separation = 6
 layout_mode = 2
 theme_override_colors/font_color = Color(0.86, 0.95, 0.92, 1)
 theme_override_font_sizes/font_size = 18
-text = "左键：选择玩家 Pawn    右键：移动/攻击目标    Q：主动技能    空格：暂停/恢复"
+text = "左键：选择单位 / 移动到地面    右键：取消瞄准 / 攻击敌方    1~6：主动技能    Q：默认技能    空格：暂停/恢复"
 autowrap_mode = 2
 
 [node name="SelectedLabel" type="Label" parent="HUD/HudMargin/HudPanel/HudContent" unique_id=1891443701]

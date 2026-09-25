@@ -1,6 +1,6 @@
 # UI 主题计划
 
-> 最后修改：2026-09-25T21:14:43+08:00
+> 最后修改：2026-09-26T01:48:20+08:00
 > 主题：ui  
 > 规则来源：`../AGENTS.md`
 
@@ -694,3 +694,47 @@
 - 验收时间：待验收
 - Git：待提交（提交后回写）
 - 备注：本 Increment 是 Gate C（主动 Build 重构）的最小可见操作面，只做两套固定预设与切换按钮，不扩成 Build 编辑器；4v4 冻结期不实现任何队伍 HUD。
+
+## INC-UI-019：选中敌方单位时的信息 UI 口径
+
+- 状态：accepted
+- 创建时间：2026-09-26T00:45:00+08:00
+- 最后修改：2026-09-26T01:48:20+08:00
+- 主题：ui
+- 目标：选中敌方单位时，玩家能立刻看到这个敌人的完整信息，同时不会看到任何只属于玩家自己的操作面板。
+- 验收标准：
+  - 选中敌方 → `PawnInfoPanel` 绑定该敌方并可见，显示名称 / 阵营 / 气血 / 护体；未配置灵力的敌方不显示灵力行，无境界敌方给出 Build 空态。
+  - 选中敌方 → `SkillBar` 与 `BuildLoadoutPanel` 解绑并隐藏，不出现「查看敌方技能栏 / 给敌方换 Build」这类越权入口。
+  - HUD `SelectedLabel` 显示该敌方的名称 / 阵营 / 气血 / 护体（有灵力才显示灵力）/ 状态；`SkillLabel` 与 `BuildLabel` 对无技能、无境界的敌方给出稳定空态文案，而不是残留上一个单位的内容。
+  - HUD `OrderLabel` 只在选中玩家自己的单位时显示玩家指令，选中敌方或未选中时显示 `指令：-`。
+  - `InstructionsLabel` 的运行时文案与 `main.tscn` 静态文案一致反映新操作模型（左键选择 / 移动、右键取消瞄准 / 攻击敌方），不再出现「右键：移动」。
+- 范围：`game/main/main.gd`（`_set_selected_pawn` 的面板绑定分支、`_update_hud` 文案与 `OrderLabel` 分支）、`game/main/main.tscn` 的 `InstructionsLabel` 静态文案。
+- 非范围：新增信息卡控件或改版式、敌方血条 / 仇恨 / Buff 列表可视化、`PawnInfoModel` 快照字段变更、`tr()` 本地化迁移、美术表现与配色调整。
+- 依赖：`INC-UI-007` / `INC-UI-008` / `INC-UI-009`（信息卡结构、敌方空态与 Build 区）、`INC-UI-011`（技能栏）、`INC-UI-018`（Build 面板）、`INC-CORE-013`（把敌方带进选中态）。
+- 检索证据：2026-09-26T00:42+08:00 执行 `git status --short` / `git diff --unified=0 -- agent-plan/` 与编号占用检索（`INC-UI-019` 无命中）；读取 `game/ui/pawn_info_panel.gd`（已支持绑定任意 `Pawn`，敌方走「无灵力 / 无境界」空态）与 `game/ui/skill_bar.gd`（`bind_pawn()` 会置 `visible = true`）确认：本 Increment 只需要在主场景侧区分「玩家自己的面板」，不需要改信息卡组件本身。
+- 风险：① `SkillBar.bind_pawn()` 会让技能栏变可见，若继续对敌方绑定就会把敌方技能当玩家技能展示，必须在主场景侧分流；② 选中敌方后 `OrderLabel` 若继续显示玩家指令会造成误读，需要显式空态；③ 敌方的资源信号此前未接入 HUD，数值可能看起来是静止的，订阅补齐后必须复核没有重复连接报错。
+- 实现说明：
+  - `_set_selected_pawn()` 拆成两层：`info_panel.bind_pawn(_selected_pawn)` 对所有选中单位生效（信息卡本来就能渲染敌方空态），而 `skill_bar` 与 `build_loadout_panel` 只在 `_binds_player_panels(pawn)`（即 `pawn == player_pawn`）时绑定，否则显式 `unbind()`——因为 `SkillBar.bind_pawn()` 会把技能栏置为 `visible = true`，继续绑定敌方等于把敌方技能当玩家技能展示。
+  - `OrderLabel` 增加选中态判断：只有选中玩家自己的单位时才显示 `player_controller.get_order_description()`，选中敌方或未选中统一显示 `指令：-`，避免「看着敌人信息、读到的却是自己指令」。
+  - `InstructionsLabel` 运行时文案与 `main.tscn` 静态文案同步改为 `左键：选择单位 / 移动到地面    右键：取消瞄准 / 攻击敌方    1~6：主动技能    Q：默认技能    空格：暂停/恢复`；TARGETING 中的文案保持原样（左键确认 / 右键或 Esc 取消）。
+  - 信息卡组件本身零改动：敌方无灵力 → 隐藏灵力行、无境界 → `Build：不适用`、无技能 → `技能：无` 都已由 `INC-UI-007/008/009` 提供。
+- 变更文件：
+  - `game/main/main.gd`（`_set_selected_pawn` 的玩家面板分流、新增 `_binds_player_panels`、`_update_hud` 的 `OrderLabel` 分支与 `InstructionsLabel` 文案）
+  - `game/main/main.tscn`（`InstructionsLabel` 静态文案）
+- 测试证据：
+  - `mcp__godot::validate` 校验 `game/main/main.gd` 与 `test/gameplay/main_scene_skill_targeting_test.gd` → `valid: true`、`errors: []`
+  - gameplay 用例 `test_left_click_enemy_selects_it_and_binds_enemy_info_ui` 断言：`info_panel.get_bound_pawn()` 为敌方、`info_panel.visible`、`skill_bar.get_bound_pawn()` 为 null、`skill_bar.visible == false`、`build_panel.get_bound_pawn()` 为 null、`SelectedLabel` 含敌方 `display_name` 与 `阵营：enemy`、`OrderLabel == "指令：-"`。
+  - 既有用例未回归：`test/gameplay/main_scene_gameplay_test.gd::test_skill_label_shows_none_for_pawn_without_skill`（`技能：无`）与 `test_build_label_reports_not_applicable_without_realm`（`境界：无    Build：不适用`）继续通过；headless `hud_spirit_display_test.gd`（敌方不显示灵力行 / 取消选中回到 `未选中单位`）`CHECKS=8 FAILURES=0`。
+  - 可见控件清单（MCP `get_ui_elements`，敌方选中态）：可见项里没有 `SkillBar`；`BuildLoadoutPanel` 显示 `未绑定单位` 且两个 `UseButton` 为 disabled；`PawnInfoPanel` 只有 `气血 200 / 200` 与 `护体 20 / 20` 两行、无灵力行；`InstructionsLabel` = `左键：选择单位 / 移动到地面    右键：取消瞄准 / 攻击敌方    1~6：主动技能    Q：默认技能    空格：暂停/恢复`
+  - 截图：`.mcp/godot-runtime/screenshots/screenshot_1790354832_205.png`（2560x1434，`.mcp/` 不入库）
+  - `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` → `RESULT: PASS`（GdUnit4 406 cases / 0 failures、headless 10 suites / 549 assertions / 0 failing suites，exit 0；改动前 402 cases，本次净增 4 个用例）
+- 验证状态：验证通过
+- 验证时间：2026-09-26T00:57:00+08:00
+- 已知问题：
+  - 敌方信息卡沿用与友方相同的版式，没有「敌方」专属配色 / 图标；身份行靠 `阵营：enemy` 文本区分（符合不得只靠颜色表达状态的要求）。
+  - `IdentityLabel` 对没有灵根 / 流派数据的敌人显示 `—` 与 `无功法` 占位，属既有信息卡空态，不在本 Increment 调整。
+  - 操作提示文案是硬编码中文，未走 `tr()`（与项目既有 HUD 文案一致）；国际化迁移另立 Increment。
+- 用户验收：已验收
+- 验收时间：2026-09-26T01:48:20+08:00
+- Git：develop
+- 备注：父 Increment 为 `INC-CROSS-020`；信息卡组件本身不改，本次只改主场景的绑定与文案口径，保证「看敌方」与「操作自己」在 UI 上不混线。
