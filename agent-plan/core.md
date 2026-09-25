@@ -344,9 +344,9 @@
 
 ## INC-CORE-010：主场景宗门接线与秘境收益入账
 
-- 状态：planned
+- 状态：accepted
 - 创建时间：2026-09-25T19:22:00+08:00
-- 最后修改：2026-09-25T19:22:00+08:00
+- 最后修改：2026-09-25T19:53:40+08:00
 - 主题：core
 - 目标：把宗门接入真实主场景，补上「秘境收益 → 宗门库存」这条唯一缺口，并让宗门面板的七个玩家动作路由到 `SectState`；`main.gd` 继续只做信号转发与引用刷新，不新增宗门业务规则。
 - 验收标准：
@@ -360,13 +360,13 @@
 - 依赖：`INC-SECT-001`、`INC-SECT-002`、`INC-SECT-003`、`INC-PAWNS-018`、`INC-UI-016`、`INC-WORLD-004`（已验收）。
 - 检索证据：Git Diff 优先检索结论同 `INC-SECT-001`；`game/main/main.gd` 现有 `_connect_dungeon_signals()` 已在订阅 `dungeon_run.run_finished`（用于面板状态），`game/world/dungeon_run.gd` 的 `run_finished(dungeon, outcome, earned_spirit_stones)` 是本局收益的唯一出口，且 `_emit_finished()` 有 `_finished_emitted` 兜底保证每局只广播一次；`git grep -n "earned_spirit_stones" -- game/` 显示该数值目前只被 `DungeonPanel.set_reward()` 用于显示，没有任何入账目标，确认本 Increment 是入账路径的唯一新增写入者。
 - 风险：`main.gd` 已是高冲突文件（约 430 行），本 Increment 会继续改它，因此新增逻辑必须严格限定在「信号转发 + 引用刷新 + 一次入账」；若发现需要按设施类型分派，必须回到 `SectState` 而不是写进主场景。另一风险是入账与面板刷新顺序导致 UI 显示旧库存，因此入账后必须立即刷新面板快照。
-- 实现说明：待实现后回填。
-- 变更文件：待实现后回填。
-- 测试证据：待实现后回填。
-- 验证状态：未验证
-- 验证时间：
-- 已知问题：待实现后回填。
-- 用户验收：未验收
-- 验收时间：
+- 实现说明：`main.tscn` 在真实主场景挂载 `SectState`（注入六座设施与三部功法）及 `HUD/BottomLeftDock/SectPanel`；根节点导出 `sect_techniques` 的顺序为 `process_mode` → `script` → 导出属性，确保 Godot 4.7 能解析脚本类型数组。`main.gd` 开机绑定宗门状态与面板，`encounter_started` 时把当前玩家单位刷新为本代修士，`run_finished` 时通过 `_dungeon_reward_committed` 保证同一局只入账一次，并把面板七个动作原样转发给 `SectState`，没有在主场景复制花费、产出或门槛判定。`sect_panel.gd` 仅做一项接线必需修正：动态设施行改用 `queue_free()`，避免 `pressed` 回调触发状态刷新时销毁正在发信号的按钮。
+- 变更文件：`game/main/main.gd`（修改，+65）、`game/main/main.tscn`（修改，+21，挂载宗门节点并注入资源）、`game/ui/sect_panel.gd`（修改，+2 / -1，动态行延迟释放）、`test/gameplay/main_scene_sect_test.gd`（新增，6 个 gameplay 用例）、`test/gameplay/main_scene_sect_test.gd.uid`（随资源新增）、`agent-plan/core.md` 与 `agent-plan/_index.md`（计划回填）。
+- 测试证据：`mcp__godot::validate` 对 `game/main/main.gd`、`game/main/main.tscn`、`test/gameplay/main_scene_sect_test.gd` 三个目标全部 `valid: true`；`pwsh -File test/run_tests.ps1 -Godot <godot> -Layer gameplay` → PASS（GdUnit4 gameplay 58 cases / 0 errors / 0 failures，退出码 0）；`pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` → PASS（GdUnit4 320 cases / 0 failures：unit 125、integration 137、gameplay 58；headless 10 suites / 549 assertions / 0 failing suites，退出码 0）。新增用例覆盖：启动绑定与三功法目录、清房后只在终局入账一次、深入换房后修士引用刷新且宗门状态不重置、七个面板动作全部走真实 `main.tscn` 路由、真实收益升级灵田并打坐涨修为、战败入账 0。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T19:53:40+08:00
+- 已知问题：主场景已真实挂载宗门面板，`INC-UI-016` 的窄窗口布局取证是在动态追加面板时完成的；接入后的 800×720 Dock 宽度需要在 `INC-TESTING-009` 重跑三档分辨率证据确认，必要时只调整布局，不改变面板语义。
+- 用户验收：已验收（依据用户 2026-09-25 指令「分批increment单独推送后继续开发」；本项验证通过后按该授权逐项提交、推送）
+- 验收时间：2026-09-25T19:53:40+08:00
 - Git：
 - 备注：父 Increment 为 `INC-CROSS-017`；本 Increment 是父级唯一允许修改 `main.gd` / `main.tscn` 的接线项。

@@ -16,10 +16,24 @@
 [ext_resource type="Script" uid="uid://vqgb4afkgfdu" path="res://game/world/dungeon_run.gd" id="12_dungeon_run"]
 [ext_resource type="PackedScene" path="res://game/ui/dungeon_panel.tscn" id="13_dungeon_panel"]
 [ext_resource type="Resource" path="res://game/world/data/dungeons/trial_dungeon.tres" id="14_trial_dungeon"]
+[ext_resource type="Script" uid="uid://5nrfqgvygyae" path="res://game/sect/sect_state.gd" id="15_sect_state"]
+[ext_resource type="PackedScene" path="res://game/ui/sect_panel.tscn" id="16_sect_panel"]
+[ext_resource type="Script" uid="uid://bj6ghtokyvyno" path="res://game/shared/resources/sect_facility_definition.gd" id="17_sect_facility"]
+[ext_resource type="Resource" path="res://game/sect/data/facilities/cave_dwelling.tres" id="18_cave_dwelling"]
+[ext_resource type="Resource" path="res://game/sect/data/facilities/spirit_array.tres" id="19_spirit_array"]
+[ext_resource type="Resource" path="res://game/sect/data/facilities/spirit_field.tres" id="20_spirit_field"]
+[ext_resource type="Resource" path="res://game/sect/data/facilities/alchemy_room.tres" id="21_alchemy_room"]
+[ext_resource type="Resource" path="res://game/sect/data/facilities/forge_room.tres" id="22_forge_room"]
+[ext_resource type="Resource" path="res://game/sect/data/facilities/scripture_pavilion.tres" id="23_scripture_pavilion"]
+[ext_resource type="Script" uid="uid://dhptllh6i2w5n" path="res://game/shared/resources/technique_definition.gd" id="24_technique"]
+[ext_resource type="Resource" path="res://game/cultivation/data/techniques/sword_cultivation.tres" id="25_sword_cultivation"]
+[ext_resource type="Resource" path="res://game/cultivation/data/techniques/body_cultivation.tres" id="26_body_cultivation"]
+[ext_resource type="Resource" path="res://game/cultivation/data/techniques/thunder_cultivation.tres" id="27_thunder_cultivation"]
 
 [node name="Main" type="Node2D" unique_id=539579646]
 process_mode = 3
 script = ExtResource("1_yil3p")
+sect_techniques = Array[ExtResource("24_technique")]([ExtResource("25_sword_cultivation"), ExtResource("26_body_cultivation"), ExtResource("27_thunder_cultivation")])
 
 [node name="Background" type="ColorRect" parent="." unique_id=238189977]
 anchors_preset = 15
@@ -50,6 +64,10 @@ initial_encounter = ExtResource("6_encounter_trial")
 script = ExtResource("12_dungeon_run")
 encounter_session = NodePath("../EncounterSession")
 default_dungeon = ExtResource("14_trial_dungeon")
+
+[node name="SectState" type="Node" parent="."]
+script = ExtResource("15_sect_state")
+facilities = Array[ExtResource("17_sect_facility")]([ExtResource("18_cave_dwelling"), ExtResource("19_spirit_array"), ExtResource("20_spirit_field"), ExtResource("21_alchemy_room"), ExtResource("22_forge_room"), ExtResource("23_scripture_pavilion")])
 
 [node name="HUD" type="CanvasLayer" parent="." unique_id=1870880984]
 layer = 10
@@ -134,6 +152,9 @@ layout_mode = 2
 encounters = Array[ExtResource("11_encdef")]([ExtResource("6_encounter_trial"), ExtResource("7_encounter_iron_guard"), ExtResource("8_encounter_blood_blade")])
 
 [node name="DungeonPanel" parent="HUD/BottomLeftDock" instance=ExtResource("13_dungeon_panel")]
+layout_mode = 2
+
+[node name="SectPanel" parent="HUD/BottomLeftDock" instance=ExtResource("16_sect_panel")]
 layout_mode = 2
 
 [node name="PauseOverlay" type="Control" parent="HUD" unique_id=535022588]

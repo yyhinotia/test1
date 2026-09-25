@@ -209,7 +209,8 @@ func _rebuild_facility_rows() -> void:
 		return
 	for child: Node in _facilities_container.get_children():
 		_facilities_container.remove_child(child)
-		child.free()
+		# 按钮的 pressed 回调里会触发状态刷新；延迟释放旧行，避免在信号发射中销毁发射者。
+		child.queue_free()
 	_upgrade_buttons.clear()
 	_upgrade_reasons.clear()
 	if not is_bound():

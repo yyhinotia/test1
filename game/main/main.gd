@@ -2,6 +2,9 @@ extends Node2D
 
 const PAWN_CLICK_RADIUS: float = 30.0
 
+## 宗门可参悟功法目录：由 main.tscn 注入，主场景只负责把目录交给面板并转发选择。
+@export var sect_techniques: Array[TechniqueDefinition] = []
+
 ## 单位与控制器引用在换遭遇时会被整体替换，因此不能用 @onready 一次性捕获；
 ## 统一由 _refresh_pawn_references() 在 encounter_started 时刷新（INC-CORE-008）。
 var player_pawn: Pawn
@@ -13,6 +16,8 @@ var ai_controller: AIController
 @onready var encounter_panel: EncounterPanel = $HUD/BottomLeftDock/EncounterPanel
 @onready var dungeon_run: DungeonRun = $DungeonRun
 @onready var dungeon_panel: DungeonPanel = $HUD/BottomLeftDock/DungeonPanel
+@onready var sect_state: SectState = $SectState
+@onready var sect_panel: SectPanel = $HUD/BottomLeftDock/SectPanel
 @onready var instructions_label: Label = $HUD/HudMargin/HudPanel/HudContent/InstructionsLabel
 @onready var selected_label: Label = $HUD/HudMargin/HudPanel/HudContent/SelectedLabel
 @onready var order_label: Label = $HUD/HudMargin/HudPanel/HudContent/OrderLabel
@@ -26,10 +31,15 @@ var ai_controller: AIController
 var _selected_pawn: Pawn
 ## 目标高亮由主场景统一持有，确保切换技能、取消、确认和单位死亡时都能清理旧引用。
 var _targeting_highlighted_pawn: Pawn
+## 同一局秘境只允许把收益入账一次；run_started 时重置，防止重复广播造成重复入账。
+var _dungeon_reward_committed: bool = false
 
 func _ready() -> void:
 	_connect_encounter_signals()
 	_connect_dungeon_signals()
+	_connect_sect_signals()
+	sect_panel.bind_state(sect_state)
+	sect_panel.set_learnable_techniques(sect_techniques)
 	if not skill_bar.skill_requested.is_connected(_on_skill_bar_skill_requested):
 		skill_bar.skill_requested.connect(_on_skill_bar_skill_requested)
 	if not skill_bar.targeting_started.is_connected(_on_skill_targeting_started):
@@ -71,6 +81,7 @@ func _on_encounter_restart_requested() -> void:
 func _on_encounter_started(encounter: EncounterDefinition, _player: Pawn, _enemy: Pawn) -> void:
 	_cancel_skill_targeting()
 	_refresh_pawn_references()
+	sect_state.bind_cultivator(player_pawn)
 	encounter_panel.set_active_encounter(encounter)
 	encounter_panel.set_running(true)
 	# 秘境进行中额外锁住「重新挑战」：单场重开会白送一次满状态，破坏损耗累积。
@@ -124,6 +135,7 @@ func _on_dungeon_restart_requested() -> void:
 
 ## 进入一间房（含第一间与继续深入）：面板刷新为「本层进行中」，抉择入口先关掉。
 func _on_dungeon_run_started(_dungeon: DungeonDefinition, _room_index: int) -> void:
+	_dungeon_reward_committed = false
 	_refresh_dungeon_panel()
 	dungeon_panel.set_awaiting_decision(false)
 	dungeon_panel.set_can_restart(false)
@@ -139,6 +151,9 @@ func _on_dungeon_room_cleared(_dungeon: DungeonDefinition, _room_index: int, _re
 
 ## 本局唯一一次终局：面板显示结局与最终灵石，重开入口打开，单场入口恢复可用。
 func _on_dungeon_run_finished(_dungeon: DungeonDefinition, outcome: int, earned_spirit_stones: int) -> void:
+	if not _dungeon_reward_committed:
+		_dungeon_reward_committed = true
+		sect_state.deposit_spirit_stones(earned_spirit_stones)
 	_refresh_dungeon_panel()
 	dungeon_panel.set_awaiting_decision(false)
 	dungeon_panel.set_can_restart(true)
@@ -166,6 +181,56 @@ func _compose_dungeon_status(outcome: int) -> String:
 	var room_name: String = room.display_name if room != null else "-"
 	return "%s：%s" % [DungeonRun.get_outcome_label(outcome), room_name]
 
+
+## 宗门接线（INC-CORE-010）：只把面板的七个玩家意图转发给 SectState，
+## 收益入账与修士绑定都发生在既有信号回调里，主场景不判断资源是否足够。
+func _connect_sect_signals() -> void:
+	if not sect_panel.upgrade_requested.is_connected(_on_sect_upgrade_requested):
+		sect_panel.upgrade_requested.connect(_on_sect_upgrade_requested)
+	if not sect_panel.cultivate_requested.is_connected(_on_sect_cultivate_requested):
+		sect_panel.cultivate_requested.connect(_on_sect_cultivate_requested)
+	if not sect_panel.harvest_requested.is_connected(_on_sect_harvest_requested):
+		sect_panel.harvest_requested.connect(_on_sect_harvest_requested)
+	if not sect_panel.learn_requested.is_connected(_on_sect_learn_requested):
+		sect_panel.learn_requested.connect(_on_sect_learn_requested)
+	if not sect_panel.strengthen_requested.is_connected(_on_sect_strengthen_requested):
+		sect_panel.strengthen_requested.connect(_on_sect_strengthen_requested)
+	if not sect_panel.refine_pill_requested.is_connected(_on_sect_refine_pill_requested):
+		sect_panel.refine_pill_requested.connect(_on_sect_refine_pill_requested)
+	if not sect_panel.use_pill_requested.is_connected(_on_sect_use_pill_requested):
+		sect_panel.use_pill_requested.connect(_on_sect_use_pill_requested)
+
+
+func _on_sect_upgrade_requested(facility_id: StringName) -> void:
+	sect_state.upgrade_facility(facility_id)
+
+
+func _on_sect_cultivate_requested() -> void:
+	sect_state.cultivate()
+
+
+func _on_sect_harvest_requested() -> void:
+	sect_state.harvest_spirit_field()
+
+
+## 面板只发功法 id；主场景把它映射回注入的正式目录，失败由 SectState 统一返回 false。
+func _on_sect_learn_requested(technique_id: StringName) -> void:
+	for technique: TechniqueDefinition in sect_techniques:
+		if technique != null and technique.id == technique_id:
+			sect_state.learn_technique_from_pavilion(technique)
+			return
+
+
+func _on_sect_strengthen_requested() -> void:
+	sect_state.strengthen_weapon()
+
+
+func _on_sect_refine_pill_requested() -> void:
+	sect_state.refine_pill()
+
+
+func _on_sect_use_pill_requested() -> void:
+	sect_state.use_pill()
 
 ## 换遭遇后的唯一引用刷新点：单位 / 控制器 / HUD 信号 / 选中态一起更新，避免悬空引用。
 func _refresh_pawn_references() -> void:
