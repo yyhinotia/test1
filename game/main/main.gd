@@ -17,6 +17,8 @@ const PAWN_CLICK_RADIUS: float = 30.0
 @onready var skill_bar: SkillBar = $HUD/BottomLeftDock/SkillBar
 
 var _selected_pawn: Pawn
+## 目标高亮由主场景统一持有，确保切换技能、取消、确认和单位死亡时都能清理旧引用。
+var _targeting_highlighted_pawn: Pawn
 
 func _ready() -> void:
 	player_controller.bind(player_pawn)
@@ -25,12 +27,21 @@ func _ready() -> void:
 
 	if not skill_bar.skill_requested.is_connected(_on_skill_bar_skill_requested):
 		skill_bar.skill_requested.connect(_on_skill_bar_skill_requested)
+	if not skill_bar.targeting_started.is_connected(_on_skill_targeting_started):
+		skill_bar.targeting_started.connect(_on_skill_targeting_started)
+	if not skill_bar.targeting_cancelled.is_connected(_on_skill_targeting_cancelled):
+		skill_bar.targeting_cancelled.connect(_on_skill_targeting_cancelled)
 	_set_paused(false)
 	_update_hud()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("toggle_pause"):
 		_set_paused(not get_tree().paused)
+		get_viewport().set_input_as_handled()
+		return
+
+	if event.is_action_pressed("cancel_targeting") and skill_bar.is_targeting():
+		_cancel_skill_targeting()
 		get_viewport().set_input_as_handled()
 		return
 
@@ -45,6 +56,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 
+	# 目标选择期间只更新悬停反馈，不把鼠标移动解释为移动/攻击命令。
+	if event is InputEventMouseMotion and skill_bar.is_targeting():
+		_update_target_highlight(event.position)
+		get_viewport().set_input_as_handled()
+		return
+
 	if event is InputEventMouseButton and event.pressed:
 		if event.is_action_pressed("select"):
 			_handle_select(event.position)
@@ -54,6 +71,11 @@ func _unhandled_input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 
 func _handle_select(screen_position: Vector2) -> void:
+	# TARGETING 优先于普通选中：合法点击确认一次技能命令，非法/空白点击保持瞄准但不改选中。
+	if skill_bar.is_targeting():
+		_handle_targeting_click(screen_position)
+		return
+
 	var hit_pawn: Pawn = _pawn_at_screen_position(screen_position)
 	if hit_pawn == player_pawn and hit_pawn.is_alive():
 		_set_selected_pawn(hit_pawn)
@@ -61,6 +83,10 @@ func _handle_select(screen_position: Vector2) -> void:
 		_set_selected_pawn(null)
 
 func _handle_command(screen_position: Vector2) -> void:
+	# 右键在目标选择期间只取消，不下达移动/普通攻击命令。
+	if skill_bar.is_targeting():
+		_cancel_skill_targeting()
+		return
 	if _selected_pawn != player_pawn or not player_pawn.is_alive():
 		return
 
@@ -71,14 +97,11 @@ func _handle_command(screen_position: Vector2) -> void:
 		player_controller.order_move(_screen_to_world(screen_position))
 	_update_hud()
 
-## Q 键技能入口：保持既有兼容行为，默认选择第一个已配置主动技能。
-## 命令记录在控制器里，暂停期间也可下达，恢复运行后由控制器接近并施放。
+## Q 键技能入口：默认选择第一个已配置主动技能，并统一经过 SkillBar 的 SELF/TARGETING 分流。
 func _handle_cast_skill() -> void:
-	if _selected_pawn != player_pawn or not player_pawn.is_alive():
+	if player_pawn.data == null:
 		return
-	if not player_controller.order_skill():
-		return
-	_update_hud()
+	_request_selected_skill(player_pawn.data.get_primary_active_skill())
 
 ## 数字键技能入口：按技能栏顺序解析具体技能，对不存在/未配置的槽位保持完全无操作。
 func _handle_cast_skill_slot(index: int) -> void:
@@ -89,16 +112,77 @@ func _handle_cast_skill_slot(index: int) -> void:
 		return
 	_request_selected_skill(skills[index])
 
-## 技能栏点击与数字键共用唯一命令路由；控制器负责目标、冷却与灵力的最终裁决。
+## 所有主动技能输入的唯一前置路由：SELF 直发，需要目标的技能进入 SkillBar TARGETING。
 func _request_selected_skill(skill: ActiveSkillDefinition) -> void:
 	if _selected_pawn != player_pawn or not player_pawn.is_alive():
 		return
-	if not player_controller.order_skill_instance(skill):
+	if skill == null:
 		return
+	skill_bar.request_skill(skill)
 	_update_hud()
 
+## SkillBar 已裁决为可直接施放的请求（当前为 SELF）：主场景只负责转交控制器。
 func _on_skill_bar_skill_requested(skill: ActiveSkillDefinition) -> void:
-	_request_selected_skill(skill)
+	_order_selected_skill(skill)
+
+## 目标确认的唯一控制器入口；成功后清理瞄准状态，失败时保留状态以便玩家重新选择。
+func _order_selected_skill(skill: ActiveSkillDefinition, target: Pawn = null) -> bool:
+	if _selected_pawn != player_pawn or not player_pawn.is_alive():
+		return false
+	if not player_controller.order_skill_instance(skill, target):
+		return false
+	_clear_target_highlight()
+	if skill_bar.is_targeting():
+		skill_bar.cancel_targeting()
+	_update_hud()
+	return true
+
+## 左键确认：只接受 Pawn.is_valid_skill_target() 的最终裁决结果；非法点击不产生任何命令副作用。
+func _handle_targeting_click(screen_position: Vector2) -> void:
+	var skill: ActiveSkillDefinition = skill_bar.get_targeting_skill()
+	if skill == null:
+		_cancel_skill_targeting()
+		return
+	var hit_pawn: Pawn = _pawn_at_screen_position(screen_position)
+	if hit_pawn == null or not player_pawn.is_valid_skill_target(skill, hit_pawn):
+		_clear_target_highlight()
+		return
+	if not _order_selected_skill(skill, hit_pawn):
+		# 技能/目标在确认瞬间失效时自动取消，避免保留无法完成的旧瞄准状态。
+		_cancel_skill_targeting()
+
+## 悬停只更新表现层高亮，合法性始终询问 Pawn 的目标裁决，不在 Main 复制敌我规则。
+func _update_target_highlight(screen_position: Vector2) -> void:
+	var skill: ActiveSkillDefinition = skill_bar.get_targeting_skill()
+	var candidate: Pawn = _pawn_at_screen_position(screen_position)
+	if skill == null or candidate == null or not player_pawn.is_valid_skill_target(skill, candidate):
+		_clear_target_highlight()
+		return
+	if _targeting_highlighted_pawn == candidate and candidate.is_target_highlight_visible():
+		return
+	_clear_target_highlight()
+	candidate.set_target_highlight(true, true)
+	_targeting_highlighted_pawn = candidate
+
+func _clear_target_highlight() -> void:
+	if _targeting_highlighted_pawn != null and is_instance_valid(_targeting_highlighted_pawn):
+		_targeting_highlighted_pawn.set_target_highlight(false)
+	_targeting_highlighted_pawn = null
+
+func _cancel_skill_targeting() -> void:
+	var was_targeting: bool = skill_bar.is_targeting()
+	_clear_target_highlight()
+	if was_targeting:
+		skill_bar.cancel_targeting()
+	_update_hud()
+
+func _on_skill_targeting_started(_skill: ActiveSkillDefinition) -> void:
+	_clear_target_highlight()
+	_update_hud()
+
+func _on_skill_targeting_cancelled() -> void:
+	_clear_target_highlight()
+	_update_hud()
 
 func _pawn_at_screen_position(screen_position: Vector2) -> Pawn:
 	var world_position: Vector2 = _screen_to_world(screen_position)
@@ -135,7 +219,10 @@ func _set_paused(value: bool) -> void:
 	_update_hud()
 
 func _update_hud() -> void:
-	instructions_label.text = "左键：选择玩家 Pawn    右键：移动/攻击目标    1~6：主动技能    Q：默认技能    空格：暂停/恢复"
+	if skill_bar.is_targeting():
+		instructions_label.text = "目标选择：左键合法目标确认    右键/Esc 取消    空格：暂停/恢复"
+	else:
+		instructions_label.text = "左键：选择玩家 Pawn    右键：移动/攻击目标    1~6：主动技能    Q：默认技能    空格：暂停/恢复"
 	if _selected_pawn == null:
 		selected_label.text = "未选中单位"
 		order_label.text = "指令：-"
@@ -227,6 +314,11 @@ func _on_player_skill_cast(changed_pawn: Pawn, _skill: ActiveSkillDefinition, _t
 		_update_hud()
 
 func _on_pawn_died(changed_pawn: Pawn) -> void:
+	# 当前高亮目标或施法者死亡时，目标选择必须在任何后续命令前自动失效。
+	if skill_bar.is_targeting() and (
+		changed_pawn == player_pawn or changed_pawn == _targeting_highlighted_pawn
+	):
+		_cancel_skill_targeting()
 	if changed_pawn == _selected_pawn:
 		# 选中单位阵亡：复用选中路由，信息卡与 HUD 同步清理。
 		_set_selected_pawn(null)

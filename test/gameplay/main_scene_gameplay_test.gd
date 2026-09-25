@@ -210,8 +210,8 @@ func test_cast_skill_without_selection_or_target_is_no_op() -> void:
 	assert_float(enemy.current_shield + enemy.current_health).is_equal_approx(enemy_total_before, APPROX)
 
 
-## 选中玩家并对敌人下达攻击命令后，Q 键把普通攻击目标升级为一次技能命令，HUD 立即反映。
-func test_cast_skill_forwards_valid_enemy_target() -> void:
+## Q 键统一进入目标选择；点击合法敌人后才生成技能命令，确认前不得扣灵力。
+func test_q_enters_targeting_and_valid_click_forwards_enemy_target() -> void:
 	var main: Node2D = _spawn_main()
 	await await_idle_frame()
 
@@ -220,16 +220,20 @@ func test_cast_skill_forwards_valid_enemy_target() -> void:
 	# 目标放在技能距离之外，确保本用例只验证命令记录，不立即施放并扣灵力。
 	enemy.global_position = player.global_position + Vector2(400.0, 0.0)
 	var order_label: Label = main.get_node(ORDER_LABEL_PATH)
+	var bar: SkillBar = main.get_node("HUD/BottomLeftDock/SkillBar")
 	var spirit_before: float = player.current_spirit
 
 	main.call("_set_selected_pawn", player)
-	main.call("_handle_command", main.get_canvas_transform() * enemy.global_position)
-	await await_idle_frame()
-	assert_str(order_label.text).is_equal("指令：攻击 %s" % enemy.data.display_name)
-
 	_press_key(main, KEY_Q)
 	await await_idle_frame()
+	assert_bool(bar.is_targeting()).is_true()
+	assert_object(bar.get_targeting_skill()).is_same(player.data.active_skill)
+	assert_float(player.current_spirit).is_equal_approx(spirit_before, APPROX)
 
+	main.call("_handle_select", main.get_canvas_transform() * enemy.global_position)
+	await await_idle_frame()
+
+	assert_bool(bar.is_targeting()).is_false()
 	assert_bool(order_label.text.contains("施放技能")).is_true()
 	assert_bool(order_label.text.contains(player.data.active_skill.display_name)).is_true()
 	assert_float(player.current_spirit).is_equal_approx(spirit_before, APPROX)
@@ -366,7 +370,7 @@ func test_bottom_left_dock_structure_and_draw_order() -> void:
 	assert_int(dock.get_index()).is_less(overlay.get_index())
 
 
-## 数字键 2 路由到第二个具体技能，而不是永远回退第一个；Q 仍保持默认第一个技能。
+## 数字键 2 与 Q 都先进入各自技能的目标选择；点击同一敌人后分别生成对应技能命令。
 func test_number_key_routes_specific_skill_and_q_keeps_default() -> void:
 	var main: Node2D = _spawn_main_with_player_data(_make_two_skill_data())
 	await await_idle_frame()
@@ -374,16 +378,24 @@ func test_number_key_routes_specific_skill_and_q_keeps_default() -> void:
 	var player: Pawn = main.get_node("Pawns/PlayerPawn")
 	var enemy: Pawn = main.get_node("Pawns/EnemyPawn")
 	enemy.global_position = player.global_position + Vector2(400.0, 0.0)
+	var enemy_screen_position: Vector2 = main.get_canvas_transform() * enemy.global_position
 	var order_label: Label = main.get_node(ORDER_LABEL_PATH)
+	var bar: SkillBar = main.get_node("HUD/BottomLeftDock/SkillBar")
 	main.call("_set_selected_pawn", player)
-	main.call("_handle_command", main.get_canvas_transform() * enemy.global_position)
-	await await_idle_frame()
 
 	_press_key(main, KEY_2)
+	await await_idle_frame()
+	assert_bool(bar.is_targeting()).is_true()
+	assert_object(bar.get_targeting_skill()).is_same(player.data.get_active_skills()[1])
+	main.call("_handle_select", enemy_screen_position)
 	await await_idle_frame()
 	assert_bool(order_label.text.contains("试炼爆炎")).is_true()
 
 	_press_key(main, KEY_Q)
+	await await_idle_frame()
+	assert_bool(bar.is_targeting()).is_true()
+	assert_object(bar.get_targeting_skill()).is_same(player.data.get_primary_active_skill())
+	main.call("_handle_select", enemy_screen_position)
 	await await_idle_frame()
 	assert_bool(order_label.text.contains(player.data.get_primary_active_skill().display_name)).is_true()
 
