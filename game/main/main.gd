@@ -325,32 +325,45 @@ func _unhandled_input(event: InputEvent) -> void:
 			_handle_command(event.position)
 			get_viewport().set_input_as_handled()
 
+## 左键是唯一的世界交互入口（INC-CORE-013）：TARGETING 期间确认技能目标，其余情况按命中对象分流。
 func _handle_select(screen_position: Vector2) -> void:
 	# TARGETING 优先于普通选中：合法点击确认一次技能命令，非法/空白点击保持瞄准但不改选中。
 	if skill_bar.is_targeting():
 		_handle_targeting_click(screen_position)
 		return
 
+	# 命中任意存活单位（含敌方）一律进入选中态：敌方信息由信息卡承担，命令仍只由玩家自己的单位执行。
 	var hit_pawn: Pawn = _pawn_at_screen_position(screen_position)
-	if hit_pawn != null and hit_pawn == player_pawn and hit_pawn.is_alive():
+	if hit_pawn != null:
 		_set_selected_pawn(hit_pawn)
-	else:
-		_set_selected_pawn(null)
+		return
 
+	# 空白地：选中玩家单位时下达移动命令，否则只清空选中，不产生任何命令副作用。
+	if _can_command_player():
+		player_controller.order_move(_screen_to_world(screen_position))
+		_update_hud()
+		return
+	_set_selected_pawn(null)
+
+## 右键不再是移动入口（INC-CORE-013）：只保留取消瞄准与「对敌方单位下达普通攻击」两条职责。
 func _handle_command(screen_position: Vector2) -> void:
 	# 右键在目标选择期间只取消，不下达移动/普通攻击命令。
 	if skill_bar.is_targeting():
 		_cancel_skill_targeting()
 		return
-	if player_pawn == null or _selected_pawn != player_pawn or not player_pawn.is_alive():
+	if not _can_command_player():
 		return
 
 	var hit_pawn: Pawn = _pawn_at_screen_position(screen_position)
-	if hit_pawn != null and hit_pawn != player_pawn and hit_pawn.is_alive():
-		player_controller.order_attack(hit_pawn)
-	else:
-		player_controller.order_move(_screen_to_world(screen_position))
+	if hit_pawn == null or hit_pawn == player_pawn or not hit_pawn.is_alive():
+		# 右键点地面 / 己方不再产生任何命令：移动只能通过左键点击地面下达。
+		return
+	player_controller.order_attack(hit_pawn)
 	_update_hud()
+
+## 命令前置条件只有一个来源：玩家自己的单位被选中且存活；选中敌方时任何命令都不会误发。
+func _can_command_player() -> bool:
+	return player_pawn != null and _selected_pawn == player_pawn and player_pawn.is_alive()
 
 ## Q 键技能入口：默认选择第一个已装配主动技能，并统一经过 SkillBar 的 SELF/TARGETING 分流。
 func _handle_cast_skill() -> void:
@@ -456,22 +469,46 @@ func _pawn_at_screen_position(screen_position: Vector2) -> Pawn:
 func _screen_to_world(screen_position: Vector2) -> Vector2:
 	return get_canvas_transform().affine_inverse() * screen_position
 
-## 选中状态是唯一接入点：同一个分支里同步信息卡的绑定 / 解绑，避免两条状态流各自维护。
+## 选中状态是唯一接入点：同一个分支里同步信息卡、玩家专属面板与 HUD 订阅，避免多条状态流各自维护。
+## 选中敌方是合法状态（INC-UI-019）：信息卡照常绑定，但技能栏 / Build 面板只属于玩家自己的单位。
 func _set_selected_pawn(new_selection: Pawn) -> void:
 	if _selected_pawn != null and is_instance_valid(_selected_pawn):
 		_selected_pawn.set_selected(false)
 	_selected_pawn = new_selection
 	if _selected_pawn != null and is_instance_valid(_selected_pawn) and _selected_pawn.is_alive():
 		_selected_pawn.set_selected(true)
+		_watch_selected_pawn_signals(_selected_pawn)
 		info_panel.bind_pawn(_selected_pawn)
-		skill_bar.bind_pawn(_selected_pawn)
-		build_loadout_panel.bind_pawn(_selected_pawn)
+		if _binds_player_panels(_selected_pawn):
+			skill_bar.bind_pawn(_selected_pawn)
+			build_loadout_panel.bind_pawn(_selected_pawn)
+		else:
+			skill_bar.unbind()
+			build_loadout_panel.unbind()
 	else:
 		_selected_pawn = null
 		info_panel.unbind()
 		skill_bar.unbind()
 		build_loadout_panel.unbind()
 	_update_hud()
+
+## 玩家专属面板（技能栏 / Build 面板）只跟随玩家自己的单位；选中敌方时全部解绑，避免越权入口。
+func _binds_player_panels(pawn: Pawn) -> bool:
+	return pawn != null and pawn == player_pawn
+
+## 选中态决定 HUD 订阅：任意被选中的单位都要在资源 / 状态变化时刷新选中行。
+## 这里只做幂等追加连接、不反向断开：回调内部按 `changed_pawn == _selected_pawn` 过滤，
+## 而未被选中的旧单位会在阵亡 / 换遭遇时随节点一起销毁，连接随之释放。
+func _watch_selected_pawn_signals(pawn: Pawn) -> void:
+	_connect_signal_if_needed(pawn.health_changed, _on_health_changed)
+	_connect_signal_if_needed(pawn.shield_changed, _on_shield_changed)
+	_connect_signal_if_needed(pawn.spirit_changed, _on_spirit_changed)
+	_connect_signal_if_needed(pawn.state_changed, _on_player_state_changed)
+	_connect_signal_if_needed(pawn.died, _on_pawn_died)
+
+func _connect_signal_if_needed(source: Signal, target: Callable) -> void:
+	if not source.is_connected(target):
+		source.connect(target)
 
 ## 暂停是唯一接入点：暂停时信息卡给完整信息，战斗中给精简信息。
 func _set_paused(value: bool) -> void:
@@ -485,7 +522,7 @@ func _update_hud() -> void:
 	if skill_bar.is_targeting():
 		instructions_label.text = "目标选择：左键合法目标确认    右键/Esc 取消    空格：暂停/恢复"
 	else:
-		instructions_label.text = "左键：选择玩家 Pawn    右键：移动/攻击目标    1~6：主动技能    Q：默认技能    空格：暂停/恢复"
+		instructions_label.text = "左键：选择单位 / 移动到地面    右键：取消瞄准 / 攻击敌方    1~6：主动技能    Q：默认技能    空格：暂停/恢复"
 	if _selected_pawn == null:
 		selected_label.text = "未选中单位"
 		order_label.text = "指令：-"
@@ -507,7 +544,8 @@ func _update_hud() -> void:
 		selected_lines.append("灵力：%.0f / %.0f" % [_selected_pawn.current_spirit, _selected_pawn.max_spirit])
 	selected_lines.append("状态：%s" % _selected_pawn.get_state_label())
 	selected_label.text = "\n".join(selected_lines)
-	if player_controller == null:
+	# 指令行表达的是玩家自己单位的当前命令；选中敌方或未选中时不得借用玩家指令，避免信息串台。
+	if player_controller == null or _selected_pawn != player_pawn:
 		order_label.text = "指令：-"
 	else:
 		order_label.text = "指令：%s" % player_controller.get_order_description()

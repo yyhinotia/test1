@@ -1,6 +1,6 @@
 # Core 主题计划
 
-> 最后修改：2026-09-25T21:14:43+08:00
+> 最后修改：2026-09-26T01:48:20+08:00
 > 主题：core  
 > 规则来源：`../AGENTS.md`
 
@@ -425,3 +425,50 @@
 - 验收时间：不适用
 - Git：无提交
 - 备注：按 AGENTS.md §3.2 保留原文并标记 `superseded`；退役不等于否定该能力，只表示当前实验阶段不需要它。
+
+## INC-CORE-013：左键统一操作模型（选择 / 移动 / 敌方选中）
+
+- 状态：accepted
+- 创建时间：2026-09-26T00:45:00+08:00
+- 最后修改：2026-09-26T01:48:20+08:00
+- 主题：core
+- 目标：把主场景的鼠标输入路由从「左键选择 + 右键移动/攻击」改成「左键承担选择、技能目标选择与移动，右键不再移动」，并让左键可以直接选中敌方单位。
+- 验收标准：
+  - `_handle_select()` 是唯一的左键世界交互入口：TARGETING 期间仍然交回 `_handle_targeting_click()`，非 TARGETING 时按命中对象分流。
+  - 左键命中己方单位 → `_set_selected_pawn(hit_pawn)`；左键命中敌方单位 → 同样 `_set_selected_pawn(hit_pawn)`；两种命中都不产生移动 / 攻击命令。
+  - 左键命中空白地：已选中玩家单位时调用 `PlayerController.order_move(world_position)`；未选中玩家单位时只清空选中，不产生命令。
+  - 右键（`command`）：TARGETING 期间只取消瞄准；非 TARGETING 时只对敌方单位下达 `order_attack()`，不再调用 `order_move()`。
+  - InputMap 契约不变：`select` = 鼠标左键、`command` = 鼠标右键、`cancel_targeting` = Esc、`toggle_pause` = Space，不新增动作、不硬编码物理按键。
+  - 选中任意单位（含敌方）时，该单位的 `health_changed` / `shield_changed` / `spirit_changed` / `state_changed` / `died` 都会刷新 HUD 选中行；未选中单位的变化不改变 HUD。
+- 范围：`game/main/main.gd`（`_unhandled_input` / `_handle_select` / `_handle_command` / `_set_selected_pawn` / `_update_hud` 与选中态信号订阅）、`game/main/main.tscn` 的 `InstructionsLabel` 静态文案。
+- 非范围：`project.godot` 的 InputMap 定义（`select` / `command` 语义保持不变，不新增动作）、多单位选择与 Shift 编队、右键菜单、悬停提示、地面点击特效、相机与寻路、`docs/4v4-vertical-slice.md` 里已冻结的 4v4 输入设计。
+- 依赖：`INC-CORE-001`（InputMap 与主场景入口）、`INC-CORE-006`（技能目标选择路由契约）、`INC-PAWNS-020`（1vN 多敌人集合，任意敌人可被选中）。
+- 检索证据：2026-09-26T00:42+08:00 在仓库根目录执行 `git status --short`（工作区含 `INC-TESTING-015/016/017` 未提交改动与若干非本 Increment 改动：`AGENTS.md`、`project.godot`、`trial_dungeon.tres`、部分 `tests/*.tscn` UID 重存）、`git diff --unified=0 -- agent-plan/`（新增行只涉及 `INC-TESTING-015/016/017`）、`git grep -n -E "INC-CROSS-020|INC-CORE-013|INC-UI-019|INC-TESTING-018" -- agent-plan/`（无命中，编号未被占用）、`git grep -n -E "INC-CORE-012" -- agent-plan/`（多单位选择已标记 `superseded`，与本次无关）；读取 `game/main/main.gd`（`_handle_select` 只接受 `player_pawn` 是本问题的直接原因）与 `project.godot`（`select`=左键 1 / `command`=右键 2）确认改动面。
+- 风险：① 左键同时承担「选中」与「移动」，若分流写错会出现「点敌人把玩家挪过去」这类串台，必须用命中对象分支 + 自动化用例锁住；② 右键能力收窄后，若某处代码依赖右键移动会静默失效，必须靠 `order_move()` 的调用点检索与用例覆盖；③ 敌方单位此前没有被 HUD 订阅资源信号，遗漏会出现「选中敌方后数值不刷新」的表现缺陷。
+- 实现说明：
+  - 左键收敛为唯一世界交互入口：`_handle_select()` 在 TARGETING 期间仍然交回 `_handle_targeting_click()`，非 TARGETING 时先取 `_pawn_at_screen_position()`，命中任意存活单位（含敌方）就 `_set_selected_pawn(hit_pawn)` 并 `return`，因此「点敌方」不会再落进 `_set_selected_pawn(null)` 的旧分支。
+  - 空白地分支只在 `_can_command_player()` 为真时调用 `order_move()`；该前置条件（玩家单位被选中且存活）被抽成单一函数，替换原先散在 `_handle_command()` 里的三段判断。
+  - `_handle_command()` 收缩为「TARGETING → 取消」与「非 TARGETING → 命中敌方则 `order_attack()`」两条路径，删除 `order_move()` 调用；右键点地面 / 点己方显式 `return`，不再产生任何命令。
+  - `InputMap` 未改动：`select` 仍是鼠标左键、`command` 仍是鼠标右键，只是 `command` 的语义从「移动/攻击」收窄为「取消瞄准/攻击敌方」，因此不需要触碰 `project.godot`（该文件当前另有非本 Increment 的未提交改动）。
+  - HUD 订阅改为「跟随选中态」：新增 `_watch_selected_pawn_signals()`，对任意被选中单位幂等追加 `health_changed` / `shield_changed` / `spirit_changed` / `state_changed` / `died` 连接；刻意不做反向断开，因为既有回调都按 `changed_pawn == _selected_pawn` 过滤，而旧单位随阵亡 / 换遭遇销毁时连接自动释放。
+- 变更文件：
+  - `game/main/main.gd`（`_handle_select` / `_handle_command` / 新增 `_can_command_player`·`_binds_player_panels`·`_watch_selected_pawn_signals`·`_connect_signal_if_needed`；`_set_selected_pawn`、`_update_hud` 的 `InstructionsLabel` 与 `OrderLabel` 分支）
+  - `game/main/main.tscn`（`HUD/HudMargin/HudPanel/HudContent/InstructionsLabel` 静态文案）
+- 测试证据：
+  - `mcp__godot::validate` 校验 `game/main/main.gd` 与 `test/gameplay/main_scene_skill_targeting_test.gd` → `valid: true`、`errors: []`
+  - `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` → `RESULT: PASS`（GdUnit4 406 cases / 0 failures、headless 10 suites / 549 assertions / 0 failing suites，exit 0；改动前 402 cases，本次净增 4 个用例）
+  - gameplay 输入路由用例（`test/gameplay/main_scene_skill_targeting_test.gd`）：`test_left_click_friendly_pawn_selects_player`（左键点己方 → `SelectionIndicator.visible` + 信息卡与技能栏绑定玩家）、`test_left_click_ground_orders_move_for_selected_player`（左键点空白地 → `指令：移动到`）、`test_left_click_enemy_selects_it_and_binds_enemy_info_ui`（左键点敌方 → 信息卡换绑 + 玩家面板解绑 + 控制器指令不变）、`test_right_click_cancels_targeting_and_never_orders_move`（TARGETING 右键只取消 + 非 TARGETING 右键点地面零命令）、`test_right_click_enemy_keeps_attack_order`（右键点敌方仍下达 `攻击 <name>`）。
+  - 真实窗口冒烟（`tests/scenario_build_test_1v2.tscn`，MCP `run_project` background 模式，2560x1434窗口 / 1156x648 画布）：冻结控制器后逐个点击复核——左键点己方 → `PawnInfoPanel` 绑定玩家 + 技能栏绑定可见 + `指令：待命`；左键点空白地 → `指令：移动到 (320, 520)`；左键点敌方 `赤拳战修` → 信息卡绑定该敌方且 `visible=true`、技能栏解绑且 `visible=false`、Build 面板解绑（按钮 disabled / `未绑定单位`）、`SelectedLabel` = `赤拳战修 / 阵营：enemy / HP：200 / 200 护盾：20 / 20 / 状态：待命`、`OrderLabel` = `指令：-`、控制器指令描述不变（零命令副作用）、敌方 `SelectionIndicator.visible=true` 而玩家为 false；左键点第二名敌人 `灵弓修者` → 信息卡跟随新目标；右键点空白地 → 指令仍为 `移动到 (320, 520)`（不产生新移动命令）；右键点敌方 → `指令：攻击 赤拳战修`（普通攻击入口保留）
+  - 真实 OS 级鼠标输入（MCP `simulate_input`，窗口像素坐标）：左键点敌方 (788,589) → `Main._selected_pawn` = `EnemyPawn`；左键点己方 (1926,907) → `PlayerPawn`；左键点空白地 (708,1151) → `指令：移动到 (320, 520)`；右键点另一处空白地 (1550,332) → 指令仍是 `移动到 (320, 520)`（未下达新移动命令）；右键点敌方 → `指令：攻击 赤拳战修`
+  - `order_move()` 调用点复核：`git grep -n "order_move" -- game/ test/ tests/` 显示生产代码里只剩 `game/main/main.gd` 的左键分支负责下达移动命令（其余命中项是测试与 `PlayerController` 定义本身），说明右键移动没有残留入口。
+- 验证状态：验证通过
+- 验证时间：2026-09-26T00:57:00+08:00
+- 已知问题：
+  - 移动命令仍然要求「玩家自己的单位处于选中态」：选中敌方后要先点回自己的单位才能移动。这是沿用 `INC-CORE-001` / `INC-CORE-006` 的既有契约，若要改成「点地面无条件移动玩家」，属于新的输入契约，另立 Increment。
+  - 普通攻击目前只有「右键点敌方」一个鼠标入口（左键点敌方按用户要求只做选中 + 看信息）；若后续要加双击 / 左键直接攻击 / 技能栏外置攻击键，另立 Increment。
+  - 未被选中的旧单位仍持有到主场景的信号连接（不做反向断开的设计取舍）；单位在阵亡 / 换遭遇时销毁即释放，未观察到重复连接报错。
+  - 既有 orphan 债务（gameplay 324 / integration 288）与统一门禁输出里的 `[GdUnit4] ... FAIL (N cases, 0 errors, 0 failures)` 标签噪音与本 Increment 无关。
+- 用户验收：已验收
+- 验收时间：2026-09-26T01:48:20+08:00
+- Git：develop
+- 备注：父 Increment 为 `INC-CROSS-020`；本 Increment 只改输入路由与 HUD 订阅，不改战斗 / 技能 / 奖励规则，也不改 `Pawn` 与 `PawnController` 的 API。
