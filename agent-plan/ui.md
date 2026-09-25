@@ -493,3 +493,32 @@
 - 用户验收：已验收（2026-09-25T17:31:30+08:00，用户授权“验收通过，分increment提交”）
 - Git：`main` / `cbe098b`
 - 备注：父 Increment 为 `INC-CROSS-012`；本 Increment 不接主场景输入，输入路由由 `INC-CORE-006` 完成。
+
+## INC-UI-013：超容量技能槽的禁用显示与请求拦截
+
+- 状态：planned
+- 创建时间：2026-09-25T18:00:42+08:00
+- 最后修改：2026-09-25T18:00:42+08:00
+- 主题：ui
+- 目标：采用建议方案 B——技能栏继续显示所有已配置技能，超容量技能明确显示为 DISABLED 且不可点击/不可进入 TARGETING，而不是静默隐藏或静默截断。
+- 验收标准：
+  - 有效境界下槽位数量为 `max(主动技能容量, 合法技能数量)` 并受 `MAX_SLOTS` 限制；容量未满时继续保留空槽。
+  - 第 N 个超容量技能的状态为 `DISABLED`，原因包含“超出主动技能容量”；其颜色/灰化沿用现有 DISABLED 视觉。
+  - 超容量技能槽点击不发出 `cast_requested`；`SkillBar.request_skill()` 对其返回 false 且不发出 `skill_requested` / `targeting_started`，不影响当前 TARGETING。
+  - 容量内技能、SELF 直发、ENEMY/ALLY TARGETING、取消与暂停行为保持 `INC-UI-012` 语义。
+  - 无境界单位保持旧行为：已配置合法技能均正常显示。
+- 范围：`game/combat/skill/skill_slot_state.gd`、`game/ui/skill_slot.gd`、`game/ui/skill_bar.gd`、对应单元/集成测试。
+- 非范围：技能图标、动画、拖拽、AOE、Build 编辑界面。
+- 依赖：`INC-PAWNS-015`、`INC-UI-010`、`INC-UI-012`。
+- 检索证据：已执行 `git status --short`（工作区干净，`main...origin/main`）、`git diff --unified=0 -- agent-plan/`（空）、`git diff --cached --unified=0 -- agent-plan/`（空）与 `git log --oneline -5 -- agent-plan/`（当前计划基线 `cbccdb8`）；全量检索确认现有最高主题编号为 PAWNS-014 / COMBAT-006 / UI-012 / CORE-006 / TESTING-004，CROSS-012 已验收，无未完成 planned Increment。 `git grep` 实测：`BuildValidator` 已能报告 `over_capacity`，但 `Pawn.can_cast_skill()` 不检查容量，`PlayerController.order_skill_instance()` 只检查 known skill，`AIController` 直接遍历 `data.get_active_skills()`，`SkillBar.refresh()` 用 `max(capacity, skills.size())` 显示全部技能却未把多余技能置为 DISABLED。因此“校验能发现错误”与“运行时实际禁止错误 Build”之间仍有缺口。
+- 风险：必须保持既有正常 Build（炼气 2/2）行为不变；不得让无境界的怪物/傀儡因缺少 Build 容量而失去天生技能；不得只修 UI 而留下控制器或 AI 旁路；不得静默截断技能列表。
+- 实现说明：SkillSlotState 增加 Build 可用性输入；SkillBar 只对启用技能调用 TARGETING 路由；超容量技能保留在视觉列表中以显示明确错误。
+- 变更文件：待实现回填。
+- 测试证据：待实现回填。
+- 验证状态：未验证
+- 验证时间：
+- 已知问题：待实现回填。
+- 用户验收：未验收
+- 验收时间：
+- Git：待验收后提交
+- 备注：父 Increment 为 `INC-CROSS-013`；本 Increment 采用方案 B，不采用静默截断方案 C。

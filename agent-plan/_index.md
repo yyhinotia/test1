@@ -1,24 +1,24 @@
 # Agent Plan Index
 
-> 最后修改：2026-09-25T17:57:16+08:00
+> 最后修改：2026-09-25T18:00:42+08:00
 > 规则来源：`../AGENTS.md`
 
 ## 主题索引
 
 | 主题 | 计划文件 | 状态 | 当前 Increment | 最后修改 |
 |---|---|---|---|---|
-| UI | `ui.md` | 已验收 | `INC-UI-012` | 2026-09-25T17:57:16+08:00 |
-| 战斗 | `combat.md` | 已验收 | `INC-COMBAT-006` | 2026-09-25T17:57:16+08:00 |
-| Pawns | `pawns.md` | 已验收 | `INC-PAWNS-014` | 2026-09-25T17:34:51+08:00 |
+| UI | `ui.md` | 开发中 | `INC-UI-013` | 2026-09-25T18:00:42+08:00 |
+| 战斗 | `combat.md` | 开发中 | `INC-COMBAT-007` | 2026-09-25T18:00:42+08:00 |
+| Pawns | `pawns.md` | 开发中 | `INC-PAWNS-015` | 2026-09-25T18:00:42+08:00 |
 | 修炼 | `cultivation.md` | 已验收 | `INC-CULT-004` | 2026-09-25T16:51:32+08:00 |
 | 宗门 | `sect.md` | 未创建 | - | - |
 | 世界 | `world.md` | 未创建 | - | - |
 | 背包 | `inventory.md` | 已验收 | `INC-INVENTORY-001` | 2026-09-25T16:51:32+08:00 |
 | 存档 | `save.md` | 未创建 | - | - |
 | 音频 | `audio.md` | 未创建 | - | - |
-| 核心 | `core.md` | 已验收 | `INC-CORE-006` | 2026-09-25T17:57:16+08:00 |
+| 核心 | `core.md` | 开发中 | `INC-CORE-007` | 2026-09-25T18:00:42+08:00 |
 | 工具 | `tools.md` | 已验收 | `INC-TOOLS-002` | 2026-09-25T13:54:46+08:00 |
-| 测试 | `testing.md` | 已验收 | `INC-TESTING-004` | 2026-09-25T17:57:16+08:00 |
+| 测试 | `testing.md` | 开发中 | `INC-TESTING-005` | 2026-09-25T18:00:42+08:00 |
 
 ## 跨主题父 Increment
 
@@ -36,6 +36,7 @@
 | `INC-CROSS-010` | `accepted` | `INC-INVENTORY-001`、`INC-CULT-004`、`INC-PAWNS-012`、`INC-UI-009` | Build 信息卡与武器槽（Phase 2 第一步）：武器静态定义与五行、武器槽容量、PawnData 武器字段与校验、信息卡四类槽位显示 | 通过 | 已验收 | 2026-09-25T16:51:32+08:00 |
 | `INC-CROSS-011` | `accepted` | `INC-PAWNS-013`、`INC-COMBAT-004`、`INC-UI-010`、`INC-UI-011`、`INC-CORE-005`、`INC-TESTING-003` | 战斗技能栏 SkillBar、技能状态读模型、1~6/点击施法入口与左下角 HUD 布局起点 | 通过 | 已验收 | 2026-09-25T17:17:48+08:00 |
 | `INC-CROSS-012` | `accepted` | `INC-PAWNS-014`、`INC-COMBAT-005`、`INC-COMBAT-006`、`INC-UI-012`、`INC-CORE-006`、`INC-TESTING-004` | 三种战术技能与 Build → Combat 玩法闭环 | 通过 | 已验收 | 2026-09-25T17:57:16+08:00 |
+| `INC-CROSS-013` | `in_progress` | `INC-PAWNS-015`、`INC-COMBAT-007`、`INC-UI-013`、`INC-CORE-007`、`INC-TESTING-005` | Build 容量一致性执行：所有技能可见，超容量技能禁用且任何入口不可施放 | 进行中 | 待验收 | 2026-09-25T18:00:42+08:00 |
 
 ### INC-CROSS-001：第一个 Pawn MVP
 
@@ -321,6 +322,29 @@
 - Git：`main` / `65a494d`、`df36f24`、`0438397`、`cbe098b`、`a72f475`、`a895e2b`
 - 备注：六个子 Increment 均已按 Increment 拆分提交；父级最终计划与 hash 回写随本次文档提交落库。
 
+### INC-CROSS-013：Build 容量一致性执行
+
+- 状态：in_progress
+- 创建时间：2026-09-25T18:00:42+08:00
+- 最后修改：2026-09-25T18:00:42+08:00
+- 来源：用户 2026-09-25 的下一阶段建议（Build Validator 优先级 4）与 `docs/build-mvp.md` MVP-5；建议明确指出当前 `Build capacity = 2` 与更多技能配置之间需要明确方案 A/B/C。
+- 目标：让 `BuildValidator` 的容量结论真正贯穿 Pawn、Controller、AI、SkillBar、主场景快捷键与 HUD；采用方案 B——保留所有技能可见，超容量技能明确 `DISABLED`，不采用静默截断方案 C。
+- 子 Increment：`INC-PAWNS-015`、`INC-COMBAT-007`、`INC-UI-013`、`INC-CORE-007`、`INC-TESTING-005`。
+- 实施顺序：PAWNS-015 → COMBAT-007 → UI-013 → CORE-007 → TESTING-005；`pawn.gd`、`skill_slot_state.gd`、`skill_bar.gd`、`main.gd` 串行写入。
+- 验收标准与证据：
+  - `Pawn` 提供唯一的主动技能容量投影：有效境界返回前 N 个技能为可用，完整列表仍用于 `BuildValidator` 的 `over_capacity` 诊断。
+  - 超容量技能在所有施法入口被拒绝，且无灵力、冷却、位置、资源或命令副作用；AI 不会消费超容量技能。
+  - SkillBar 继续显示所有技能，超容量技能显示 `DISABLED` 且不能点击/进入 TARGETING；容量内技能与空槽行为不回归。
+  - HUD 对超容量首技能显示明确 Build 禁用原因，Q/数字键不绕过 UI 裁决。
+  - 三层测试覆盖容量 0 / 1 / 2 / 4、无境界兼容、完整 loadout 诊断与 4 技能 / 2 槽 gameplay 场景；统一门禁、Godot MCP validate 与 `git diff --check` 通过。
+- 非范围：Build 编辑器、拖拽装备、技能商店/升级、五行与属性门槛扩展、正式数值平衡、存档迁移、AOE/目标类型扩展。
+- 依赖：`INC-CROSS-012` 已验收；容量来源沿用 `INC-CULT-001` / `INC-CULT-002`。
+- 风险：无境界单位与玩家 Build 语义必须区分；只在 UI 禁用会留下控制器/AI 旁路；截断完整技能列表会让 `BuildValidator` 失去诊断依据；超容量状态不得影响正常 2/2 Build。
+- 验证结论：待子 Increment 完成。
+- 验收时间：待用户验收
+- Git：待验收后提交
+- 备注：父级全部子 Increment 验证通过后才请求最终验收；本次先实现运行时容量投影与统一禁用语义。
+
 ## 活跃 Increment
 
 | ID | 父 Increment | 主题 | 状态 | 摘要 | 最后修改 | 验证 | 验收 | Git |
@@ -385,6 +409,13 @@
 | `INC-CORE-006` | `INC-CROSS-012` | core | `accepted` | 主场景技能目标选择与取消路由 | 2026-09-25T17:57:16+08:00 | 验证通过 | 已验收 | `main` / `a72f475` |
 | `INC-TESTING-004` | `INC-CROSS-012` | testing | `accepted` | 三种技能战术差异与 Build 变化证据 | 2026-09-25T17:57:16+08:00 | 验证通过 | 已验收 | `main` / `a895e2b` |
 
+| `INC-CROSS-013` | - | cross | `in_progress` | Build 容量一致性执行 | 2026-09-25T18:00:42+08:00 | 进行中 | 待验收 | 待验收后提交 |
+| `INC-PAWNS-015` | `INC-CROSS-013` | pawns | `in_progress` | 主动技能容量的运行时投影 | 2026-09-25T18:00:42+08:00 | 未验证 | 未验收 | 待验收后提交 |
+| `INC-COMBAT-007` | `INC-CROSS-013` | combat | `planned` | Build 容量约束贯穿施法裁决 | 2026-09-25T18:00:42+08:00 | 未验证 | 未验收 | 待验收后提交 |
+| `INC-UI-013` | `INC-CROSS-013` | ui | `planned` | 超容量技能槽的禁用显示与请求拦截 | 2026-09-25T18:00:42+08:00 | 未验证 | 未验收 | 待验收后提交 |
+| `INC-CORE-007` | `INC-CROSS-013` | core | `planned` | HUD 与快捷键的 Build 容量一致性 | 2026-09-25T18:00:42+08:00 | 未验证 | 未验收 | 待验收后提交 |
+| `INC-TESTING-005` | `INC-CROSS-013` | testing | `planned` | Build 容量一致的自动化证据 | 2026-09-25T18:00:42+08:00 | 未验证 | 未验收 | 待验收后提交 |
+
 ## 已完成 Increment
 
 | ID | 主题 | 完成时间 | 验收时间 | Git commit |
@@ -425,6 +456,7 @@
 
 | 版本 | 时间 | 变更 |
 |---|---|---|
+| v5.1 | 2026-09-25T18:00:42+08:00 | 按建议启动 `INC-CROSS-013`（Build 容量一致性）：采用方案 B，完整技能列表继续用于诊断与展示，Pawn 提供容量投影，超容量技能在 SkillBar / HUD / Controller / AI 全链路禁用；拆为 PAWNS-015、COMBAT-007、UI-013、CORE-007、TESTING-005 |
 | v5.0 | 2026-09-25T17:57:16+08:00 | 完成并验收 `INC-CROSS-012` 全部六个子 Increment：三种战术技能数据契约、SELF/ALLY/ENEMY 目标解析、最小 Skill Effect System、目标选择 UI、主场景选择/取消路由与三套 Build 轨迹证据；GdUnit4 192 cases / 0 failures、headless 10 suites / 549 assertions / 0 failing；按 Increment 提交并回填 Git hash |
 | v4.9 | 2026-09-25T17:43:37+08:00 | 完成并验收 `INC-UI-012`：SkillSlot 分离 NORMAL / SELECTED / TARGETING 交互状态，SkillBar 按目标类型路由 SELF 直发或 TARGETING，并新增取消清理与 Pawn 合法目标高亮；GdUnit4 unit 87 / integration 67 / gameplay 26（180 cases、0 failures）、headless 10 suites / 549 assertions 全部通过 |
 | v4.8 | 2026-09-25T17:35:46+08:00 | 完成并验收 `INC-CROSS-012` 前两个子 Increment：`INC-PAWNS-014`（技能数据契约与御剑斩 / 护体真气 / 定身术三份资源，`65a494d`）与 `INC-COMBAT-005`（SELF / ALLY / ENEMY 目标解析，`df36f24`）；统一门禁 GdUnit4 unit 87 / integration 58 / gameplay 26、headless 10 suites 549 assertions 全通过；`INC-COMBAT-006`、`INC-UI-012`、`INC-CORE-006`、`INC-TESTING-004` 仍为 planned，待后续开发 |

@@ -260,3 +260,31 @@
 - 验收时间：2026-09-25T17:39:59+08:00
 - Git：`main` / `0438397`、`60355ae`（新增脚本 UID）
 - 备注：父 Increment 为 `INC-CROSS-012`；本 Increment 只实现最小效果系统。验收依据：用户 2026-09-25T17:31+08:00 回复“验收通过，分increment提交”。
+
+## INC-COMBAT-007：Build 容量约束贯穿施法裁决
+
+- 状态：planned
+- 创建时间：2026-09-25T18:00:42+08:00
+- 最后修改：2026-09-25T18:00:42+08:00
+- 主题：combat
+- 目标：让超容量主动技能在所有施法入口都被同一条 `Pawn` 容量事实拒绝，即使调用方绕过 SkillBar 也不能扣除灵力、推进冷却、移动或造成效果。
+- 验收标准：
+  - `Pawn.can_cast_skill()` 在目标、距离、冷却与灵力检查前先拒绝未启用技能；`SkillEffectResolver` 的既有失败无副作用语义保持不变。
+  - `PlayerController.order_skill_instance()` 拒绝超容量技能且不覆盖既有移动/攻击/技能命令。
+  - `AIController` 只遍历 `Pawn.get_enabled_active_skills()`，不会尝试超容量技能；无境界单位的天生技能仍可施放。
+  - 集成测试证明超容量技能直接调用 `cast_skill()` 返回 false，且灵力、冷却、位置、生命/护盾、命令状态均不变化。
+- 范围：`game/pawns/pawn.gd`、`game/pawns/controllers/player_controller.gd`、`game/pawns/controllers/ai_controller.gd` 与对应集成测试。
+- 非范围：技能伤害/效果重平衡、目标规则变更、AI 决策升级、技能栏视觉。
+- 依赖：`INC-PAWNS-015`。
+- 检索证据：已执行 `git status --short`（工作区干净，`main...origin/main`）、`git diff --unified=0 -- agent-plan/`（空）、`git diff --cached --unified=0 -- agent-plan/`（空）与 `git log --oneline -5 -- agent-plan/`（当前计划基线 `cbccdb8`）；全量检索确认现有最高主题编号为 PAWNS-014 / COMBAT-006 / UI-012 / CORE-006 / TESTING-004，CROSS-012 已验收，无未完成 planned Increment。 `git grep` 实测：`BuildValidator` 已能报告 `over_capacity`，但 `Pawn.can_cast_skill()` 不检查容量，`PlayerController.order_skill_instance()` 只检查 known skill，`AIController` 直接遍历 `data.get_active_skills()`，`SkillBar.refresh()` 用 `max(capacity, skills.size())` 显示全部技能却未把多余技能置为 DISABLED。因此“校验能发现错误”与“运行时实际禁止错误 Build”之间仍有缺口。
+- 风险：必须保持既有正常 Build（炼气 2/2）行为不变；不得让无境界的怪物/傀儡因缺少 Build 容量而失去天生技能；不得只修 UI 而留下控制器或 AI 旁路；不得静默截断技能列表。
+- 实现说明：所有控制器只消费 Pawn 的容量投影；`can_cast_skill()` 作为最终权威，控制器拒绝作为无副作用的前置过滤。
+- 变更文件：待实现回填。
+- 测试证据：待实现回填。
+- 验证状态：未验证
+- 验证时间：
+- 已知问题：待实现回填。
+- 用户验收：未验收
+- 验收时间：
+- Git：待验收后提交
+- 备注：父 Increment 为 `INC-CROSS-013`；本 Increment 不改变技能效果规则。

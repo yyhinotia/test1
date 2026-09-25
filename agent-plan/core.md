@@ -249,3 +249,31 @@
 - 验收时间：2026-09-25T17:31:30+08:00
 - Git：`main` / `a72f475`
 - 备注：父 Increment 为 `INC-CROSS-012`；本 Increment 只负责输入与命令接线。
+
+## INC-CORE-007：HUD 与快捷键的 Build 容量一致性
+
+- 状态：planned
+- 创建时间：2026-09-25T18:00:42+08:00
+- 最后修改：2026-09-25T18:00:42+08:00
+- 主题：core
+- 目标：主场景的 Q/数字键请求与 HUD 技能可用性文案必须遵守同一条 Build 容量投影，避免界面显示“可用”但实际被拒绝，或快捷键触发超容量技能。
+- 验收标准：
+  - Q 与数字键继续统一通过 `SkillBar.request_skill()`；超容量技能被拒绝时不产生控制器命令、施法、资源或冷却副作用。
+  - `_describe_active_skill()` 在首个技能被 Build 容量禁用时显示 `Build 禁用：超出主动技能容量`，不再显示“可用”。
+  - 正常炼气 2/2 玩家、暂停/目标选择、HUD 刷新与选中生命周期保持既有行为。
+  - gameplay 测试覆盖超容量 Build 的热键、HUD 文案和无副作用拒绝。
+- 范围：`game/main/main.gd`、`test/gameplay` 中主场景相关测试。
+- 非范围：InputMap 改动、技能栏布局、Build 编辑器、战斗数值调整。
+- 依赖：`INC-PAWNS-015`、`INC-UI-013`、`INC-CORE-006`。
+- 检索证据：已执行 `git status --short`（工作区干净，`main...origin/main`）、`git diff --unified=0 -- agent-plan/`（空）、`git diff --cached --unified=0 -- agent-plan/`（空）与 `git log --oneline -5 -- agent-plan/`（当前计划基线 `cbccdb8`）；全量检索确认现有最高主题编号为 PAWNS-014 / COMBAT-006 / UI-012 / CORE-006 / TESTING-004，CROSS-012 已验收，无未完成 planned Increment。 `git grep` 实测：`BuildValidator` 已能报告 `over_capacity`，但 `Pawn.can_cast_skill()` 不检查容量，`PlayerController.order_skill_instance()` 只检查 known skill，`AIController` 直接遍历 `data.get_active_skills()`，`SkillBar.refresh()` 用 `max(capacity, skills.size())` 显示全部技能却未把多余技能置为 DISABLED。因此“校验能发现错误”与“运行时实际禁止错误 Build”之间仍有缺口。
+- 风险：必须保持既有正常 Build（炼气 2/2）行为不变；不得让无境界的怪物/傀儡因缺少 Build 容量而失去天生技能；不得只修 UI 而留下控制器或 AI 旁路；不得静默截断技能列表。
+- 实现说明：主场景不复制容量规则，只读取 Pawn 的容量投影和 SkillBar 的请求裁决；HUD 文案只反映最终可用性。
+- 变更文件：待实现回填。
+- 测试证据：待实现回填。
+- 验证状态：未验证
+- 验证时间：
+- 已知问题：待实现回填。
+- 用户验收：未验收
+- 验收时间：
+- Git：待验收后提交
+- 备注：父 Increment 为 `INC-CROSS-013`。

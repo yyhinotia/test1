@@ -176,3 +176,31 @@
 - 验收时间：2026-09-25T17:31:30+08:00
 - Git：`main` / `a895e2b`
 - 备注：父 Increment 为 `INC-CROSS-012`；本 Increment 是父级 Gameplay 验收的核心证据层。
+
+## INC-TESTING-005：Build 容量一致的自动化证据
+
+- 状态：planned
+- 创建时间：2026-09-25T18:00:42+08:00
+- 最后修改：2026-09-25T18:00:42+08:00
+- 主题：testing
+- 目标：为“所有技能可见、超容量禁用、任何入口都不能施放”的选择提供跨 unit / integration / gameplay 的可重复证据，而不是只验证 BuildValidator 的错误码。
+- 验收标准：
+  - 单元测试覆盖 Pawn 容量投影：容量 0 / 1 / 2 / 4、超容量索引、无境界兼容、完整 loadout 仍报告 `over_capacity`。
+  - 集成测试覆盖 SkillSlotState/SkillBar 的 DISABLED 状态、点击无请求、`request_skill()` 拒绝、PlayerController/AI 不消费超容量技能。
+  - gameplay 测试构造同一玩家 4 个技能但炼气容量 2：前 2 个可用，后 2 个 DISABLED；点击/快捷键/直接 cast 均无灵力、冷却、HP/Shield、位置或 controller 命令副作用。
+  - 统一门禁 `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all`、Godot MCP validate 与 `git diff --check` 全部通过。
+- 范围：`test/unit`、`test/integration`、`test/gameplay` 中新增或扩展的容量一致性测试。
+- 非范围：正式 Build 编辑器、存档迁移、平衡调参、网络同步。
+- 依赖：`INC-PAWNS-015`、`INC-COMBAT-007`、`INC-UI-013`、`INC-CORE-007`。
+- 检索证据：已执行 `git status --short`（工作区干净，`main...origin/main`）、`git diff --unified=0 -- agent-plan/`（空）、`git diff --cached --unified=0 -- agent-plan/`（空）与 `git log --oneline -5 -- agent-plan/`（当前计划基线 `cbccdb8`）；全量检索确认现有最高主题编号为 PAWNS-014 / COMBAT-006 / UI-012 / CORE-006 / TESTING-004，CROSS-012 已验收，无未完成 planned Increment。 `git grep` 实测：`BuildValidator` 已能报告 `over_capacity`，但 `Pawn.can_cast_skill()` 不检查容量，`PlayerController.order_skill_instance()` 只检查 known skill，`AIController` 直接遍历 `data.get_active_skills()`，`SkillBar.refresh()` 用 `max(capacity, skills.size())` 显示全部技能却未把多余技能置为 DISABLED。因此“校验能发现错误”与“运行时实际禁止错误 Build”之间仍有缺口。
+- 风险：必须保持既有正常 Build（炼气 2/2）行为不变；不得让无境界的怪物/傀儡因缺少 Build 容量而失去天生技能；不得只修 UI 而留下控制器或 AI 旁路；不得静默截断技能列表。
+- 实现说明：测试使用隔离的 `PawnData` / `RealmDefinition` 副本构造超容量场景，不改动正式玩家预设；断言容量内行为不回归。
+- 变更文件：待实现回填。
+- 测试证据：待实现回填。
+- 验证状态：未验证
+- 验证时间：
+- 已知问题：待实现回填。
+- 用户验收：未验收
+- 验收时间：
+- Git：待验收后提交
+- 备注：父 Increment 为 `INC-CROSS-013`；本 Increment 是父级验收的核心证据层。
