@@ -323,9 +323,9 @@
 
 ## INC-TESTING-009：宗门闭环证据（收益 → 修炼 / 制作 / 强化 → 再战）
 
-- 状态：planned
+- 状态：accepted
 - 创建时间：2026-09-25T19:22:00+08:00
-- 最后修改：2026-09-25T19:22:00+08:00
+- 最后修改：2026-09-25T20:04:47+08:00
 - 主题：testing
 - 目标：为「秘境收益 → 宗门产出 → 修士变强 → 再战」这条 MVP-⑤ 闭环提供可复核证据，回答 `docs/project_summary.md` §二十二 提出的问题：「玩家打完之后，会不会因为宗门/新 Build 而想再打一轮？」
 - 验收标准：
@@ -336,16 +336,25 @@
   - 取证报告落 `.mcp/godot-runtime/screenshots/`（复用 `INC-UI-016` 的宗门面板真实窗口取证），报告里给出三档分辨率的通过结论。
 - 范围：`test/gameplay/sect_loop_test.gd`（新增）、`agent-plan/testing.md`（本 Increment 记录）、必要时补 `test/headless/` 回归套件（只在既有断言不下降的前提下追加）。
 - 非范围：修改 `game/` 下任何业务规则来迁就测试、调整既有断言期望值、移除既有 headless 套件、把 CROSS-016 的秘境断言改写为宗门断言。
-- 依赖：`INC-CORE-010`、`INC-SECT-001`~`INC-SECT-003`、`INC-PAWNS-018`、`INC-UI-016`。
-- 检索证据：Git Diff 优先检索结论同 `INC-SECT-001`；`git grep -n -E "sect_loop|sect_state" -- test/` 无匹配；`test/README.md` 规定玩法层承载「真实 `main.tscn` 上的玩家可见整条链路」，本 Increment 属该层；既有 `test/gameplay/main_scene_dungeon_test.gd`（`INC-TESTING-008`）已提供「清空房间 → 继续 / 撤退 → 收益」的真实路径，本 Increment 在其之后追加宗门段，不重写既有断言。
-- 风险：闭环用例横跨秘境 / 宗门 / Pawn / UI 四层，容易出现「测试写死了实现细节」；因此断言只落在对外契约（库存、等级、修为、攻击力、信号次数、`get_snapshot()`），不断言私有字段或节点内部结构。另一风险是把测试写太长导致定位困难，因此允许按链路节点拆成多个 `test_` 方法，共享同一份夹具。
-- 实现说明：待实现后回填。
-- 变更文件：待实现后回填。
-- 测试证据：待实现后回填。
-- 验证状态：未验证
-- 验证时间：
-- 已知问题：待实现后回填。
-- 用户验收：未验收
-- 验收时间：
-- Git：
-- 备注：父 Increment 为 `INC-CROSS-017`；本 Increment 是父级验收的证据层。
+- 依赖：`INC-CORE-010`、`INC-SECT-001`~`INC-SECT-003`、`INC-PAWNS-018`、`INC-UI-016`；闭环首轮失败暴露的会话层缺口由 `INC-WORLD-005` 修复。
+- 检索证据（2026-09-25T19:55:22+08:00）：`git status --short` 工作区干净；`git diff --unified=0 -- agent-plan/` 与 `git diff --cached --unified=0 -- agent-plan/` 均无输出；`git log --oneline -- agent-plan/` 显示 `INC-CORE-010` 已以 `224b7f6` / `7706de2` 提交；`git grep -n -E "INC-TESTING-009|sect_loop" -- agent-plan/ test/` 只命中本计划与索引，`sect_loop_test.gd` 尚不存在。依赖 `INC-CORE-010`、`INC-SECT-001`~`003`、`INC-PAWNS-018`、`INC-UI-016` 均已验收。
+- 风险：闭环用例横跨秘境 / 宗门 / Pawn / UI 四层，容易出现「测试写死了实现细节」；因此断言只落在对外契约（库存、等级、修为、攻击力、信号次数、`get_snapshot()`），不断言私有字段或节点内部结构。另一风险是把测试写太长导致定位困难，因此按链路节点拆成两个 `test_` 方法，共享同一份夹具。
+- 实现说明：
+  - 新增 `test/gameplay/sect_loop_test.gd`，只通过真实 `main.tscn`、真实面板按钮与真实死亡 / 结算路径驱动，数值一律从 `DungeonDefinition` / `SectState` / `Pawn` 公开 API 读取，不复制宗门公式。
+  - 用例一 `test_complete_sect_loop_makes_the_restarted_run_stronger`：清 4 间 → 撤退入账 → 灵田升级 → 打坐 → 收草 → 炼丹 → 服丹 → 重开（断言修为 / 库存 / 设施延续）→ 在同一单位上比较强化前 / 后的真实 `try_attack()` 伤害差 = `FORGE_ATTACK_BONUS_PER_LEVEL` → 再清 1 间 → 撤退 → 再重开，断言强化等级、修为与攻击力仍高于未强化基线。
+  - 用例二 `test_run_finished_is_deposited_once_and_defeat_deposits_zero`：撤退入账一次后重复广播 `run_finished` 不再重复入账；另起一局让玩家阵亡，断言收益与宗门库存均为 0、面板文案与库存一致。
+  - 用例一同时在重开前后校验 `EncounterSession` 确实换了单位实例（`instance_id` 不同），把「成长延续」与「单位重建」两件事分开断言。
+- 变更文件：
+  - `test/gameplay/sect_loop_test.gd`（新增，含 `.uid`）
+- 测试证据：
+  - `& $env:GODOT_BIN --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://test/gameplay/sect_loop_test.gd -rd res://reports/debug_sect_loop --ignoreHeadlessMode`：退出码 0，`Overall Summary: 2 test cases | 0 errors | 0 failures | 0 flaky | 0 skipped | 0 orphans`，两个用例均 PASSED。
+  - `pwsh -File test/run_tests.ps1 -Godot $env:GODOT_BIN -Layer all`：退出码 0，`GdUnit4 : 324 cases, 0 failures`（unit 125 / integration 139 / gameplay 60）、`headless : 10 suites, 549 assertions, 0 failing suites`、`RESULT: PASS`，相对基线只增不减。
+  - `& $env:GODOT_BIN --path . --script res://test/tools/capture_sect_panel_evidence.gd`：`SECT_PANEL_CAPTURE_DONE FAILURES=0`，三档分辨率 1152×648 / 1152×720 / 800×720 的 `PANEL_INSIDE=true`、`DOCK_INSIDE=true`、`TEXT_OVERFLOW=[]` 与截图写入 `.mcp/godot-runtime/screenshots/`（已忽略，不入库）。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T20:04:47+08:00
+- 已知问题：`INC-UI-016` 遗留的 `test/integration/sect_panel_test.gd` 在 GdUnit4 目录模式下报 288 orphans（该文件自身 0 failures / 0 errors），使该层进程退出码为 101；`run_tests.ps1` 汇总仍为 `RESULT: PASS`。该孤儿与本 Increment 无关，属既有测试整洁度债务。
+- 用户验收：已验收
+- 验收时间：2026-09-25T20:04:47+08:00
+- 验收依据：用户指令「分批increment单独推送后继续开发」（2026-09-25），授权本批次按 Increment 分批提交并逐一推送。
+- Git：`main` / `<commit>`（提交后由 `docs(plan)` 回填）
+- 备注：父 Increment 为 `INC-CROSS-017`；本 Increment 是父级验收的证据层，真实主场景闭环用例也是 `INC-WORLD-005` 缺口的第一发现者。
