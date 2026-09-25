@@ -1,13 +1,13 @@
 # Agent Plan Index
 
-> 最后修改：2026-09-25T22:22:00+08:00
+> 最后修改：2026-09-26T01:48:20+08:00
 > 规则来源：`../AGENTS.md`
 
 ## 主题索引
 
 | 主题 | 计划文件 | 状态 | 当前 Increment | 最后修改 |
 |---|---|---|---|---|
-| UI | `ui.md` | 待验收 | `INC-UI-018` | 2026-09-25T22:30:00+08:00 |
+| UI | `ui.md` | 待验收 | `INC-UI-019` | 2026-09-26T01:48:20+08:00 |
 | 战斗 | `combat.md` | 待验收 | `INC-COMBAT-009` | 2026-09-25T22:05:26+08:00 |
 | Pawns | `pawns.md` | 待验收 | `INC-PAWNS-021` | 2026-09-25T21:45:00+08:00 |
 | 修炼 | `cultivation.md` | 已验收 | `INC-CULT-005` | 2026-09-25T20:16:30+08:00 |
@@ -16,9 +16,9 @@
 | 背包 | `inventory.md` | 已验收 | `INC-INVENTORY-001` | 2026-09-25T16:51:32+08:00 |
 | 存档 | `save.md` | 未创建 | - | - |
 | 音频 | `audio.md` | 未创建 | - | - |
-| 核心 | `core.md` | 已退役（4v4 冻结） | `INC-CORE-012`（superseded） | 2026-09-25T21:45:00+08:00 |
+| 核心 | `core.md` | 已验收（输入路由） | `INC-CORE-013` | 2026-09-26T01:48:20+08:00 |
 | 工具 | `tools.md` | 已验收 | `INC-TOOLS-002` | 2026-09-25T13:54:46+08:00 |
-| 测试 | `testing.md` | 待验收 | `INC-TESTING-014` | 2026-09-25T23:01:35+08:00 |
+| 测试 | `testing.md` | 待验收 | `INC-TESTING-018` | 2026-09-26T01:48:20+08:00 |
 
 ## 跨主题父 Increment
 
@@ -43,6 +43,7 @@
 | `INC-CROSS-017` | `accepted` | `INC-SECT-001`、`INC-SECT-002`、`INC-SECT-003`、`INC-PAWNS-018`、`INC-UI-016`、`INC-CORE-010`、`INC-WORLD-005`、`INC-TESTING-009` | 最小宗门（MVP-⑤）：把秘境灵石收益变成可升级的宗门设施，产出修为 / 灵草 / 丹药 / 功法 / 强化武器，形成「回去修炼 / 制作 / 强化，然后再次出发」的闭环 | 通过 | 已验收 | 2026-09-25T20:05:25+08:00 |
 | `INC-CROSS-018` | `in_progress` | `INC-CULT-005`、`INC-PAWNS-019`、`INC-WORLD-006`、`INC-UI-017`、`INC-CORE-011`、`INC-TESTING-010` | 突破 → Build 重构：突破执行、运行时境界覆盖、跨遭遇延续、玩家入口与再战证据 | 进行中（4/6 子项已验收） | 待验收 | 2026-09-25T20:39:32+08:00 |
 | `INC-CROSS-019` | `in_progress` | `INC-COMBAT-009`、`INC-PAWNS-021`、`INC-WORLD-007`、`INC-UI-018`、`INC-TESTING-011`、`INC-TESTING-012`、`INC-TESTING-013`、`INC-TESTING-014`（已实现前置：`INC-PAWNS-020` 多单位运行时；已退役：`INC-CORE-012`） | 1v1 → 1vN Build 玩法验证（Build Gameplay Validation） | 部分验证（Gate 0 机制层 + 1v1 首通奖励、Build 切换面板与跨遭遇延续、`tests/` 场景化人工入口、Build Replay 自动化证据与 Round 1/2 客观对照、Stage 2 `1v1 / 1v2 / 1v3` 运行时终局收敛与重开清洁） | 待验收 | 2026-09-25T23:55:00+08:00 |
+| `INC-CROSS-020` | `accepted` | `INC-CORE-013`、`INC-UI-019`、`INC-TESTING-018` | 左键统一操作模型：选择 / 移动 / 技能目标选择，选中敌方显示敌方信息 | 验证通过（gameplay 输入路由用例 + 统一门禁 `RESULT: PASS` + 真实窗口与 OS 级鼠标输入冒烟） | 已验收 | 2026-09-26T01:48:20+08:00 |
 
 ### INC-CROSS-001：第一个 Pawn MVP
 
@@ -445,6 +446,10 @@
 | `INC-TESTING-012` | `INC-CROSS-019` | testing | `awaiting_acceptance` | 场景化测试入口拆分到 `tests/` | 2026-09-25T22:33:49+08:00 | 验证通过（入口体检 FAILURES=0 / 5 入口 × 2 次；gameplay 60 cases；统一门禁 395 cases + 549 assertions PASS） | 待验收 | `develop` / `fd3eda8` |
 | `INC-TESTING-013` | `INC-CROSS-019` | testing | `awaiting_acceptance` | Stage 2（1v1 / 1v2 / 1v3）运行时终局收敛与重开清洁证据 | 2026-09-25T23:55:00+08:00 | 验证通过（单套件 gameplay 2 cases / 0 orphans；1v1 / 1v2 / 1v3 均在 10~19s 内跑到终局，1v2 胜利需打掉两名敌人；统一门禁 399 cases + 549 assertions PASS） | 待验收 | `develop` / `6d7b388` |
 | `INC-TESTING-014` | `INC-CROSS-019` | testing | `awaiting_acceptance` | 人工轮 CombatEvent 取证（实机每局应对序列落盘） | 2026-09-25T23:01:35+08:00 | 验证通过（单套件 2 cases / 0 failures / 0 orphans；入口体检 6 入口 × 2 次 FAILURES=0；统一门禁 401 cases + 549 assertions PASS） | 待验收 | `develop` / `3549aa1` |
+| `INC-CROSS-020` | - | cross | `accepted` | 左键统一操作模型：选择 / 移动 / 技能目标选择，选中敌方显示敌方信息 | 2026-09-26T01:48:20+08:00 | 验证通过（402→406 cases 中的 4 个新输入路由用例 + 统一门禁 `RESULT: PASS` + 真实窗口 / OS 级鼠标输入冒烟） | 已验收 | develop |
+| `INC-CORE-013` | `INC-CROSS-020` | core | `accepted` | 左键统一入口：选中任意单位 / 左键移动 / 右键不再移动 | 2026-09-26T01:48:20+08:00 | 验证通过（gameplay 5 个输入路由用例 + 真实窗口 `指令：移动到 (320, 520)` / 右键零命令；统一门禁 `RESULT: PASS`） | 已验收 | develop |
+| `INC-UI-019` | `INC-CROSS-020` | ui | `accepted` | 选中敌方单位时的信息 UI 口径（信息卡绑定 / 玩家面板解绑 / HUD 文案） | 2026-09-26T01:48:20+08:00 | 验证通过（gameplay 断言信息卡绑定敌方且技能栏与 Build 面板解绑；可见控件清单无 `SkillBar`、信息卡显示 `气血/护体` 无灵力行） | 已验收 | develop |
+| `INC-TESTING-018` | `INC-CROSS-020` | testing | `accepted` | 输入模型测试矩阵（左键移动 / 敌方选中 / 右键不移动） | 2026-09-26T01:48:20+08:00 | 验证通过（删除 1 个旧契约用例、新增 5 个；统一门禁 `RESULT: PASS`，GdUnit4 402 → 406 cases / 0 failures，exit 0） | 已验收 | develop |
 | `INC-SECT-001` | `INC-CROSS-017` | sect | `accepted` | 宗门设施静态定义与六座设施数据 | 2026-09-25T19:38:41+08:00 | 通过 | 已验收 | `main` / `c25ffbc` |
 | `INC-SECT-002` | `INC-CROSS-017` | sect | `accepted` | SectState 运行时：库存 / 设施等级 / 升级 / 修炼 / 收获 | 2026-09-25T19:38:41+08:00 | 通过 | 已验收 | `main` / `8c65ff1` |
 | `INC-SECT-003` | `INC-CROSS-017` | sect | `accepted` | 转化设施：藏经阁参悟 / 炼器房强化 / 丹房炼丹 | 2026-09-25T19:38:41+08:00 | 通过 | 已验收 | `main` / `9c97ef9` |
@@ -611,6 +616,9 @@
 
 | 版本 | 时间 | 变更 |
 |---|---|---|
+| v5.32 | 2026-09-26T01:48:20+08:00 | 用户验收通过 `INC-CROSS-020`（左键统一操作模型）及其三个子 Increment（`INC-CORE-013` / `INC-UI-019` / `INC-TESTING-018`），并按其拆分提交到 `develop`；验收同时确认两项交互决策：左键点敌方只做选中并显示信息（不顺手攻击）、移动仍要求先选中玩家自己的单位 |
+| v5.31 | 2026-09-26T00:58:00+08:00 | 完成 `INC-CROSS-020` 的三个子 Increment（`INC-CORE-013` / `INC-UI-019` / `INC-TESTING-018`）：① 左键成为唯一世界交互入口——命中任意存活单位（含敌方）即选中并结束分流，空白地只在「玩家单位被选中」时下达 `order_move()`；② 右键收窄为「TARGETING 取消」+「命中敌方下达 `order_attack()`」，删除移动分支，`project.godot` 的 InputMap 与动作名不变；③ 选中敌方时信息卡绑定敌方、`SkillBar` 与 `BuildLoadoutPanel` 解绑隐藏、`OrderLabel` 显示 `指令：-`、`InstructionsLabel` 与 `main.tscn` 静态文案同步；④ 新增 `_watch_selected_pawn_signals()` 让任意被选中单位的资源 / 状态变化刷新 HUD；⑤ 改写旧契约用例 `test_right_click_cancels_without_move_command` 并新增 4 个用例，统一门禁 `RESULT: PASS`（GdUnit4 402 → 406 cases / 0 failures、headless 549 assertions，exit 0）；⑥ 真实窗口 1v2 入口用 `simulate_input`（OS 级鼠标）复核左键选敌方 / 左键移动 / 右键不移动 / 右键攻击；不新增 InputMap 动作、不改玩法数值与 `Pawn` API |
+| v5.30 | 2026-09-26T00:47:00+08:00 | 新建 `INC-CROSS-020`（左键统一操作模型）：用户指令「左键选择（人物选择，技能对象选择），移动，而非右键移动，选中敌方时需要显示敌方信息ui」；拆分为 `INC-CORE-013`（输入路由：`_handle_select` 成为唯一左键入口，左键选中任意单位 / 空白地移动，右键不再移动但保留取消瞄准与对敌方普通攻击）、`INC-UI-019`（选中敌方时信息卡绑定敌方、技能栏与 Build 面板解绑，HUD 指令行与操作提示文案同步）、`INC-TESTING-018`（改写 `test_right_click_cancels_without_move_command` 旧契约并新增左键移动 / 选中敌方用例）；不新增 InputMap 动作、不改玩法数值与 `Pawn` API |
 | v5.25 | 2026-09-25T23:01:35+08:00 | 完成 `INC-TESTING-014`（人工轮 CombatEvent 取证）：人工入口 `tests/scenario_build_replay.tscn` 原有 `SCENARIO_READY` 但没有 CombatEvent 落盘，Gate D 的「事件佐证」未绑定人工轮；本 Increment 在 `tests/scenario_entry.gd` 加只读事件记录器（每局结算追加局号 / 遭遇 / 结算 / 时钟 / 装配 / 完整事件行到不入库的 `.mcp/godot-runtime/screenshots/human_replay_events.md`），新增 `entry_ready` 就绪标志避免记录器挂载前结算，并新增 `test/gameplay/human_round_record_test.gd` 覆盖「未结算不写 + 首局落盘 + 第二局追加」；单套件 `2 cases | 0 failures | 0 orphans`，入口体检 6 入口 × 2 次 `FAILURES=0`，统一门禁 `RESULT: PASS`（GdUnit4 401 cases / headless 549 assertions，exit 0）；状态 `awaiting_acceptance`，不新增玩法内容、不改数值与实现 |
 | v5.24 | 2026-09-25T23:55:00+08:00 | 完成 `INC-TESTING-013`（Stage 2：1v1 / 1v2 / 1v3 运行时终局收敛与重开清洁证据）：`INC-CROSS-019` §27「技术」退出条件要求「1v1 / 1v2 / 1v3 可稳定运行、同一遭遇可以重复挑战」，复核后确认 1v2 / 1v3 原来只有数据目录用例（`build_test_encounter_catalog_test.gd`）与 `tests/` 入口加载体检（`verify_scenario_entries.gd`），缺真实运行时终局证据，故新增 gameplay 用例 `test/gameplay/build_test_stage2_stability_test.gd`：用正式 `EncounterSession` + 真实 `PlayerController` / `AIController` 把三份遭遇跑到终局（1v1 16.68s 落败、1v2 12.32s 胜利且换目标 2 次、1v3 9.93s 落败），并验证 `restart()` 后满血 / 无定身 / 事件清空 / 无残留单位且能第二次跑到终局；单套件 `2 test cases | 0 failures | 0 orphans`，统一门禁 `RESULT: PASS`（GdUnit4 399 cases / headless 549 assertions，exit 0）；不新增玩法内容、不改数值与实现 |
 | v5.23 | 2026-09-25T23:05:40+08:00 | 完成 `INC-CROSS-019` 开发顺序最后一步 `INC-TESTING-011`（Build Replay 实验记录）：新增共用驱动层 `test/tools/build_replay_driver.gd`（真实 `main.tscn` → 关默认秘境 → 跨物理帧走位到定身距离 → 危险窗口 Round 1 不干预 / Round 2 施放定身 → 走到原结算时刻之外确认无补结算）、玩法用例 `test/gameplay/build_replay_loop_test.gd`（2 cases：机制事实 + 跨局不污染与 Failure 4 客观判据）、取证脚本 `test/tools/capture_build_replay_record.gd`（产出 `build_replay_record` md/json，自动段填机制事实、人工段留「待人工」）与人工入口 `tests/scenario_build_replay.tscn`（登记进入口体检）；记录事实 Round 1 `danger_window_opened → skill_cast → skill_hit`（承伤 5.0/40.0）、Round 2 `... → skill_stunned → skill_cancelled`（承伤 0.0/0.0），Failure 4 未触发；单套件 2 cases、取证 `FAILURES=0`、入口体检 `FAILURES=0`（6 入口）、统一门禁 `RESULT: PASS`（GdUnit4 397 cases / headless 549 assertions，exit 0）；不新增 Increment、不改玩法数值 |
@@ -775,3 +783,54 @@
 - 调整记录（2026-09-25T22:21:30+08:00）：本轮不新增 Increment，只把 `INC-WORLD-007` 的实现口径补齐为可验收状态——① 明确「重开不残留」只约束瞬时战斗状态与事件记录，已解锁技能与显式装配的 Build 属于本代修士进度必须延续（否则 Stage 3「换 Build 再战」在机制上不成立）；② 为实现该口径把两处必要接线纳入本 Increment（`EncounterDefinition` 首通奖励字段 + `EncounterSession` 胜利结算发放、`SquadProgressSnapshot` 主动技能采集 / 写回 + `Pawn` 装配状态只读查询）；③ 三份试剑遭遇接入 `game/main/main.tscn` 遭遇面板作为实机入口，`main_scene_encounter_test.gd` 同步放宽为「至少一侧为正式档案且敌人数与站位一致」以兼容 `enemy_squad` 遭遇；④ 奖励口径不变：首通只给 `player_binding_skill.tres`，不含灵石 / 装备 / 强化 / 随机掉落。
 - 调整记录（2026-09-25T21:50:38+08:00）：按外部设计评审意见做 5 处增量调整（只改计划与设计基线，不新增 Increment、不改玩法数值）：① 新增 Gate 0（技术成立前置门）与「Gate 0 → Gate A/B → Gate C/D/E」判定顺序；② `INC-COMBAT-009` 终局判定修正为 1vN 全灭判胜（对齐 `INC-PAWNS-020` 与 `game/world/encounter_session.gd` 注释中的既有约定）；③ `INC-WORLD-007` 明确 1v3 第三名敌人 = 1v1 同一个 Boss，且 1v2 / 1v3 在全灭判胜落地前不得进入人工验收；④ `INC-TESTING-011` 增加 Round 1 / Round 2 危险窗口应对序列的客观对照判据，并把 Gate D 改为「原话 + 事件佐证」双证据；⑤ 保留三问硬门，新增非门控问题 Q4。
 - 备注：本父 Increment 只有把「4v4 Vertical Slice」重定义为「Build Gameplay Validation」这一件事，它验证的是**Build 是否值得继续做**，而不是秘境 / 宗门 / 队伍系统是否完整。闭环成立之后，`1vN → NvN → 4v4` 才是逐步增加 Build 决策空间，而不是在猜玩法。
+
+### INC-CROSS-020：左键统一操作模型（选择 / 移动 / 敌方信息）
+
+- 状态：accepted
+- 创建时间：2026-09-26T00:45:00+08:00
+- 最后修改：2026-09-26T01:48:20+08:00
+- 来源：用户 2026-09-26 指令「先将操作进行修改，左键选择（人物选择，技能对象选择），移动，而非右键移动，选中敌方时需要显示敌方信息ui」。
+- 目标：把鼠标操作收敛成一套不需要记忆的模型——左键同时承担「选中单位 / 选择技能目标 / 移动」，右键不再负责移动；被选中的敌方单位立刻显示自己的信息 UI，而不是点击后无反应。
+- 子 Increment：`INC-CORE-013`（输入路由与选中模型）、`INC-UI-019`（选中敌方时的信息 UI 口径）、`INC-TESTING-018`（输入模型测试矩阵）。
+- 验收标准（父级）：
+  - 左键点击己方单位 → 选中；左键点击空白地 → 已选中的玩家单位移动过去。
+  - 左键点击敌方单位 → 选中该敌方并显示其信息 UI（信息卡 + HUD 选中行），且不产生任何攻击 / 移动副作用。
+  - 技能目标选择期间左键点击合法目标仍然只确认一次技能命令（`INC-CORE-006` 契约不回归）。
+  - 右键不再产生移动命令；右键保留「取消瞄准」与「对敌方下达普通攻击」的既有能力。
+  - 上述四条都有自动化证据，并有真实窗口的 MCP 冒烟证据。
+- 非范围：多单位选择与 Shift 编队（`INC-CORE-012` 已按 4v4 冻结退役）、右键菜单、悬停提示、地面点击特效、手柄 / 键位重绑定、4v4 输入模型（`docs/4v4-vertical-slice.md` 保持冻结历史文档）、美术表现。
+- 依赖：`INC-CORE-001`（InputMap 与主场景输入入口）、`INC-CORE-006`（技能目标选择路由）、`INC-CORE-004`（信息卡路由）、`INC-UI-007` / `INC-UI-008` / `INC-UI-009`（信息卡与敌方空态）、`INC-UI-011`（技能栏）、`INC-UI-018`（Build 面板）、`INC-PAWNS-020`（1vN 多条敌人，任意敌人可被选中）。
+- 判定顺序：先 `INC-CORE-013`（路由）→ 再 `INC-UI-019`（UI 口径）→ 最后 `INC-TESTING-018`（测试矩阵）；三者验证通过后父级才进入 `awaiting_acceptance`。
+- 检索证据：2026-09-26T00:42+08:00 在仓库根目录执行 `git status --short`（`develop...origin/develop`，工作区含 `INC-TESTING-015/016/017` 未提交改动与若干非本 Increment 改动：`AGENTS.md`、`project.godot`、`game/world/data/dungeons/trial_dungeon.tres`、`test/gameplay/build_decision_differentiation_test.gd`、部分 `tests/*.tscn` 的 UID 重存）、`git diff --unified=0 -- agent-plan/`（新增行仅涉及 `INC-TESTING-015/016/017`）、`git grep -n -E "INC-CROSS-020|INC-CORE-013|INC-UI-019|INC-TESTING-018" -- agent-plan/`（无命中，编号未占用）；结论：本次是独立于 `INC-CROSS-019` 的新父 Increment，不得与 019 的未验收改动混提。
+- 风险：最大风险是「一条左键承担三种语义」出现串台（点敌人却下达攻击 / 点地面却只改选中）；第二风险是右键能力收窄造成静默失效；第三风险是敌方单位缺少 HUD 订阅导致信息看起来静止。三者分别由 `INC-CORE-013` 的分流实现、`INC-CORE-013` 的 `order_move()` 调用点收敛与 `INC-TESTING-018` 的用例矩阵兜底。
+- 实现说明：
+  - 三个子 Increment 一次落地但职责分明：`INC-CORE-013` 负责「左键单入口 + 右键收窄 + HUD 订阅」，`INC-UI-019` 负责「选中敌方时的面板绑定与文案口径」，`INC-TESTING-018` 负责把新契约锁进用例矩阵。生产代码只落在 `game/main/main.gd` 与 `game/main/main.tscn`，UI 组件（`PawnInfoPanel` / `SkillBar` / `BuildLoadoutPanel`）本身零改动。
+  - 关键设计决策一：左键点敌方**只做选中**、不下达攻击命令。理由是用户的原始需求把「选择」和「显示敌方信息」绑在一起，若同一次点击顺手发攻击，玩家就无法只查看敌人；普通攻击因此保留在右键（本次只收窄「移动」）。
+  - 关键设计决策二：命令前置条件收敛为 `_can_command_player()`（玩家单位被选中且存活），因此移动与攻击都不会因为「当前看的是敌人」而误发到玩家单位上。
+  - 关键设计决策三：玩家专属面板（技能栏 / Build 面板）以 `pawn == player_pawn` 为唯一判据，而不是按 `faction` 判断。这样即便将来出现友方单位（`faction == player`），也不会出现「技能栏绑定到别人、点了没反应」的静默死路。
+  - 未触碰 `project.godot`（该文件当前另有非本 Increment 的未提交改动），InputMap 动作与物理按键完全不变。
+- 变更文件：
+  - `game/main/main.gd`
+  - `game/main/main.tscn`
+  - `test/gameplay/main_scene_skill_targeting_test.gd`
+  - `agent-plan/_index.md`、`agent-plan/core.md`、`agent-plan/ui.md`、`agent-plan/testing.md`
+- 测试证据：
+  - 静态校验：`mcp__godot::validate` 校验 `game/main/main.gd` 与 `test/gameplay/main_scene_skill_targeting_test.gd` → `valid: true`、`errors: []`。
+  - 统一门禁：`pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` → `RESULT: PASS`（GdUnit4 406 cases / 0 failures、headless 10 suites / 549 assertions / 0 failing suites，exit 0；改动前 402 cases）。
+  - gameplay 输入路由用例：左键点己方 / 左键点地面移动 / 左键点敌方选中并绑定敌方信息卡 / 右键不再移动 / 右键点敌方仍攻击，共 5 个用例。
+  - 真实窗口冒烟：`tests/scenario_build_test_1v2.tscn` 下左键点敌方 → 信息卡绑定 `赤拳战修`、技能栏解绑隐藏、`指令：-`、控制器指令无副作用；左键点第二名敌人 `灵弓修者` → 信息卡跟随；左键点地面 → `指令：移动到 (320, 520)`；右键点地面 → 指令不变；右键点敌方 → `指令：攻击 赤拳战修`。
+  - OS 级鼠标输入（MCP `simulate_input`）：左键点敌方 (788,589) 后 `Main._selected_pawn` 变为 `EnemyPawn`，左键点己方 (1926,907) 变回 `PlayerPawn`，左键点地面 (708,1151) 得到 `移动到 (320, 520)`，右键点另一处地面 (1550,332) 不改指令。
+  - 可见控件清单（`get_ui_elements`）：敌方选中态下可见项无 `SkillBar`、`BuildLoadoutPanel` 显示 `未绑定单位` 且按钮 disabled、信息卡只有 `气血 200 / 200` 与 `护体 20 / 20`（无灵力行）。
+  - 截图：`.mcp/godot-runtime/screenshots/screenshot_1790354832_205.png`（2560x1434，`.mcp/` 不入库）。
+- 验证状态：验证通过
+- 验证时间：2026-09-26T00:57:00+08:00
+- 已知问题：
+  - 移动命令仍要求玩家自己的单位处于选中态，选中敌方后需先点回自己才能移动（沿用既有契约）；若要改成「点地面无条件移动玩家」，另立 Increment。
+  - 普通攻击的鼠标入口只剩「右键点敌方」；用户若希望左键点敌方也直接攻击，需要显式放弃「点敌方只看信息」的语义，另立 Increment 决策。
+  - `docs/4v4-vertical-slice.md` 第 121~125 行仍是冻结的 4v4 输入设计原文（左键选择 / 右键移动），本次未同步，属非范围。
+  - 用户侧 Godot 编辑器在验证期间保持打开（PID 26484）；若编辑器再次保存 `main.tscn`，`InstructionsLabel` 静态文案可能被内存中的旧值覆盖，提交前需要复核该行。
+  - 既有 orphan 债务（gameplay 324 / integration 288）与门禁 stderr 噪音与本 Increment 无关。
+- 用户验收：已验收
+- 验收时间：2026-09-26T01:48:20+08:00
+- Git：develop
+- 备注：本父 Increment 只改玩家与鼠标之间的输入层契约，不改战斗 / 技能 / 奖励 / 敌人 AI；`docs/4v4-vertical-slice.md` 的第 121~125 行仍是已冻结的 4v4 设计原文，如需让该文档跟随本次变更，另立文档类 Increment。
