@@ -179,9 +179,9 @@
 
 ## INC-TESTING-005：Build 容量一致的自动化证据
 
-- 状态：planned
+- 状态：accepted
 - 创建时间：2026-09-25T18:00:42+08:00
-- 最后修改：2026-09-25T18:00:42+08:00
+- 最后修改：2026-09-25T18:10:00+08:00
 - 主题：testing
 - 目标：为“所有技能可见、超容量禁用、任何入口都不能施放”的选择提供跨 unit / integration / gameplay 的可重复证据，而不是只验证 BuildValidator 的错误码。
 - 验收标准：
@@ -195,12 +195,12 @@
 - 检索证据：已执行 `git status --short`（工作区干净，`main...origin/main`）、`git diff --unified=0 -- agent-plan/`（空）、`git diff --cached --unified=0 -- agent-plan/`（空）与 `git log --oneline -5 -- agent-plan/`（当前计划基线 `cbccdb8`）；全量检索确认现有最高主题编号为 PAWNS-014 / COMBAT-006 / UI-012 / CORE-006 / TESTING-004，CROSS-012 已验收，无未完成 planned Increment。 `git grep` 实测：`BuildValidator` 已能报告 `over_capacity`，但 `Pawn.can_cast_skill()` 不检查容量，`PlayerController.order_skill_instance()` 只检查 known skill，`AIController` 直接遍历 `data.get_active_skills()`，`SkillBar.refresh()` 用 `max(capacity, skills.size())` 显示全部技能却未把多余技能置为 DISABLED。因此“校验能发现错误”与“运行时实际禁止错误 Build”之间仍有缺口。
 - 风险：必须保持既有正常 Build（炼气 2/2）行为不变；不得让无境界的怪物/傀儡因缺少 Build 容量而失去天生技能；不得只修 UI 而留下控制器或 AI 旁路；不得静默截断技能列表。
 - 实现说明：测试使用隔离的 `PawnData` / `RealmDefinition` 副本构造超容量场景，不改动正式玩家预设；断言容量内行为不回归。
-- 变更文件：待实现回填。
-- 测试证据：待实现回填。
-- 验证状态：未验证
-- 验证时间：
-- 已知问题：待实现回填。
-- 用户验收：未验收
-- 验收时间：
-- Git：待验收后提交
+- 变更文件：`test/unit/pawn_active_skill_capacity_test.gd`、`test/unit/skill_slot_state_test.gd`、`test/integration/active_skill_execution_test.gd`、`test/integration/skill_bar_test.gd`、`test/integration/skill_targeting_ui_test.gd`、`test/gameplay/main_scene_gameplay_test.gd`。
+- 测试证据：统一门禁 `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` 返回 PASS：GdUnit4 207 cases / 0 failures（unit 94 / integration 73 / gameplay 40），headless 10 suites / 549 assertions / 0 failing suites。三层专项覆盖容量投影、UI DISABLED/请求拦截、控制器/AI 旁路拒绝、主场景快捷键/HUD 与 4 技能 / 2 容量玩法场景。Godot MCP `validate` 对 13 个本次变更脚本/测试目标返回 `valid: true`、`errors: []`；`git diff --check` 无输出。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T18:10:00+08:00
+- 已知问题：无新增阻塞。未覆盖正式 Build 编辑器、存档迁移、数值平衡与 AOE；均属于非范围。
+- 用户验收：已验收
+- 验收时间：2026-09-25T18:10:00+08:00
+- Git：`main` / 待本轮分 Increment 提交后回写 hash
 - 备注：父 Increment 为 `INC-CROSS-013`；本 Increment 是父级验收的核心证据层。
