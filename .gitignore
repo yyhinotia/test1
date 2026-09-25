@@ -2,3 +2,6 @@
 .godot/
 /android/
 .mcp/
+
+# 测试报告为可重建产物，不入库（GdUnit4 的 HTML 与 JUnit XML 报告）
+reports/
