@@ -4,14 +4,14 @@
 
 [resource]
 script = ExtResource("1_skill")
-id = &"sword_strike"
-display_name = "御剑斩"
-description = "对单个敌人造成伤害的基础输出技能。"
-spirit_cost = 25.0
-cooldown = 2.5
-cast_range = 110.0
-damage_multiplier = 1.8
+id = &"binding_spell"
+display_name = "定身术"
+description = "短暂封锁敌人的行动，不造成直接伤害。"
+spirit_cost = 35.0
+cooldown = 10.0
+cast_range = 120.0
+damage_multiplier = 0.0
 target_type = 2
-effect_type = 0
-effect_value = 1.8
-effect_duration = 0.0
+effect_type = 3
+effect_value = 0.0
+effect_duration = 2.0

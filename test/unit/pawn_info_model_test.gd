@@ -103,7 +103,7 @@ func test_build_lines_report_capacity_and_names() -> void:
 		"technique_max": 1,
 		"weapon_used": 1,
 		"weapon_max": 1,
-		"active_skill_used": 1,
+		"active_skill_used": 2,
 		"active_skill_max": 2,
 		"passive_skill_used": 0,
 		"passive_skill_max": 1,
@@ -112,7 +112,7 @@ func test_build_lines_report_capacity_and_names() -> void:
 	assert_int(lines.size()).is_equal(4)
 	assert_str(lines[0]).is_equal("功法  1 / 1    剑修")
 	assert_str(lines[1]).is_equal("武器  1 / 1    青锋剑（剑 · 金）")
-	assert_str(lines[2]).is_equal("主动  1 / 2    御剑斩")
+	assert_str(lines[2]).is_equal("主动  2 / 2    御剑斩, 护体真气")
 	assert_str(lines[3]).is_equal("被动  0 / 1    —")
 
 

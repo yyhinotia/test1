@@ -48,7 +48,7 @@ func test_player_preset_reports_realm_and_valid_build() -> void:
 	var loadout: BuildLoadout = player.get_build_loadout()
 	assert_int(loadout.get_used_slots(RealmDefinition.KIND_TECHNIQUE)).is_equal(1)
 	assert_int(loadout.get_capacity(RealmDefinition.KIND_TECHNIQUE)).is_equal(1)
-	assert_int(loadout.get_used_slots(RealmDefinition.KIND_ACTIVE_SKILL)).is_equal(1)
+	assert_int(loadout.get_used_slots(RealmDefinition.KIND_ACTIVE_SKILL)).is_equal(2)
 	assert_int(loadout.get_capacity(RealmDefinition.KIND_ACTIVE_SKILL)).is_equal(2)
 	assert_int(loadout.get_used_slots(RealmDefinition.KIND_WEAPON)).is_equal(1)
 	assert_int(loadout.get_capacity(RealmDefinition.KIND_WEAPON)).is_equal(1)
@@ -148,7 +148,7 @@ func test_build_summary_counts_are_stable_across_runtime_changes() -> void:
 	# 施法只改灵力与冷却；Build 汇总计数与校验结论不受影响。
 	assert_float(player.current_spirit).is_less(spirit_before)
 	assert_float(player.get_skill_cooldown_remaining(skill.id)).is_greater(0.0)
-	assert_int(player.get_build_loadout().get_used_slots(RealmDefinition.KIND_ACTIVE_SKILL)).is_equal(1)
+	assert_int(player.get_build_loadout().get_used_slots(RealmDefinition.KIND_ACTIVE_SKILL)).is_equal(2)
 	assert_int(player.get_build_loadout().get_used_slots(RealmDefinition.KIND_TECHNIQUE)).is_equal(1)
 	assert_bool(player.get_build_validation().is_valid()).is_true()
 

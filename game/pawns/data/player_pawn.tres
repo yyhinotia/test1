@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://ewp2akokimur" path="res://game/shared/resources/pawn_data.gd" id="1_pawn_data"]
 [ext_resource type="Resource" path="res://game/pawns/data/player_sword_skill.tres" id="2_sword_skill"]
+[ext_resource type="Resource" path="res://game/pawns/data/player_guard_skill.tres" id="6_guard_skill"]
 [ext_resource type="Resource" path="res://game/cultivation/data/realms/qi_refining.tres" id="3_realm"]
 [ext_resource type="Resource" path="res://game/cultivation/data/techniques/sword_cultivation.tres" id="4_technique"]
 [ext_resource type="Resource" path="res://game/inventory/data/weapons/qingfeng_sword.tres" id="5_weapon"]
@@ -20,7 +21,7 @@ realm = ExtResource("3_realm")
 techniques = Array[TechniqueDefinition]([ExtResource("4_technique")])
 weapon = ExtResource("5_weapon")
 active_skill = ExtResource("2_sword_skill")
-active_skills = Array[ActiveSkillDefinition]([ExtResource("2_sword_skill")])
+active_skills = Array[ActiveSkillDefinition]([ExtResource("2_sword_skill"), ExtResource("6_guard_skill")])
 attack = 28.0
 defense = 5.0
 move_speed = 145.0

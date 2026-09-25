@@ -27,10 +27,15 @@ func test_default_definition_is_safe_and_configured() -> void:
 
 	assert_str(String(skill.id)).is_equal("skill")
 	assert_str(skill.display_name).is_equal("技能")
+	assert_str(skill.description).is_equal("")
 	assert_float(skill.spirit_cost).is_equal_approx(0.0, APPROX)
 	assert_float(skill.cooldown).is_equal_approx(1.0, APPROX)
 	assert_float(skill.cast_range).is_equal_approx(0.0, APPROX)
 	assert_float(skill.damage_multiplier).is_equal_approx(1.0, APPROX)
+	assert_int(skill.target_type).is_equal(ActiveSkillDefinition.SkillTargetType.ENEMY)
+	assert_int(skill.effect_type).is_equal(ActiveSkillDefinition.SkillEffectType.DAMAGE)
+	assert_float(skill.effect_value).is_equal_approx(0.0, APPROX)
+	assert_float(skill.effect_duration).is_equal_approx(0.0, APPROX)
 	assert_bool(skill.is_configured()).is_true()
 
 
@@ -53,6 +58,8 @@ func test_runtime_values_are_normalized_before_use() -> void:
 	assert_float(skill.get_normalized_spirit_cost()).is_zero()
 	assert_float(skill.get_normalized_cooldown()).is_zero()
 	assert_float(skill.get_normalized_damage_multiplier()).is_zero()
+	assert_float(skill.get_normalized_effect_value()).is_zero()
+	assert_float(skill.get_normalized_effect_duration()).is_zero()
 
 
 func test_empty_or_whitespace_id_is_not_configured() -> void:
@@ -68,6 +75,25 @@ func test_empty_or_whitespace_id_is_not_configured() -> void:
 	assert_bool(skill.is_configured()).is_true()
 
 
+func test_effect_value_falls_back_to_legacy_damage_multiplier() -> void:
+	var skill: ActiveSkillDefinition = _make_skill(&"legacy", 10.0, 1.0, 50.0, 1.7)
+
+	assert_float(skill.get_normalized_effect_value()).is_equal_approx(1.7, APPROX)
+	skill.effect_value = 2.2
+	assert_float(skill.get_normalized_effect_value()).is_equal_approx(2.2, APPROX)
+	skill.effect_type = ActiveSkillDefinition.SkillEffectType.SHIELD
+	skill.effect_value = -1.0
+	assert_float(skill.get_normalized_effect_value()).is_zero()
+
+
+func test_self_target_skill_ignores_cast_range() -> void:
+	var skill: ActiveSkillDefinition = _make_skill(&"self_guard", 10.0, 1.0, 200.0, 0.0)
+	skill.target_type = ActiveSkillDefinition.SkillTargetType.SELF
+
+	assert_bool(skill.is_self_targeted()).is_true()
+	assert_float(skill.get_effective_cast_range(42.0)).is_zero()
+
+
 func test_player_pawn_data_references_configured_skill() -> void:
 	var data: PawnData = load("res://game/pawns/data/player_pawn.tres") as PawnData
 
@@ -79,3 +105,8 @@ func test_player_pawn_data_references_configured_skill() -> void:
 	assert_float(data.active_skill.cooldown).is_equal_approx(2.5, APPROX)
 	assert_float(data.active_skill.cast_range).is_equal_approx(110.0, APPROX)
 	assert_float(data.active_skill.damage_multiplier).is_equal_approx(1.8, APPROX)
+	assert_int(data.active_skill.target_type).is_equal(ActiveSkillDefinition.SkillTargetType.ENEMY)
+	assert_int(data.active_skill.effect_type).is_equal(ActiveSkillDefinition.SkillEffectType.DAMAGE)
+	assert_float(data.active_skill.get_normalized_effect_value()).is_equal_approx(1.8, APPROX)
+	assert_int(data.get_active_skills().size()).is_equal(2)
+	assert_str(String(data.get_active_skills()[1].id)).is_equal("guard_true_qi")

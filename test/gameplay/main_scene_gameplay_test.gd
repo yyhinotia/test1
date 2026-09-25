@@ -451,7 +451,7 @@ func test_build_label_initial_and_player_capacity_row() -> void:
 	assert_object(realm).is_not_null()
 	assert_bool(build_label.text.contains("境界：%s" % realm.display_name)).is_true()
 	assert_bool(build_label.text.contains("功法 1 / %d" % realm.technique_slots)).is_true()
-	assert_bool(build_label.text.contains("主动 1 / %d" % realm.active_skill_slots)).is_true()
+	assert_bool(build_label.text.contains("主动 2 / %d" % realm.active_skill_slots)).is_true()
 	assert_bool(build_label.text.contains("被动 0 / %d" % realm.passive_skill_slots)).is_true()
 	# 玩家预设是合法 Build：不得出现错误摘要后缀。
 	assert_bool(build_label.text.contains("Build：")).is_false()
