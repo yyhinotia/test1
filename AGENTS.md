@@ -4,7 +4,7 @@
 > 项目定位：修仙 RPG + 宗门经营 + 秘境探索 + 暂停式实时战术战斗  
 > 设计源：`docs/project_summary.md`  
 > 引擎版本：Godot `4.7.2.stable`  
-> 文档最后修改：`2026-09-25T14:17:55+08:00`
+> 文档最后修改：`2026-09-25T14:38:49+08:00`
 
 ## 0. 指令优先级
 
@@ -202,6 +202,7 @@ INC-<THEME>-NNN
 - 范围：允许修改的目录、文件和系统。
 - 非范围：明确不处理的内容，防止范围膨胀。
 - 依赖：前置 Increment、资源、插件或设计决策。
+- 检索证据：执行过的 `git status` / `git diff` 命令，以及检索到的 Increment、父 Increment、依赖状态和工作区变更。
 - 风险：兼容性、性能、存档、资源许可或架构风险。
 - 实现说明：关键设计决策和偏离原计划的理由。
 - 变更文件：代码与资源路径列表。
@@ -260,8 +261,8 @@ blocked = in_progress 的中断状态，解除后返回 in_progress
 
 ### 3.6 每次代码任务的标准流程
 
-1. 判断主题，读取 `agent-plan/_index.md` 和相关主题文件。
-2. 新建或修改 Increment，填写目标、范围、验收标准、风险和时间。
+1. 按 §3.7 的 Git Diff 优先检索协议确定本任务对应的 Increment；可以读取 `agent-plan/_index.md`、主题文件，也允许读取 `agent-plan/` 下的全部计划文件。
+2. 新建或修改 Increment，填写检索证据、目标、范围、验收标准、风险和时间。
 3. 将状态改为 `in_progress`，更新时间。
 4. 只修改 Increment 范围内的文件。
 5. 运行静态检查、编辑器验证、运行测试或人工冒烟测试。
@@ -270,6 +271,48 @@ blocked = in_progress 的中断状态，解除后返回 in_progress
 8. 用户验收后，记录验收时间，状态改为 `accepted`；用户拒绝则改为 `rejected` 并记录原因。
 9. 执行 Git 提交，记录分支和 commit hash。
 10. 更新 `_index.md`，确保主题索引、状态和 Git 记录一致。
+
+### 3.7 Increment 检索协议（Git Diff 优先）
+
+`agent-plan/` 允许全量读取；不得把“一个主题一个文件”解释为“只能读 `_index.md` 和当前主题文件”。检索 Increment 时，先用 Git Diff 找出真实变化，再结合索引、主题文件和必要的全量计划内容确认上下文。
+
+#### 3.7.1 工作区检索（开始实现前必做）
+
+在仓库根目录执行：
+
+```text
+git status --short
+git diff --unified=0 -- agent-plan/
+git diff --cached --unified=0 -- agent-plan/
+```
+
+要求：
+
+- 从 `git diff` 的新增/删除行中搜索 `INC-[A-Z]+-[0-9]{3}`，识别被新增、修改、取消或替代的 Increment。
+- 没有未提交 diff 时，继续执行历史检索，不得仅凭记忆或单个索引表开始实现。
+- 工作区存在多个主题的 plan 变更时，只选择当前任务需要的 Increment，不得把其他未验收变更混入实现或提交。
+
+#### 3.7.2 历史与全量检索
+
+```text
+git log --oneline -- agent-plan/
+git diff <已验收基线>..HEAD --unified=0 -- agent-plan/
+git grep -n -E "INC-[A-Z]+-[0-9]{3}" -- agent-plan/
+```
+
+如果 diff 不足以确认父子关系、依赖或验收标准，允许直接读取 `agent-plan/` 下全部主题文件；全量读取是合法上下文，不视为越界。
+
+#### 3.7.3 检索结论
+
+开始写代码前，必须把以下内容写入当前 Increment 的 `检索证据` 字段和 `实现说明`：
+
+- 执行过的 Git Diff 命令及结果摘要。
+- 当前 Increment ID、父 Increment（如有）和主题文件。
+- 依赖 Increment 的状态；只有依赖满足 Plan Gate 才能开始。
+- 允许修改的文件范围；超出范围的内容另立 Increment。
+- 如果存在多个候选 Increment，优先遵循父 Increment 指定的子 Increment 顺序；没有父级顺序时，按依赖 DAG 选择，优先选择依赖已满足且编号最小的 Increment。
+
+历史已验收 Increment 不要求回填 `检索证据`；自本规则生效后，新建或修改 Increment 时必须填写。
 
 ---
 
