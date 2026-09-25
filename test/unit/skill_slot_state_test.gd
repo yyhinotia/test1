@@ -68,3 +68,23 @@ func test_dead_unit_and_invalid_definition_are_disabled() -> void:
 func test_interaction_state_names_are_reserved_for_ui() -> void:
 	assert_str(String(SkillSlotState.state_name(SkillSlotState.State.SELECTED))).is_equal("SELECTED")
 	assert_str(String(SkillSlotState.state_name(SkillSlotState.State.TARGETING))).is_equal("TARGETING")
+
+
+func test_build_disabled_over_capacity_is_explicit_and_takes_precedence() -> void:
+	var skill: ActiveSkillDefinition = _make_skill(0.0, 1.0)
+	var snapshot: Dictionary = SkillSlotState.evaluate(skill, 0.0, 100.0, true, false)
+
+	assert_str(String(snapshot["state_name"])).is_equal("DISABLED")
+	assert_bool(snapshot["build_enabled"]).is_false()
+	assert_bool(snapshot["can_cast"]).is_false()
+	assert_bool(String(snapshot["reason"]).contains("超出主动技能容量")).is_true()
+
+
+func test_build_enabled_preserves_ready_state() -> void:
+	var skill: ActiveSkillDefinition = _make_skill(0.0, 1.0)
+	var snapshot: Dictionary = SkillSlotState.evaluate(skill, 0.0, 100.0, true, true)
+
+	assert_str(String(snapshot["state_name"])).is_equal("READY")
+	assert_bool(snapshot["build_enabled"]).is_true()
+	assert_bool(snapshot["can_cast"]).is_true()
+	assert_str(String(snapshot["reason"])).is_empty()

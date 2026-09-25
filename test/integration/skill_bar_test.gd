@@ -139,3 +139,72 @@ func test_unbind_clears_slots_and_hides_bar() -> void:
 	assert_int(bar.get_slot_count()).is_zero()
 	assert_bool(bar.visible).is_false()
 	assert_object(bar.get_bound_pawn()).is_null()
+
+
+func test_over_capacity_skills_remain_visible_but_disabled() -> void:
+	var bar: SkillBar = _spawn_bar()
+	var pawn: Pawn = _spawn_pawn(_make_data_for_capacity(2, 4))
+	await await_idle_frame()
+	bar.bind_pawn(pawn)
+
+	assert_int(bar.get_slot_count()).is_equal(4)
+	var slots: Array[SkillSlot] = bar.get_slots()
+	for index: int in 2:
+		assert_str(String(slots[index].get_snapshot()["state_name"])).is_equal("READY")
+	for index: int in range(2, 4):
+		var snapshot: Dictionary = slots[index].get_snapshot()
+		assert_str(String(snapshot["state_name"])).is_equal("DISABLED")
+		assert_bool(snapshot["build_enabled"]).is_false()
+		assert_bool(snapshot["can_cast"]).is_false()
+		assert_bool(String(snapshot["reason"]).contains("超出主动技能容量")).is_true()
+
+
+func test_capacity_zero_keeps_configured_skills_visible_and_disabled() -> void:
+	var bar: SkillBar = _spawn_bar()
+	var pawn: Pawn = _spawn_pawn(_make_data_for_capacity(0, 3))
+	await await_idle_frame()
+	bar.bind_pawn(pawn)
+
+	assert_int(bar.get_slot_count()).is_equal(3)
+	for slot: SkillSlot in bar.get_slots():
+		var snapshot: Dictionary = slot.get_snapshot()
+		assert_str(String(snapshot["state_name"])).is_equal("DISABLED")
+		assert_bool(snapshot["build_enabled"]).is_false()
+		assert_bool(String(snapshot["reason"]).contains("超出主动技能容量")).is_true()
+
+
+func test_disabled_slot_and_request_do_not_emit_or_replace_targeting() -> void:
+	var bar: SkillBar = _spawn_bar()
+	var pawn: Pawn = _spawn_pawn(_make_data_for_capacity(2, 4))
+	await await_idle_frame()
+	bar.bind_pawn(pawn)
+
+	var requests: Array[ActiveSkillDefinition] = []
+	var targeting: Array[ActiveSkillDefinition] = []
+	bar.skill_requested.connect(func(skill: ActiveSkillDefinition) -> void: requests.append(skill))
+	bar.targeting_started.connect(func(skill: ActiveSkillDefinition) -> void: targeting.append(skill))
+
+	var enabled: ActiveSkillDefinition = pawn.data.get_active_skills()[0]
+	var disabled: ActiveSkillDefinition = pawn.data.get_active_skills()[2]
+	disabled.target_type = ActiveSkillDefinition.SkillTargetType.SELF
+
+	assert_bool(bar.request_skill(enabled)).is_true()
+	assert_bool(bar.is_targeting()).is_true()
+	assert_object(bar.get_targeting_skill()).is_same(enabled)
+	assert_int(targeting.size()).is_equal(1)
+	assert_int(requests.size()).is_zero()
+
+	var click: InputEventMouseButton = InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = true
+	bar.get_slots()[2].call("_gui_input", click)
+
+	assert_int(targeting.size()).is_equal(1)
+	assert_int(requests.size()).is_zero()
+	assert_object(bar.get_targeting_skill()).is_same(enabled)
+
+	assert_bool(bar.request_skill(disabled)).is_false()
+	assert_int(targeting.size()).is_equal(1)
+	assert_int(requests.size()).is_zero()
+	assert_object(bar.get_targeting_skill()).is_same(enabled)
+	assert_bool(bar.begin_targeting(disabled)).is_false()

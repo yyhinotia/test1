@@ -28,7 +28,7 @@ static func for_pawn(pawn: Pawn, skill: ActiveSkillDefinition) -> Dictionary:
 	if pawn == null or not is_instance_valid(pawn) or skill == null:
 		return evaluate(skill, 0.0, 0.0, false)
 	var remaining: float = pawn.get_skill_cooldown_remaining(skill.id) if skill.is_configured() else 0.0
-	return evaluate(skill, remaining, pawn.current_spirit, pawn.is_alive())
+	return evaluate(skill, remaining, pawn.current_spirit, pawn.is_alive(), pawn.is_active_skill_enabled(skill))
 
 
 ## 纯逻辑入口：调用方提供只读快照，便于单元测试且不依赖场景树。
@@ -36,7 +36,8 @@ static func evaluate(
 		skill: ActiveSkillDefinition,
 		cooldown_remaining: float,
 		current_spirit: float,
-		unit_alive: bool
+		unit_alive: bool,
+		build_enabled: bool = true
 	) -> Dictionary:
 	var snapshot: Dictionary = {
 		"state": State.EMPTY,
@@ -49,6 +50,7 @@ static func evaluate(
 		"cooldown_total": 0.0,
 		"cooldown_ratio": 0.0,
 		"can_cast": false,
+		"build_enabled": build_enabled,
 		"reason": "",
 	}
 	if skill == null:
@@ -58,6 +60,8 @@ static func evaluate(
 	snapshot["display_name"] = skill.display_name
 	if not skill.is_configured():
 		return _disabled(snapshot, "技能未配置")
+	if not build_enabled:
+		return _disabled(snapshot, "超出主动技能容量")
 	snapshot["cost"] = skill.get_normalized_spirit_cost()
 	if not unit_alive:
 		return _disabled(snapshot, "单位不存在或已死亡")

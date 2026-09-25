@@ -44,6 +44,11 @@ func _make_skill(id: StringName, target_type: ActiveSkillDefinition.SkillTargetT
 
 func _make_data(skills: Array[ActiveSkillDefinition]) -> PawnData:
 	var data: PawnData = (load(PLAYER_DATA_PATH) as PawnData).duplicate(true) as PawnData
+	# 让本用例聚焦 TARGETING 交互；容量一致性由专用容量测试覆盖。
+	if data.realm != null:
+		var realm: RealmDefinition = data.realm.duplicate(true) as RealmDefinition
+		realm.active_skill_slots = maxi(skills.size(), 2)
+		data.realm = realm
 	var first: ActiveSkillDefinition = skills[0] if not skills.is_empty() else null
 	data.active_skill = first
 	data.active_skills = skills

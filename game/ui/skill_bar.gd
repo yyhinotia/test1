@@ -58,21 +58,23 @@ func get_targeting_skill() -> ActiveSkillDefinition:
 
 ## 点击槽位的唯一入口：SELF 技能不需要玩家再点目标，其余技能进入 TARGETING。
 ## 本方法只发请求信号与改自身交互状态，绝不施法、扣灵力或推进冷却。
-func request_skill(skill: ActiveSkillDefinition) -> void:
+func request_skill(skill: ActiveSkillDefinition) -> bool:
 	if skill == null or not skill.is_configured():
-		return
+		return false
+	if _pawn != null and not _is_enabled_skill(skill):
+		return false
 	if skill.target_type == ActiveSkillDefinition.SkillTargetType.SELF:
 		cancel_targeting()
 		skill_requested.emit(skill)
-		return
-	begin_targeting(skill)
+		return true
+	return begin_targeting(skill)
 
 
 ## 进入目标选择：同一时间只允许一个技能处于 TARGETING。
 func begin_targeting(skill: ActiveSkillDefinition) -> bool:
 	if skill == null or not skill.is_configured():
 		return false
-	if _pawn != null and not _is_known_skill(skill):
+	if _pawn != null and not _is_enabled_skill(skill):
 		return false
 	_targeting_skill = skill
 	_apply_interaction_states()
@@ -107,13 +109,11 @@ func refresh() -> void:
 		visible = false
 		return
 	visible = true
-	# 技能列表变化后原瞄准对象可能已失效，必须自动取消并清掉 TARGETING。
-	if _targeting_skill != null and not _is_known_skill(_targeting_skill):
+	# 技能列表或容量变化后原瞄准对象可能已失效，必须自动取消并清掉 TARGETING。
+	if _targeting_skill != null and not _is_enabled_skill(_targeting_skill):
 		cancel_targeting()
-	var capacity: int = 0
-	var realm: RealmDefinition = _pawn.get_realm()
-	if realm != null:
-		capacity = realm.get_slot_capacity(RealmDefinition.KIND_ACTIVE_SKILL)
+	# 超容量技能仍保留槽位以便显示 DISABLED；无境界时容量哨兵按 0 槽参与布局。
+	var capacity: int = maxi(_pawn.get_active_skill_capacity(), 0)
 	var skills: Array[ActiveSkillDefinition] = _pawn.data.get_active_skills()
 	var count: int = clampi(maxi(capacity, skills.size()), 0, MAX_SLOTS)
 	_ensure_slot_count(count)
@@ -132,6 +132,11 @@ func _is_known_skill(skill: ActiveSkillDefinition) -> bool:
 		if candidate == skill:
 			return true
 	return false
+
+
+## 瞄准对象必须同时属于完整技能列表且位于当前容量投影内。
+func _is_enabled_skill(skill: ActiveSkillDefinition) -> bool:
+	return _is_known_skill(skill) and _pawn != null and _pawn.is_active_skill_enabled(skill)
 
 
 func _ensure_slot_count(count: int) -> void:

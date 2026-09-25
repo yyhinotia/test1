@@ -206,5 +206,8 @@ func _gui_input(event: InputEvent) -> void:
 		return
 	if not has_skill():
 		return
+	# 超容量技能保持可见以便玩家看到明确禁用原因，但点击不得发出施法请求。
+	if not bool(_snapshot.get("build_enabled", true)):
+		return
 	cast_requested.emit(_skill)
 	accept_event()
