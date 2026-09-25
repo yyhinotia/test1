@@ -1,6 +1,6 @@
 # Testing 主题计划
 
-> 最后修改：2026-09-25T18:53:57+08:00
+> 最后修改：2026-09-25T19:22:00+08:00
 > 主题：testing
 > 规则来源：`../AGENTS.md`
 
@@ -147,7 +147,6 @@
 - Git：`main` / `cecc91d`
 - 备注：父 Increment 为 `INC-CROSS-011`。
 
-
 ## INC-TESTING-004：三种技能战术差异与 Build 变化证据
 
 - 状态：accepted
@@ -204,7 +203,6 @@
 - 验收时间：2026-09-25T18:10:00+08:00
 - Git：`main` / `f79b627`（文档证据提交）
 - 备注：父 Increment 为 `INC-CROSS-013`；本 Increment 是父级验收的核心证据层。
-
 
 ## INC-TESTING-006：Build 决策差异证据（威胁档案 × 三套 Build 的终局对照）
 
@@ -322,3 +320,32 @@
 - 验收时间：2026-09-25T19:15:13+08:00
 - Git：`main` / `8880733`
 - 备注：父 Increment 为 `INC-CROSS-016`；本 Increment 是父级验收的证据层。
+
+## INC-TESTING-009：宗门闭环证据（收益 → 修炼 / 制作 / 强化 → 再战）
+
+- 状态：planned
+- 创建时间：2026-09-25T19:22:00+08:00
+- 最后修改：2026-09-25T19:22:00+08:00
+- 主题：testing
+- 目标：为「秘境收益 → 宗门产出 → 修士变强 → 再战」这条 MVP-⑤ 闭环提供可复核证据，回答 `docs/project_summary.md` §二十二 提出的问题：「玩家打完之后，会不会因为宗门/新 Build 而想再打一轮？」
+- 验收标准：
+  - 新增 `test/gameplay/sect_loop_test.gd`，在真实 `main.tscn` 上跑完整链路：进入秘境 → 清空至少一间房 → 结算收益入账宗门 → 用灵石升级设施 → 打坐产修为 → 灵田收草 → 炼丹 / 服丹恢复 → 强化武器后 `get_attack_power()` 提升 → 重新开始秘境时强化与修为仍然生效（宗门状态不随对局重置）。
+  - 断言「宗门变强确实改变下一轮战斗数值」：强化后的 `get_attack_power()` 高于强化前，且同一玩家单位的真实 `try_attack()` 造成更高伤害；不使用伪造伤害或直接改数值。
+  - 断言收尾一致性：一条 `run_finished` 只入账一次；战败局入账 0；入账后宗门库存与 `DungeonPanel` 显示不矛盾。
+  - 统一门禁 `pwsh -File test/run_tests.ps1 -Godot $env:GODOT_BIN -Layer all` 退出码 0，且断言总数不低于 `INC-CROSS-016` 基线（GdUnit4 272 cases、headless 10 suites / 549 assertions），headless 套件数不减少。
+  - 取证报告落 `.mcp/godot-runtime/screenshots/`（复用 `INC-UI-016` 的宗门面板真实窗口取证），报告里给出三档分辨率的通过结论。
+- 范围：`test/gameplay/sect_loop_test.gd`（新增）、`agent-plan/testing.md`（本 Increment 记录）、必要时补 `test/headless/` 回归套件（只在既有断言不下降的前提下追加）。
+- 非范围：修改 `game/` 下任何业务规则来迁就测试、调整既有断言期望值、移除既有 headless 套件、把 CROSS-016 的秘境断言改写为宗门断言。
+- 依赖：`INC-CORE-010`、`INC-SECT-001`~`INC-SECT-003`、`INC-PAWNS-018`、`INC-UI-016`。
+- 检索证据：Git Diff 优先检索结论同 `INC-SECT-001`；`git grep -n -E "sect_loop|sect_state" -- test/` 无匹配；`test/README.md` 规定玩法层承载「真实 `main.tscn` 上的玩家可见整条链路」，本 Increment 属该层；既有 `test/gameplay/main_scene_dungeon_test.gd`（`INC-TESTING-008`）已提供「清空房间 → 继续 / 撤退 → 收益」的真实路径，本 Increment 在其之后追加宗门段，不重写既有断言。
+- 风险：闭环用例横跨秘境 / 宗门 / Pawn / UI 四层，容易出现「测试写死了实现细节」；因此断言只落在对外契约（库存、等级、修为、攻击力、信号次数、`get_snapshot()`），不断言私有字段或节点内部结构。另一风险是把测试写太长导致定位困难，因此允许按链路节点拆成多个 `test_` 方法，共享同一份夹具。
+- 实现说明：待实现后回填。
+- 变更文件：待实现后回填。
+- 测试证据：待实现后回填。
+- 验证状态：未验证
+- 验证时间：
+- 已知问题：待实现后回填。
+- 用户验收：未验收
+- 验收时间：
+- Git：
+- 备注：父 Increment 为 `INC-CROSS-017`；本 Increment 是父级验收的证据层。

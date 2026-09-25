@@ -1,6 +1,6 @@
 # Core 主题计划
 
-> 最后修改：2026-09-25T18:53:57+08:00
+> 最后修改：2026-09-25T19:22:00+08:00
 > 主题：core  
 > 规则来源：`../AGENTS.md`
 
@@ -219,7 +219,6 @@
 - Git：`main` / `182190b`
 - 备注：父 Increment 为 `INC-CROSS-011`。
 
-
 ## INC-CORE-006：主场景技能目标选择与取消路由
 
 - 状态：accepted
@@ -342,3 +341,32 @@
 - 计划修订（2026-09-25T19:01:58+08:00）：明确「重新开始秘境」由 `DungeonPanel.RestartButton` 承担，并要求秘境进行中锁住单场遭遇入口，避免绕过 `DungeonRun` 直接重开当前房间而重置损耗。
 - 计划修订（实施期，见「最后修改」）：范围扩大三项，都是接线必需的最小修正——(1) `game/world/dungeon_run.gd` 增加 `resolve_encounter_session()` 惰性解析：`.tscn` 中以 `NodePath` 声明的脚本类型导出在实例化时不会自动解析（实测 `encounter_session == null`，会让主场景静默回落到单场遭遇），因此按 `EncounterSession.resolve_pawns_container()` 的同构写法补齐；(2) `game/ui/encounter_panel.gd` 增加只增不改的 `set_restart_locked()` 外部锁与 `_on_restart_pressed()` 兜底，使「秘境进行中锁住重新挑战」在 UI 上也可见，而不是点得动却无反应；(3) 既有 `test/gameplay/main_scene_encounter_test.gd` 的两个换敌用例改为「先见好就收结束本局再换敌」，因为锁定是本次刻意引入的语义，旧断言不再成立。
 - 备注：父 Increment 为 `INC-CROSS-016`；本 Increment 是父级唯一允许修改 `main.gd` / `main.tscn` 的接线项。
+
+## INC-CORE-010：主场景宗门接线与秘境收益入账
+
+- 状态：planned
+- 创建时间：2026-09-25T19:22:00+08:00
+- 最后修改：2026-09-25T19:22:00+08:00
+- 主题：core
+- 目标：把宗门接入真实主场景，补上「秘境收益 → 宗门库存」这条唯一缺口，并让宗门面板的七个玩家动作路由到 `SectState`；`main.gd` 继续只做信号转发与引用刷新，不新增宗门业务规则。
+- 验收标准：
+  - `game/main/main.tscn` 挂载 `SectState` 节点（注入六座 `SectFacilityDefinition` 与功法目录）与 `HUD/BottomLeftDock/SectPanel`；`main.gd` 新增代码只包含：绑定面板与宗门节点、在 `encounter_started` 时把当前玩家单位绑定给宗门作为「本代修士」、把面板信号转给 `SectState`、把 `DungeonRun.run_finished` 的收益入账、以及在宗门状态变化后刷新面板文本。
+  - 收益入账只发生在 `run_finished` 一次：`CLEARED` / `RETREATED` 时按 `earned_spirit_stones` 入账，`DEFEATED` 时为 0（沿用 `DungeonRun` 既有语义，不在主场景重算收益）；同一局不得入账两次。
+  - 换遭遇 / 换房间导致玩家单位被替换时，宗门的「本代修士」引用刷新到新单位，且不丢失库存与设施等级（宗门状态不随对局重置）。
+  - 宗门面板七个动作全部通过主场景路由到 `SectState`，主场景不做「灵石够不够」「是否满级」等判定；不可用状态由 `SectState` 的返回值与面板的禁用显示共同表达。
+  - 上帝视角验证：`godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://test/gameplay` 全绿，且新增 gameplay 用例在真实 `main.tscn` 上跑通「清空一间房 → 收益入账 → 升级设施 → 打坐涨修为」。
+- 范围：`game/main/main.gd`（接线）、`game/main/main.tscn`（挂载节点）、`test/gameplay/main_scene_sect_test.gd`（新增）。
+- 非范围：宗门业务规则（花费 / 产出 / 门槛判定）、秘境房间链改动、存档、宗门场景与建筑美术、玩家输入以外的快捷键、宗门面板视觉调整。
+- 依赖：`INC-SECT-001`、`INC-SECT-002`、`INC-SECT-003`、`INC-PAWNS-018`、`INC-UI-016`、`INC-WORLD-004`（已验收）。
+- 检索证据：Git Diff 优先检索结论同 `INC-SECT-001`；`game/main/main.gd` 现有 `_connect_dungeon_signals()` 已在订阅 `dungeon_run.run_finished`（用于面板状态），`game/world/dungeon_run.gd` 的 `run_finished(dungeon, outcome, earned_spirit_stones)` 是本局收益的唯一出口，且 `_emit_finished()` 有 `_finished_emitted` 兜底保证每局只广播一次；`git grep -n "earned_spirit_stones" -- game/` 显示该数值目前只被 `DungeonPanel.set_reward()` 用于显示，没有任何入账目标，确认本 Increment 是入账路径的唯一新增写入者。
+- 风险：`main.gd` 已是高冲突文件（约 430 行），本 Increment 会继续改它，因此新增逻辑必须严格限定在「信号转发 + 引用刷新 + 一次入账」；若发现需要按设施类型分派，必须回到 `SectState` 而不是写进主场景。另一风险是入账与面板刷新顺序导致 UI 显示旧库存，因此入账后必须立即刷新面板快照。
+- 实现说明：待实现后回填。
+- 变更文件：待实现后回填。
+- 测试证据：待实现后回填。
+- 验证状态：未验证
+- 验证时间：
+- 已知问题：待实现后回填。
+- 用户验收：未验收
+- 验收时间：
+- Git：
+- 备注：父 Increment 为 `INC-CROSS-017`；本 Increment 是父级唯一允许修改 `main.gd` / `main.tscn` 的接线项。
