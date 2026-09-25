@@ -6,6 +6,8 @@ extends GdUnitTestSuite
 const MAIN_SCENE_PATH: String = "res://game/main/main.tscn"
 const ORDER_LABEL_PATH: String = "HUD/HudMargin/HudPanel/HudContent/OrderLabel"
 const INFO_PANEL_PATH: String = "HUD/BottomLeftDock/PawnInfoPanel"
+const SELECTED_LABEL_PATH: String = "HUD/HudMargin/HudPanel/HudContent/SelectedLabel"
+const BUILD_PANEL_PATH: String = "HUD/BuildLoadoutPanel"
 const PLAYER_DATA_PATH: String = "res://game/pawns/data/player_pawn.tres"
 const GUARD_SKILL_PATH: String = "res://game/pawns/data/player_guard_skill.tres"
 const ALLY_PAWN_SCENE_PATH: String = "res://game/pawns/player_pawn.tscn"
@@ -167,8 +169,75 @@ func test_illegal_pawn_and_empty_clicks_keep_targeting_without_side_effects() ->
 	assert_float(player.get_skill_cooldown_remaining(skill.id)).is_zero()
 
 
-## 右键只是取消目标选择，不把位置转成移动命令；取消后普通右键行为恢复。
-func test_right_click_cancels_without_move_command() -> void:
+## 左键点己方单位：进入选中态并绑定玩家专属面板（技能栏 / Build 面板跟随玩家单位）。
+func test_left_click_friendly_pawn_selects_player() -> void:
+	var main: Node2D = _spawn_main()
+	_isolate_controllers(main)
+	var player: Pawn = main.get_node("Pawns/PlayerPawn")
+	var bar: SkillBar = main.get_node("HUD/BottomLeftDock/SkillBar")
+	var info_panel: PawnInfoPanel = main.get_node(INFO_PANEL_PATH)
+
+	_send_mouse_button(main, MOUSE_BUTTON_LEFT, _screen_position(main, player.global_position))
+
+	assert_bool(player.selection_indicator.visible).is_true()
+	assert_object(info_panel.get_bound_pawn()).is_same(player)
+	assert_object(bar.get_bound_pawn()).is_same(player)
+
+
+## 左键点空白地：已选中玩家单位时下达移动命令，移动入口不再依赖右键（INC-CORE-013）。
+func test_left_click_ground_orders_move_for_selected_player() -> void:
+	var main: Node2D = _spawn_main()
+	_isolate_controllers(main)
+	var player: Pawn = main.get_node("Pawns/PlayerPawn")
+	var bar: SkillBar = main.get_node("HUD/BottomLeftDock/SkillBar")
+	var order_label: Label = main.get_node(ORDER_LABEL_PATH)
+	main.call("_set_selected_pawn", player)
+
+	_send_mouse_button(main, MOUSE_BUTTON_LEFT, Vector2(250.0, 250.0))
+
+	assert_bool(order_label.text.contains("移动到")).is_true()
+	assert_object(bar.get_bound_pawn()).is_same(player)
+
+
+## 左键点敌方单位：选中该敌方、绑定敌方信息 UI，且不产生攻击 / 移动 / 技能命令（INC-UI-019）。
+func test_left_click_enemy_selects_it_and_binds_enemy_info_ui() -> void:
+	var main: Node2D = _spawn_main()
+	_isolate_controllers(main)
+	var player: Pawn = main.get_node("Pawns/PlayerPawn")
+	var enemy: Pawn = main.get_node("Pawns/EnemyPawn")
+	var bar: SkillBar = main.get_node("HUD/BottomLeftDock/SkillBar")
+	var info_panel: PawnInfoPanel = main.get_node(INFO_PANEL_PATH)
+	var build_panel: BuildLoadoutPanel = main.get_node(BUILD_PANEL_PATH)
+	var order_label: Label = main.get_node(ORDER_LABEL_PATH)
+	var selected_label: Label = main.get_node(SELECTED_LABEL_PATH)
+	enemy.global_position = player.global_position + Vector2(300.0, 0.0)
+	main.call("_set_selected_pawn", player)
+	var controller: PlayerController = player.get_controller() as PlayerController
+	var order_before: String = controller.get_order_description()
+
+	_send_mouse_button(main, MOUSE_BUTTON_LEFT, _screen_position(main, enemy.global_position))
+
+	# 选中敌方：信息卡跟随敌方，玩家专属面板全部解绑并隐藏。
+	assert_bool(enemy.selection_indicator.visible).is_true()
+	assert_bool(player.selection_indicator.visible).is_false()
+	assert_object(info_panel.get_bound_pawn()).is_same(enemy)
+	assert_bool(info_panel.visible).is_true()
+	assert_object(bar.get_bound_pawn()).is_null()
+	assert_bool(bar.visible).is_false()
+	assert_object(build_panel.get_bound_pawn()).is_null()
+
+	# HUD 选中行改为敌方事实，指令行不再借用玩家指令。
+	assert_bool(selected_label.text.contains(enemy.data.display_name)).is_true()
+	assert_bool(selected_label.text.contains("阵营：enemy")).is_true()
+	assert_str(order_label.text).is_equal("指令：-")
+
+	# 只看信息：不得顺手下达攻击 / 移动命令，也不得扣灵力或改写玩家指令。
+	assert_str(controller.get_order_description()).is_equal(order_before)
+	assert_float(player.current_spirit).is_equal_approx(player.data.max_spirit, APPROX)
+
+
+## 右键：TARGETING 期间只取消瞄准；非 TARGETING 时不再移动，只保留对敌方下达普通攻击。
+func test_right_click_cancels_targeting_and_never_orders_move() -> void:
 	var main: Node2D = _spawn_main()
 	_isolate_controllers(main)
 	var player: Pawn = main.get_node("Pawns/PlayerPawn")
@@ -183,9 +252,26 @@ func test_right_click_cancels_without_move_command() -> void:
 	assert_bool(bar.is_targeting()).is_false()
 	assert_str(order_label.text).is_equal(order_before)
 
-	# 非 TARGETING 状态仍保留下达移动命令的既有契约。
+	# 移动入口在 INC-CORE-013 中整体搬到左键：右键点地面必须保持零命令。
 	_send_mouse_button(main, MOUSE_BUTTON_RIGHT, Vector2(250.0, 250.0))
-	assert_bool(order_label.text.contains("移动到")).is_true()
+	assert_bool(order_label.text.contains("移动到")).is_false()
+	assert_str(order_label.text).is_equal(order_before)
+
+
+## 右键点敌方仍保留普通攻击命令：本次只收窄「移动」，不收回 INC-COMBAT-001 的攻击能力。
+func test_right_click_enemy_keeps_attack_order() -> void:
+	var main: Node2D = _spawn_main()
+	_isolate_controllers(main)
+	var player: Pawn = main.get_node("Pawns/PlayerPawn")
+	var enemy: Pawn = main.get_node("Pawns/EnemyPawn")
+	var order_label: Label = main.get_node(ORDER_LABEL_PATH)
+	enemy.global_position = player.global_position + Vector2(300.0, 0.0)
+	main.call("_set_selected_pawn", player)
+
+	_send_mouse_button(main, MOUSE_BUTTON_RIGHT, _screen_position(main, enemy.global_position))
+
+	assert_bool(order_label.text.contains("攻击")).is_true()
+	assert_bool(order_label.text.contains(enemy.data.display_name)).is_true()
 
 
 ## Escape 由 InputMap 提供并取消 TARGETING，所有高亮同步清理。

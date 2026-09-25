@@ -1,6 +1,6 @@
 # Testing 主题计划
 
-> 最后修改：2026-09-25T21:14:43+08:00
+> 最后修改：2026-09-26T01:48:20+08:00
 > 主题：testing
 > 规则来源：`../AGENTS.md`
 
@@ -548,3 +548,43 @@
 - 验收时间：
 - Git：develop / 3549aa1
 - 备注：父 Increment 为 `INC-CROSS-019`；本 Increment 只补人工轮的取证装置。
+
+## INC-TESTING-018：输入模型测试矩阵（左键移动 / 敌方选中 / 右键不移动）
+
+- 状态：accepted
+- 创建时间：2026-09-26T00:45:00+08:00
+- 最后修改：2026-09-26T01:48:20+08:00
+- 主题：testing
+- 目标：把新的鼠标操作模型锁进自动化测试，防止回退成「右键移动」或「点敌方无反应」。
+- 验收标准：
+  - gameplay 套件覆盖：左键点己方单位 → 选中该单位；左键点空白地 → `指令：移动到 (…)`；左键点敌方单位 → `PawnInfoPanel` 绑定该敌方且 `SkillBar` 解绑。
+  - gameplay 套件覆盖：非 TARGETING 右键点空白地不产生移动命令；右键点敌方单位仍然下达 `攻击 <display_name>`（保留 `INC-COMBAT-001` 的普通攻击能力）。
+  - gameplay 套件覆盖：TARGETING 期间右键仍然只取消瞄准，不产生移动 / 攻击副作用。
+  - 统一门禁 `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` 为 `RESULT: PASS`，新增用例计入 cases 总数且 `0 failures`。
+- 范围：`test/gameplay/main_scene_skill_targeting_test.gd`（鼠标路由用例改写与新增）、必要时 `test/gameplay/main_scene_gameplay_test.gd` 的既有断言同步。
+- 非范围：新增测试框架或层级、真实窗口取证脚本改造、`test/tools/**` 重构、既有 orphan 测试债务清理（gameplay 324 / integration 288）、`tests/` 场景入口改动。
+- 依赖：`INC-CORE-013`（新的输入路由）、`INC-UI-019`（敌方选中后的 UI 口径）、`INC-TESTING-001`（GdUnit4 三层门禁）、`INC-TESTING-012`（`test/` 与 `tests/` 的职责边界）。
+- 检索证据：2026-09-26T00:42+08:00 执行 `git status --short` 与编号占用检索（`INC-TESTING-018` 无命中）；`git grep -n "MOUSE_BUTTON_LEFT|MOUSE_BUTTON_RIGHT" -- test/ tests/` 定位到鼠标输入只集中在 `test/gameplay/main_scene_skill_targeting_test.gd`；`git grep -n "移动到" -- test/` 命中唯一旧契约断言 `main_scene_skill_targeting_test.gd:188`，即本次必须改写的用例。
+- 风险：① 旧用例 `test_right_click_cancels_without_move_command` 直接断言右键移动的旧行为，属于必须改写的契约变更而不是回归；② 若把「左键点敌方」写成同时下达攻击命令，会与「点敌方只看信息」冲突，用例必须显式证明没有命令副作用；③ 左键移动的断言依赖 `PlayerController.get_order_description()` 文案，改文案会连带失败。
+- 实现说明：
+  - 旧契约用例 `test_right_click_cancels_without_move_command` 整体改写为 `test_right_click_cancels_targeting_and_never_orders_move`：先证明 TARGETING 期间右键只取消，再显式断言非 TARGETING 右键点地面 `order_label` 与取消前完全一致且不含 `移动到`。
+  - 新增 `test_left_click_friendly_pawn_selects_player`、`test_left_click_ground_orders_move_for_selected_player`、`test_left_click_enemy_selects_it_and_binds_enemy_info_ui`、`test_right_click_enemy_keeps_attack_order` 四个用例，全部走真实 `main.tscn` + 真实 `PlayerController`，不复制敌我 / 目标合法性规则；鼠标事件用既有 `_send_mouse_button()` 直接投给 `_unhandled_input`，坐标用 `main.get_canvas_transform() * world` 换算。
+  - 新增常量 `SELECTED_LABEL_PATH`、`BUILD_PANEL_PATH` 复用主场景既有节点路径；用例里「不产生命令」用 `PlayerController.get_order_description()` 前后比对判定，而不是只看 HUD 文案。
+- 变更文件：
+  - `test/gameplay/main_scene_skill_targeting_test.gd`（新增 2 个节点路径常量；替换 1 个旧用例并新增 4 个用例）
+- 测试证据：
+  - `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` → `RESULT: PASS`（GdUnit4 406 cases / 0 failures、headless 10 suites / 549 assertions / 0 failing suites，exit 0；改动前 402 cases，本次净增 4 个用例）
+  - 用例数变化核对：改动前 402 → 现在 406（删除 1 个断言旧契约的 `test_right_click_cancels_without_move_command`、新增 5 个用例：左键点己方 / 左键点地面 / 左键点敌方 / 右键不移动 / 右键攻击），门禁以 406 cases、0 failures / 0 errors 为准。
+  - 真实窗口冒烟（`tests/scenario_build_test_1v2.tscn`，MCP `run_project` background 模式，2560x1434窗口 / 1156x648 画布）：冻结控制器后逐个点击复核——左键点己方 → `PawnInfoPanel` 绑定玩家 + 技能栏绑定可见 + `指令：待命`；左键点空白地 → `指令：移动到 (320, 520)`；左键点敌方 `赤拳战修` → 信息卡绑定该敌方且 `visible=true`、技能栏解绑且 `visible=false`、Build 面板解绑（按钮 disabled / `未绑定单位`）、`SelectedLabel` = `赤拳战修 / 阵营：enemy / HP：200 / 200 护盾：20 / 20 / 状态：待命`、`OrderLabel` = `指令：-`、控制器指令描述不变（零命令副作用）、敌方 `SelectionIndicator.visible=true` 而玩家为 false；左键点第二名敌人 `灵弓修者` → 信息卡跟随新目标；右键点空白地 → 指令仍为 `移动到 (320, 520)`（不产生新移动命令）；右键点敌方 → `指令：攻击 赤拳战修`（普通攻击入口保留）
+  - 真实 OS 级鼠标输入（MCP `simulate_input`，窗口像素坐标）：左键点敌方 (788,589) → `Main._selected_pawn` = `EnemyPawn`；左键点己方 (1926,907) → `PlayerPawn`；左键点空白地 (708,1151) → `指令：移动到 (320, 520)`；右键点另一处空白地 (1550,332) → 指令仍是 `移动到 (320, 520)`（未下达新移动命令）；右键点敌方 → `指令：攻击 赤拳战修`
+  - 说明：真实窗口冒烟里第一局是在 AI 活跃状态下被打到玩家阵亡后才检查的，因此复核改用 `session.restart()` + `set_physics_process(false)` 的冻结条件重做，避免把「玩家已阵亡」误读为路由缺陷。
+- 验证状态：验证通过
+- 验证时间：2026-09-26T00:57:00+08:00
+- 已知问题：
+  - 本套件只覆盖鼠标输入路由，未覆盖手柄 / 键位重绑定（项目当前无手柄输入映射）。
+  - 既有 orphan 债务未清理（gameplay 324 / integration 288），统一门禁里 `integration` / `gameplay` 行的 `FAIL` 标签为既有 stderr 噪音（同行为 `0 errors | 0 failures`）。
+  - 真实窗口点击取证脚本未新增；本次取证用的是 MCP `simulate_input` + `run_script` 的组合，尚未沉淀为可重跑的 `test/tools/**` 脚本。
+- 用户验收：已验收
+- 验收时间：2026-09-26T01:48:20+08:00
+- Git：develop
+- 备注：父 Increment 为 `INC-CROSS-020`；本 Increment 只改测试与断言，不改生产代码，也不修改既有 orphan 债务。
