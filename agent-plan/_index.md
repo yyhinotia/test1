@@ -1,24 +1,24 @@
 # Agent Plan Index
 
-> 最后修改：2026-09-25T18:30:17+08:00
+> 最后修改：2026-09-25T18:58:12+08:00
 > 规则来源：`../AGENTS.md`
 
 ## 主题索引
 
 | 主题 | 计划文件 | 状态 | 当前 Increment | 最后修改 |
 |---|---|---|---|---|
-| UI | `ui.md` | 已验收 | `INC-UI-013` | 2026-09-25T18:11:27+08:00 |
+| UI | `ui.md` | 已验收 | `INC-UI-014` | 2026-09-25T18:52:41+08:00 |
 | 战斗 | `combat.md` | 已验收 | `INC-COMBAT-008` | 2026-09-25T18:30:17+08:00 |
 | Pawns | `pawns.md` | 已验收 | `INC-PAWNS-016` | 2026-09-25T18:30:17+08:00 |
 | 修炼 | `cultivation.md` | 已验收 | `INC-CULT-004` | 2026-09-25T16:51:32+08:00 |
 | 宗门 | `sect.md` | 未创建 | - | - |
-| 世界 | `world.md` | 未创建 | - | - |
+| 世界 | `world.md` | 已验收 | `INC-WORLD-002` | 2026-09-25T18:52:41+08:00 |
 | 背包 | `inventory.md` | 已验收 | `INC-INVENTORY-001` | 2026-09-25T16:51:32+08:00 |
 | 存档 | `save.md` | 未创建 | - | - |
 | 音频 | `audio.md` | 未创建 | - | - |
-| 核心 | `core.md` | 已验收 | `INC-CORE-007` | 2026-09-25T18:11:27+08:00 |
+| 核心 | `core.md` | 已验收 | `INC-CORE-008` | 2026-09-25T18:52:41+08:00 |
 | 工具 | `tools.md` | 已验收 | `INC-TOOLS-002` | 2026-09-25T13:54:46+08:00 |
-| 测试 | `testing.md` | 已验收 | `INC-TESTING-006` | 2026-09-25T18:30:17+08:00 |
+| 测试 | `testing.md` | 已验收 | `INC-TESTING-007` | 2026-09-25T18:52:41+08:00 |
 
 ## 跨主题父 Increment
 
@@ -38,6 +38,7 @@
 | `INC-CROSS-012` | `accepted` | `INC-PAWNS-014`、`INC-COMBAT-005`、`INC-COMBAT-006`、`INC-UI-012`、`INC-CORE-006`、`INC-TESTING-004` | 三种战术技能与 Build → Combat 玩法闭环 | 通过 | 已验收 | 2026-09-25T17:57:16+08:00 |
 | `INC-CROSS-013` | `accepted` | `INC-PAWNS-015`、`INC-COMBAT-007`、`INC-UI-013`、`INC-CORE-007`、`INC-TESTING-005` | Build 容量一致性执行：所有技能可见，超容量技能禁用且任何入口不可施放 | 通过 | 已验收 | 2026-09-25T18:11:27+08:00 |
 | `INC-CROSS-014` | `accepted` | `INC-PAWNS-016`、`INC-COMBAT-008`、`INC-TESTING-006` | Gameplay 调参：三类技能是否产生真实决策（最优 Build 随敌人威胁档案改变） | 通过 | 已验收 | 2026-09-25T18:30:17+08:00 |
+| `INC-CROSS-015` | `accepted` | `INC-WORLD-001`、`INC-WORLD-002`、`INC-UI-014`、`INC-CORE-008`、`INC-TESTING-007` | 秘境遭遇入口：把敌人威胁档案变成玩家可进入的遭遇（选择 → 战斗 → 结果 → 重选） | 通过 | 已验收 | 2026-09-25T18:52:41+08:00 |
 
 ### INC-CROSS-001：第一个 Pawn MVP
 
@@ -374,6 +375,29 @@
 - Git：`main` / `090949a`、`156e055`、`bd1c577`（+ 本计划回写提交）
 - 备注：本父 Increment 是 `docs/build-mvp.md` 中 MVP-1~MVP-4 完成后唯一剩余的 MVP-5 验收项；前四项已由 `INC-CROSS-011` / `INC-CROSS-012` / `INC-CROSS-013` 覆盖。验收依据：用户 2026-09-25 指令「推送，保持本地远端一致」（承接「验收通过，分increment提交」），按 AGENTS.md §4.1 记录为明确验收；三个子 Increment 已按 PAWNS-016 → COMBAT-008 → TESTING-006 拆分提交。
 
+### INC-CROSS-015：秘境遭遇入口（MVP-④ 第一刀）
+
+- 状态：accepted
+- 创建时间：2026-09-25T18:33:02+08:00
+- 最后修改：2026-09-25T18:52:41+08:00
+- 来源：`docs/project_summary.md` §十（秘境系统）与 §十八 MVP ④「一个秘境 + 5～10 个房间 + 1 个 Boss」；以及 `INC-PAWNS-016` 已知问题「档案数据尚无游戏内入口（遭遇选择 UI / 秘境流程属于非范围，需另立 Increment）」。
+- 目标：先做秘境的第一刀，把已经用测试证明的「最优 Build 随遭遇改变」变成玩家可体验的最小闭环——玩家在实机里选择一份秘境遭遇 → 敌人按该档案起局 → 打完看到结果 → 改选别的遭遇或重新挑战。房间推进、随机事件、奖励与 Boss 不在本父级内。
+- 子 Increment：`INC-WORLD-001`（遭遇定义与目录）、`INC-WORLD-002`（遭遇会话：起局/换敌/结算）、`INC-UI-014`（遭遇选择面板）、`INC-CORE-008`（主场景路由与引用刷新）、`INC-TESTING-007`（闭环证据）。
+- 实施顺序：WORLD-001 → WORLD-002 → UI-014 → CORE-008 → TESTING-007；`agent-plan/_index.md`、`main.gd`、`main.tscn` 为高冲突文件，必须串行写入。
+- 验收标准与证据：
+  - 存在 ≥3 份可被玩家选择的遭遇，全部引用 `INC-PAWNS-016` 的正式敌人档案，不新增敌人数值、不复制公式。
+  - 实机上选择不同遭遇会真的换掉敌人单位与其 `PawnData`，而不是只改文案（由 `INC-TESTING-007` 在真实 `main.tscn` 上断言）。
+  - 一局结束后玩家能看到胜负结果，并能重新挑战或改选下一个遭遇；重复结算不会产生第二次结果广播。
+  - 换遭遇后选中态、技能栏、信息卡、目标高亮全部指向新单位，不出现悬空引用；目标选择中点空白仍然无副作用。
+  - 统一门禁 `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all`、Godot MCP `validate` 与 `git diff --check` 全部通过。
+  - 门禁实测（2026-09-25）：GdUnit4 241 cases（unit 102 / integration 93 / gameplay 46）、0 failures；headless 10 suites / 549 assertions / 0 failing suites；退出码 0、无孤儿节点。Godot MCP `validate` 通过（脚本内动态接线会被 `signals` 检查误报 `orphaned_handler`，已按脚本校验加真实主场景用例确认）；`git diff --check` 无输出。
+- 非范围：房间推进与路线选择、随机事件、掉落与奖励结算、Boss、存档迁移、4v4 编队、AI 行为改动、技能与数值改动、UI 美化。
+- 依赖：`INC-CROSS-012`、`INC-CROSS-013`、`INC-CROSS-014`（均已验收）。
+- 风险：单位在运行时被替换是本项目第一次出现，最容易出问题的是上层缓存旧 Pawn 引用；因此本父级把「会话」与「路由」拆成两个 Increment，并要求会话通过信号驱动上层重新取引用。另一风险是范围膨胀成完整秘境；本父级只交付「一次遭遇」的闭环，房间与 Boss 另立 Increment。
+- 验收时间：2026-09-25T18:52:41+08:00
+- Git：`main` / `f7d1cc4`、`5646769`、`d4b8cd3`、`6f15121`、`e2a0594`（+ 本计划回写提交）
+- 备注：本父级是 MVP-④（秘境）的第一步，不是完整秘境；完成后玩家第一次可以在实机中「按遭遇选对手」，而不是只能接受写死的单场对局。验收依据：用户 2026-09-25 指令「推送，保持本地远端一致」，按 `AGENTS.md` §4.1 与本仓库 `INC-CROSS-011`~ `INC-CROSS-014` 的既有约定记录为明确验收；五个子 Increment 按 WORLD-001 → WORLD-002 → UI-014 → CORE-008 → TESTING-007 顺序实施并按 Increment 拆分提交。
+
 ## 活跃 Increment
 
 | ID | 父 Increment | 主题 | 状态 | 摘要 | 最后修改 | 验证 | 验收 | Git |
@@ -447,6 +471,12 @@
 | `INC-PAWNS-016` | `INC-CROSS-014` | pawns | `accepted` | 敌人威胁档案预设（长线型 / 爆发型） | 2026-09-25T18:30:17+08:00 | 验证通过 | 已验收 | `main` / `090949a` |
 | `INC-COMBAT-008` | `INC-CROSS-014` | combat | `accepted` | 技能价值标定与遭遇威胁轴对齐 | 2026-09-25T18:30:17+08:00 | 验证通过 | 已验收 | `main` / `156e055` |
 | `INC-TESTING-006` | `INC-CROSS-014` | testing | `accepted` | Build 决策差异证据（威胁档案 × 三套 Build 终局对照） | 2026-09-25T18:30:17+08:00 | 验证通过 | 已验收 | `main` / `bd1c577` |
+| `INC-CROSS-015` | - | cross | `accepted` | 秘境遭遇入口：选择 → 战斗 → 结果 → 重选 | 2026-09-25T18:52:41+08:00 | 验证通过 | 已验收 | `f7d1cc4`、`5646769`、`d4b8cd3`、`6f15121`、`e2a0594` |
+| `INC-WORLD-001` | `INC-CROSS-015` | world | `accepted` | 遭遇定义与秘境遭遇目录 | 2026-09-25T18:52:41+08:00 | 验证通过 | 已验收 | `f7d1cc4` |
+| `INC-WORLD-002` | `INC-CROSS-015` | world | `accepted` | 遭遇会话：起局 / 换敌 / 结算 | 2026-09-25T18:52:41+08:00 | 验证通过 | 已验收 | `5646769` |
+| `INC-UI-014` | `INC-CROSS-015` | ui | `accepted` | 遭遇选择面板 | 2026-09-25T18:52:41+08:00 | 验证通过 | 已验收 | `d4b8cd3` |
+| `INC-CORE-008` | `INC-CROSS-015` | core | `accepted` | 主场景遭遇路由与引用刷新 | 2026-09-25T18:52:41+08:00 | 验证通过 | 已验收 | `6f15121` |
+| `INC-TESTING-007` | `INC-CROSS-015` | testing | `accepted` | 遭遇闭环自动化证据 | 2026-09-25T18:52:41+08:00 | 验证通过 | 已验收 | `e2a0594` |
 
 ## 已完成 Increment
 
@@ -493,11 +523,19 @@
 | `INC-PAWNS-016` | pawns（敌人威胁档案预设） | 2026-09-25T18:30:17+08:00 | 2026-09-25T18:30:17+08:00 | `090949a` |
 | `INC-COMBAT-008` | combat（技能价值标定与威胁轴对齐） | 2026-09-25T18:30:17+08:00 | 2026-09-25T18:30:17+08:00 | `156e055` |
 | `INC-TESTING-006` | testing（Build 决策差异证据） | 2026-09-25T18:30:17+08:00 | 2026-09-25T18:30:17+08:00 | `bd1c577` |
+| `INC-CROSS-015` | cross（含 world / ui / core / testing 子 Increment） | 2026-09-25T18:52:41+08:00 | 2026-09-25T18:52:41+08:00 | `f7d1cc4`、`5646769`、`d4b8cd3`、`6f15121`、`e2a0594` |
+| `INC-WORLD-001` | world（遭遇定义与秘境遭遇目录） | 2026-09-25T18:52:41+08:00 | 2026-09-25T18:52:41+08:00 | `f7d1cc4` |
+| `INC-WORLD-002` | world（遭遇会话起局 / 换敌 / 结算） | 2026-09-25T18:52:41+08:00 | 2026-09-25T18:52:41+08:00 | `5646769` |
+| `INC-UI-014` | ui（遭遇选择面板） | 2026-09-25T18:52:41+08:00 | 2026-09-25T18:52:41+08:00 | `d4b8cd3` |
+| `INC-CORE-008` | core（主场景遭遇路由与引用刷新） | 2026-09-25T18:52:41+08:00 | 2026-09-25T18:52:41+08:00 | `6f15121` |
+| `INC-TESTING-007` | testing（遭遇闭环自动化证据） | 2026-09-25T18:52:41+08:00 | 2026-09-25T18:52:41+08:00 | `e2a0594` |
 
 ## 流程版本
 
 | 版本 | 时间 | 变更 |
 |---|---|---|
+| v5.5 | 2026-09-25T18:52:41+08:00 | 完成并验收 `INC-CROSS-015`（秘境遭遇入口，MVP-④ 第一刀）：新增 `EncounterDefinition` 与 3 份秘境遭遇资源（试炼傀儡 / 铁壁傀儡 / 血刃刺客，全部引用 `INC-PAWNS-016` 正式档案、数值零复制）、`EncounterSession` 起局/换敌/结算运行时、左下 Dock 遭遇选择面板与主场景路由；`main.tscn` 移除写死的两个 Pawn 与 8 条静态接线，`main.gd` 只做信号转发与引用刷新；GdUnit4 241 cases / 0 failures、headless 10 suites / 549 assertions / 0 failing，按 WORLD-001 → WORLD-002 → UI-014 → CORE-008 → TESTING-007 拆分提交并回填 hash |
+| v5.4 | 2026-09-25T18:33:02+08:00 | 按 `docs/project_summary.md` §十八 ④ 与 `INC-PAWNS-016` 已知问题启动 `INC-CROSS-015`（秘境遭遇入口，MVP-④ 第一刀）：新建世界主题 `agent-plan/world.md`，拆为 WORLD-001 遭遇定义 → WORLD-002 遭遇会话 → UI-014 遭遇面板 → CORE-008 主场景路由 → TESTING-007 闭环证据，要求 `main.gd` 只做信号转发与引用刷新 |
 | v5.3 | 2026-09-25T18:30:17+08:00 | 完成并验收 `INC-CROSS-014`（MVP-5 Gameplay 调参）：新增两份敌人威胁档案（铁壁傀儡 520+80/攻16、血刃刺客 140/攻60）而不新增系统，产出「威胁档案 × 三套两槽 Build + 无技能对照」的 12 组终局对照，证明最优 Build 随遭遇改变（长线→生存+控制、爆发→输出+控制、无技能在爆发档案直接战败），并补支配关系证据使「明确错误选择」不依赖评价口径；GdUnit4 210 cases / 0 failures、headless 10 suites / 549 assertions / 0 failing，按 PAWNS-016 → COMBAT-008 → TESTING-006 拆分提交并回填 hash |
 | v5.2 | 2026-09-25T18:11:27+08:00 | 完成并验收 `INC-CROSS-013`：Pawn 建立主动技能容量投影，PlayerController/AI/can_cast 全入口拒绝超容量技能，SkillBar 保留全部槽位并将超容量技能置 DISABLED，Q/数字键与 HUD 文案统一遵守容量事实；GdUnit4 207 cases / 0 failures、headless 10 suites / 549 assertions 全通过，按 PAWNS-015 → COMBAT-007 → UI-013 → CORE-007 → TESTING-005 拆分提交并回填 hash |
 | v5.1 | 2026-09-25T18:00:42+08:00 | 按建议启动 `INC-CROSS-013`（Build 容量一致性）：采用方案 B，完整技能列表继续用于诊断与展示，Pawn 提供容量投影，超容量技能在 SkillBar / HUD / Controller / AI 全链路禁用；拆为 PAWNS-015、COMBAT-007、UI-013、CORE-007、TESTING-005 |

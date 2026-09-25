@@ -308,5 +308,5 @@
 - 已知问题：`main.gd` 由 336 行增至约 430 行，仍是高冲突文件；本次新增全部为转发与引用刷新，但后续若继续往主场景加流程，应优先落在 `EncounterSession` 而不是 `main.gd`。`EncounterPanel` 在左下 Dock 内的真实窗口多分辨率取证（16:9 / 16:10 / 窄屏）未在本 Increment 重跑，沿用 `INC-UI-011` 的布局基线。`main.tscn` 的 8 条 `[connection]` 被移除后，接线完全依赖运行时，编辑器内静态查看不再显示连线。
 - 用户验收：已验收
 - 验收时间：2026-09-25T18:52:41+08:00
-- Git：见 `INC-CROSS-015` 的 Git 字段（按 Increment 拆分提交）。
+- Git：`main` / `6f15121`（+ `INC-CROSS-015` 计划回写提交）
 - 备注：父 Increment 为 `INC-CROSS-015`；本 Increment 是父级唯一允许修改 `main.gd` 的接线项。验收依据：用户 2026-09-25 指令「推送，保持本地远端一致」，按 `AGENTS.md` §4.1 与本仓库 `INC-CROSS-011`~ `INC-CROSS-014` 的既有约定记录为明确验收。
