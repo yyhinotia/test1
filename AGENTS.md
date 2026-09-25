@@ -4,7 +4,7 @@
 > 项目定位：修仙 RPG + 宗门经营 + 秘境探索 + 暂停式实时战术战斗  
 > 设计源：`docs/project_summary.md`  
 > 引擎版本：Godot `4.7.2.stable`  
-> 文档最后修改：`2026-09-25T16:46:47+08:00`
+> 文档最后修改：`2026-09-25T21:14:43+08:00`
 
 ## 0. 指令优先级
 
@@ -390,12 +390,20 @@ res://
     core/
     resources/
     utils/
-  test/
+  test/          # GdUnit4 自动化断言（unit / integration / gameplay / headless）
+  tests/         # 场景化测试入口（每个测试场景一个 .tscn，可选配套 .gd）
   addons/
   art/
   docs/
   agent-plan/
 ```
+
+`test/` 与 `tests/` 的职责边界：
+
+- `test/`：GdUnit4 自动化断言与 `test/run_tests.ps1` 统一门禁；分层职责见 §6 与 `test/README.md`。
+- `tests/`：场景化测试入口，每个测试场景一个独立 `.tscn`（必要时附 `.gd`），例如 4v4 Boss 玩法验证、2v2 / 3v3 技术验证、多选编队命令验证、Build 重配面板验证、首通奖励解锁验证。
+- 测试专用节点、测试专用参数与测试专用资源引用必须放在 `tests/` 场景内；`main.tscn` 只保留正式游戏入口职责，不得为测试内嵌专用引用。
+- 新增 `tests/` 场景必须同步更新 `tests/README.md`（目录规范与运行方式），并在 `test/README.md` 交叉引用。
 
 ### 5.2 GDScript 规范
 
@@ -615,5 +623,6 @@ pwsh -File test/run_tests.ps1 -Godot $env:GODOT_BIN
 - GdUnit4 编辑器插件未在 `project.godot` 中启用；测试只通过 `GdUnitCmdTool.gd` 在 headless 下运行，避免影响并行进行的 MCP 运行时验证。
 - 引入新的测试依赖或插件必须重新执行 §12.4 的审计。
 - 不得声称未实际执行的测试结果；没有对应测试时只能写实际执行的 Godot 验证或人工冒烟测试。
+- 场景化测试入口统一放在 `tests/`，与自动化断言层 `test/` 分开；新增测试场景必须放进 `tests/`，不得往 `main.tscn` 里加测试专用节点或参数。
 - 多个 Agent 并行开发时，一个主题文件、一个场景、一个 Autoload 或一个共享资源同一时间只能有一个写入者。
 - `project.godot`、`agent-plan/_index.md`、全局事件总线和共享资源属于高冲突文件，修改前必须先确认没有其他 Agent 正在写入。
