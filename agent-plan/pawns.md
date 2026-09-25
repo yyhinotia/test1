@@ -735,7 +735,7 @@
 
 - 状态：awaiting_acceptance
 - 创建时间：2026-09-25T20:47:54+08:00
-- 最后修改：2026-09-25T21:27:06+08:00
+- 最后修改：2026-09-25T21:28:47+08:00
 - 主题：pawns
 - 目标：建立 `SquadDefinition` 队伍静态契约，并让遭遇运行时能够按队伍定义创建、持有和延续多名成员；本 Increment 只提供多单位数据与快照能力，不负责 Vertical Slice 内容、AI 战术或 UI。
 - 验收标准：
@@ -758,7 +758,7 @@
 - 已知问题：`INC-CROSS-018` 在本 Increment 实现时仍未 `accepted`（`INC-CORE-011`、`INC-TESTING-010` 仍为 `planned`），实际只依赖其已验收部分（`INC-WORLD-006` / `INC-PAWNS-019` 的运行时境界延续）；终局判定仍是「主玩家死亡 / 主敌人死亡」单点规则，团队胜负、四方遭遇与 AI 目标重选留给 `INC-COMBAT-009`；多单位集合尚未接入玩家输入、AI 目标与 UI，本 Increment 的集合只被新测试消费；既有 `main_scene_sect_test.gd` 324 orphans 与 `sect_panel_test.gd` 目录模式 288 orphans 为历史债务，与本 Increment 无关。
 - 用户验收：待验收
 - 验收时间：待验收
-- Git：待提交
+- Git：`develop` / `4513e65`（未验收，暂不并入 `main`）
 - 备注：本 Increment 是 `INC-CROSS-019` Gate A 的第一个数据契约层；不改变现有单人遭遇的对外行为，不参与 Gate B 的奖励 / 经济变量。
 
 ## INC-PAWNS-021：运行时主动技能装配与 Build 重配

@@ -1,6 +1,6 @@
 # Agent Plan Index
 
-> 最后修改：2026-09-25T21:27:12+08:00
+> 最后修改：2026-09-25T21:28:47+08:00
 > 规则来源：`../AGENTS.md`
 
 ## 主题索引
@@ -9,7 +9,7 @@
 |---|---|---|---|---|
 | UI | `ui.md` | 计划中 | `INC-UI-018` | 2026-09-25T21:14:43+08:00 |
 | 战斗 | `combat.md` | 计划中 | `INC-COMBAT-009` | 2026-09-25T21:14:43+08:00 |
-| Pawns | `pawns.md` | 待验收 | `INC-PAWNS-020` | 2026-09-25T21:27:12+08:00 |
+| Pawns | `pawns.md` | 待验收 | `INC-PAWNS-020` | 2026-09-25T21:28:47+08:00 |
 | 修炼 | `cultivation.md` | 已验收 | `INC-CULT-005` | 2026-09-25T20:16:30+08:00 |
 | 宗门 | `sect.md` | 已验收 | `INC-SECT-003` | 2026-09-25T19:38:41+08:00 |
 | 世界 | `world.md` | 计划中 | `INC-WORLD-007` | 2026-09-25T21:14:43+08:00 |
@@ -435,7 +435,7 @@
 | `INC-PAWNS-019` | `INC-CROSS-018` | pawns | `accepted` | 运行时境界覆盖层、突破入口与恢复校验 | 2026-09-25T20:16:30+08:00 | 验证通过 | 已验收 | `main` / `ff07dbe` |
 | `INC-WORLD-006` | `INC-CROSS-018` | world | `accepted` | 跨遭遇延续运行时境界与容量 | 2026-09-25T20:16:30+08:00 | 验证通过 | 已验收 | `main` / `dba3f01` |
 | `INC-UI-017` | `INC-CROSS-018` | ui | `accepted` | 突破入口与突破后容量预览 | 2026-09-25T20:39:32+08:00 | 验证通过 | 已验收 | `main` / `8de54d9` |
-| `INC-PAWNS-020` | `INC-CROSS-019` | pawns | `awaiting_acceptance` | 四人队伍数据契约与多单位运行时快照 | 2026-09-25T21:27:12+08:00 | 验证通过（unit 12 / integration 8 / encounter 10，统一门禁 PASS） | 待验收 | 待提交 |
+| `INC-PAWNS-020` | `INC-CROSS-019` | pawns | `awaiting_acceptance` | 四人队伍数据契约与多单位运行时快照 | 2026-09-25T21:28:47+08:00 | 验证通过（unit 12 / integration 8 / encounter 10，统一门禁 PASS） | 待验收 | `develop` / `4513e65` |
 | `INC-PAWNS-021` | `INC-CROSS-019` | pawns | `planned` | 运行时主动技能装配与 Build 重配 | 2026-09-25T21:14:43+08:00 | 待验证 | 待验收 | 待提交 |
 | `INC-COMBAT-009` | `INC-CROSS-019` | combat | `planned` | 四方战队遭遇、团队胜负与 AI 目标重选 | 2026-09-25T21:14:43+08:00 | 待验证 | 待验收 | 待提交 |
 | `INC-WORLD-007` | `INC-CROSS-019` | world | `planned` | 4v4 Vertical Slice 秘境、奖励与定点数据 | 2026-09-25T21:14:43+08:00 | 待验证 | 待验收 | 待提交 |
@@ -609,6 +609,7 @@
 
 | 版本 | 时间 | 变更 |
 |---|---|---|
+| v5.14 | 2026-09-25T21:28:47+08:00 | 按评审收紧后的 Gate A / Gate B 口径完成并推送 `INC-PAWNS-020`（`4513e65`，`develop`）：`SquadDefinition` 队伍静态契约（成员 id 唯一、站位数量一致、默认偏移生成）、`SquadResourceSnapshot` / `SquadProgressSnapshot` 按成员 id 捕获与写回、`EncounterDefinition` 新增可选 `enemy_squad` / `player_count`（旧 `enemy_profile` 行为不变）、`EncounterSession` 多单位集合与主单位代理（终局仍单点，团队胜负留给 `INC-COMBAT-009`）；新增 unit 12 / integration 8 / encounter 10 用例，unit 层 20/20 套件与统一门禁 357 cases + 549 assertions `RESULT: PASS`；`main` 保持不动，等待用户验收后再并入 |
 | v5.13 | 2026-09-25T21:14:43+08:00 | 按 4v4 玩法验证评审收紧 INC-CROSS-019：父 Increment 拆成 Gate A（技术 Slice）与 Gate B（玩法假设），把「玩家想重构」与「重构后战斗真的发生决策变化」设为两个独立检查点；45 灵石与定身术解锁解耦，Gate B 只重打同一个 4v4 Boss 而不重播 2v2 / 3v3；人工验收从二元「会 / 不会」升级为五问 + 保留原话 + Failure A~D；新增 §5.1 / §12.6 的 `tests/` 场景化测试入口目录规范，并登记 `INC-TESTING-012` |
 | v5.12 | 2026-09-25T20:47:54+08:00 | 持久化 `INC-CROSS-019` 4v4 Vertical Slice 设计基线与 7 个子 Increment（`INC-PAWNS-020` / `INC-PAWNS-021` / `INC-COMBAT-009` / `INC-WORLD-007` / `INC-CORE-012` / `INC-UI-018` / `INC-TESTING-011`）；以 `docs/4v4-vertical-slice.md` 为唯一问题硬门，依赖 `INC-CROSS-018` 收尾后按计划顺序开发 |
 | v5.11 | 2026-09-25T20:39:32+08:00 | 完成并推送 `INC-UI-017`（`8de54d9`）（信息卡突破入口）：`PawnInfoModel` 用运行时境界覆盖静态档案并派生「突破后容量：功法 / 武器 / 主动 / 被动」预览，`PawnInfoPanel` 新增 `breakthrough_requested(pawn)` 与「突破」按钮（只在修为已满且有下一境界时可用，只发意图不改数值）；为在固定尺寸信息卡内放下新增行，按钮行压到 16px 并把面板最小高度 354 → 366、`BottomLeftDock.offset_top` -370 → -382；unit 15 / integration 10（另含 skill_bar 回归 8）0 failures，真实窗口三档取证 `FAILURES=0`；父 `INC-CROSS-018` 继续开发主场景接线与 gameplay 证据 |
