@@ -506,3 +506,45 @@
 - 验收时间：
 - Git：`develop` / `6d7b388`
 - 备注：父 Increment 为 `INC-CROSS-019`；本 Increment 只补 Stage 2 的运行时稳定性证据。
+
+## INC-TESTING-014：人工轮 CombatEvent 取证（实机每局应对序列落盘）
+
+- 状态：awaiting_acceptance
+- 创建时间：2026-09-25T23:01:35+08:00
+- 最后修改：2026-09-25T23:01:35+08:00
+- 主题：testing
+- 目标：给 `INC-CROSS-019` §20 Gate D 的「原话 + 事件佐证」补上人工轮一侧的事件证据——玩家在 `tests/scenario_build_replay.tscn` 实机打完后，每局结算自动把只读事实（事件序列、结算方式、事件时钟、装配状态）追加到本地记录文件，供人工原话与事件对照。
+- 验收标准：
+  - `tests/scenario_build_replay.tscn` 打开后，玩家每打完一局（`encounter_finished`）就追加一段：局内序号、遭遇 id、结算结果、事件时钟、事件数量、已掌握 / 已装配技能、玩家残余生命与护盾，以及 `CombatEventLog.describe()` 的完整事件行（含 `combat_end`）。
+  - 只写事实、不写结论：记录器只读 `EncounterSession` 公开 API 与 `CombatEventLog`，不复制伤害 / 奖励 / 胜负规则，也不填任何 Gate / Failure 结论。
+  - 未打完整局时不写文件（自动化的入口体检不得污染人工记录）。
+  - 记录路径可导出（默认 `.mcp/godot-runtime/screenshots/human_replay_events.md`，该目录不入库）；自动化自检使用独立路径，不污染人工记录。
+  - 新增自动化用例覆盖「每局落盘 + 第二局追加」这条链路；统一门禁 `RESULT: PASS`。
+- 范围：`tests/scenario_entry.gd`（新增只读记录器与两个导出参数）、`tests/scenario_build_replay.tscn`（打开记录开关）、`tests/README.md`（写清记录器职责与文件位置）、新增 `test/gameplay/human_round_record_test.gd`（含 `.uid`）、`agent-plan/testing.md`、`agent-plan/_index.md`。
+- 非范围：不改玩法数值、不改 `game/` 下实现；不替玩家填 Q1~Q4 与 Gate 结论；不替代 `INC-TESTING-011` 的脚本化机制事实记录。
+- 依赖：`INC-COMBAT-009`（CombatEvent / CombatEventLog）、`INC-WORLD-007`（遭遇与首通奖励）、`INC-TESTING-012`（`tests/` 入口架构）、`INC-TESTING-011`（人工轮剧本与记录骨架）。
+- 检索证据（2026-09-25T23:01:35+08:00）：`git log --oneline -3` 最新为 `dbf5f50`；读取 `tests/scenario_entry.gd`、`tests/README.md`、`test/tools/capture_build_replay_record.gd` 与 `game/combat/events/combat_event_log.gd` 后确认：人工入口当时只有 `SCENARIO_READY` 打印，没有任何 CombatEvent 落盘，`build_replay_record.md` 的机制事实全部来自脚本化 Replay——Gate D 要求的「事件佐证」因此没有绑定人工轮，故新建本 Increment。
+- 风险：记录器写在 `tests/` 侧，必须守住「只读事实、不下结论」的边界，否则会越过人工轮由人给出结论的硬要求；记录文件落在不入库的 `.mcp/` 下，重跑入口才能重建。
+- 实现说明：
+  - `tests/scenario_entry.gd` 新增 `record_combat_events` / `record_path` 导出参数，默认只给 `tests/scenario_build_replay.tscn` 开启；新增 `entry_ready` 就绪标志，入口完成全部异步摆放并挂上 `encounter_finished` 后才置位，避免自动化在记录器挂载前结算第一局。
+  - `_on_round_finished_record()` 只读 `EncounterSession.get_player_pawn()` / `get_known_active_skills()` / `get_equipped_active_skills()` 与 `CombatEventLog.describe()`；记录头使用真实场景文件名 `scenario_build_replay.tscn`，每局追加写，不覆盖历史。
+  - `tests/README.md` 补记记录器职责与 `.mcp/godot-runtime/screenshots/human_replay_events.md` 落点；新增 `test/gameplay/human_round_record_test.gd` 覆盖「未结算不写」「首局落盘」「重开第二局追加」。
+- 变更文件：
+  - `tests/scenario_entry.gd`
+  - `tests/scenario_build_replay.tscn`
+  - `tests/README.md`
+  - `test/gameplay/human_round_record_test.gd`
+  - `test/gameplay/human_round_record_test.gd.uid`
+  - `agent-plan/testing.md`
+  - `agent-plan/_index.md`
+- 测试证据：
+  - 单套件：`& <godot> --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://test/gameplay/human_round_record_test.gd -rd res://reports/gdunit/debug_human_record_final --ignoreHeadlessMode` → `2 test cases | 0 errors | 0 failures | 0 flaky | 0 skipped | 0 orphans`，exit 0；控制台出现 `HUMAN_ROUND 1 ...` 与 `HUMAN_ROUND 2 ...`，证明第二局是追加而非覆盖。
+  - 入口体检：`& <godot> --headless --path . --script res://test/tools/verify_scenario_entries.gd` → `SCENARIO_ENTRY_CHECK_DONE FAILURES=0`（6 入口 × 2 次），记录开关未破坏既有入口。
+  - 统一门禁：`pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` → `RESULT: PASS`（GdUnit4 401 cases / 0 failures、headless 10 suites / 549 assertions / 0 failing suites，exit 0）。层内仍报告既有 orphan 债务（integration 288 / gameplay 324 个 orphans），本次 errors / failures 均为 0，未新增 orphan。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T23:01:35+08:00
+- 已知问题：① 记录文件为追加写，同一路径重复人工轮会累积历史局；正式人工轮开始前应删除旧文件或改用新的 `record_path`。② `.mcp/` 不入库，记录需重跑入口重建。③ 记录器只写事实，Gate D 结论仍必须由人工原话 + `skill_cancelled` 事件对照给出。④ 既有 orphan 债务（integration 288 / gameplay 324）与本次无关。
+- 用户验收：未验收
+- 验收时间：
+- Git：develop / 3549aa1
+- 备注：父 Increment 为 `INC-CROSS-019`；本 Increment 只补人工轮的取证装置。

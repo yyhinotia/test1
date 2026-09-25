@@ -18,7 +18,7 @@
 | 音频 | `audio.md` | 未创建 | - | - |
 | 核心 | `core.md` | 已退役（4v4 冻结） | `INC-CORE-012`（superseded） | 2026-09-25T21:45:00+08:00 |
 | 工具 | `tools.md` | 已验收 | `INC-TOOLS-002` | 2026-09-25T13:54:46+08:00 |
-| 测试 | `testing.md` | 待验收 | `INC-TESTING-013` | 2026-09-25T23:55:00+08:00 |
+| 测试 | `testing.md` | 待验收 | `INC-TESTING-014` | 2026-09-25T23:01:35+08:00 |
 
 ## 跨主题父 Increment
 
@@ -42,7 +42,7 @@
 | `INC-CROSS-015` | `accepted` | `INC-WORLD-001`、`INC-WORLD-002`、`INC-UI-014`、`INC-CORE-008`、`INC-TESTING-007` | 秘境遭遇入口：把敌人威胁档案变成玩家可进入的遭遇（选择 → 战斗 → 结果 → 重选） | 通过 | 已验收 | 2026-09-25T18:52:41+08:00 |
 | `INC-CROSS-017` | `accepted` | `INC-SECT-001`、`INC-SECT-002`、`INC-SECT-003`、`INC-PAWNS-018`、`INC-UI-016`、`INC-CORE-010`、`INC-WORLD-005`、`INC-TESTING-009` | 最小宗门（MVP-⑤）：把秘境灵石收益变成可升级的宗门设施，产出修为 / 灵草 / 丹药 / 功法 / 强化武器，形成「回去修炼 / 制作 / 强化，然后再次出发」的闭环 | 通过 | 已验收 | 2026-09-25T20:05:25+08:00 |
 | `INC-CROSS-018` | `in_progress` | `INC-CULT-005`、`INC-PAWNS-019`、`INC-WORLD-006`、`INC-UI-017`、`INC-CORE-011`、`INC-TESTING-010` | 突破 → Build 重构：突破执行、运行时境界覆盖、跨遭遇延续、玩家入口与再战证据 | 进行中（4/6 子项已验收） | 待验收 | 2026-09-25T20:39:32+08:00 |
-| `INC-CROSS-019` | `in_progress` | `INC-COMBAT-009`、`INC-PAWNS-021`、`INC-WORLD-007`、`INC-UI-018`、`INC-TESTING-011`、`INC-TESTING-012`、`INC-TESTING-013`（已实现前置：`INC-PAWNS-020` 多单位运行时；已退役：`INC-CORE-012`） | 1v1 → 1vN Build 玩法验证（Build Gameplay Validation） | 部分验证（Gate 0 机制层 + 1v1 首通奖励、Build 切换面板与跨遭遇延续、`tests/` 场景化人工入口、Build Replay 自动化证据与 Round 1/2 客观对照、Stage 2 `1v1 / 1v2 / 1v3` 运行时终局收敛与重开清洁） | 待验收 | 2026-09-25T23:55:00+08:00 |
+| `INC-CROSS-019` | `in_progress` | `INC-COMBAT-009`、`INC-PAWNS-021`、`INC-WORLD-007`、`INC-UI-018`、`INC-TESTING-011`、`INC-TESTING-012`、`INC-TESTING-013`、`INC-TESTING-014`（已实现前置：`INC-PAWNS-020` 多单位运行时；已退役：`INC-CORE-012`） | 1v1 → 1vN Build 玩法验证（Build Gameplay Validation） | 部分验证（Gate 0 机制层 + 1v1 首通奖励、Build 切换面板与跨遭遇延续、`tests/` 场景化人工入口、Build Replay 自动化证据与 Round 1/2 客观对照、Stage 2 `1v1 / 1v2 / 1v3` 运行时终局收敛与重开清洁） | 待验收 | 2026-09-25T23:55:00+08:00 |
 
 ### INC-CROSS-001：第一个 Pawn MVP
 
@@ -444,6 +444,7 @@
 | `INC-TESTING-011` | `INC-CROSS-019` | testing | `awaiting_acceptance` | Build Replay 实验记录（自动化证据 + 人工三问） | 2026-09-25T23:05:40+08:00 | 验证通过（机制层 + 客观对照判据：单套件 2 cases；记录 FAILURES=0；统一门禁 397 cases + 549 assertions PASS；Gate A~E 属人工轮） | 待验收 | `develop` / `d6bd273` |
 | `INC-TESTING-012` | `INC-CROSS-019` | testing | `awaiting_acceptance` | 场景化测试入口拆分到 `tests/` | 2026-09-25T22:33:49+08:00 | 验证通过（入口体检 FAILURES=0 / 5 入口 × 2 次；gameplay 60 cases；统一门禁 395 cases + 549 assertions PASS） | 待验收 | `develop` / `fd3eda8` |
 | `INC-TESTING-013` | `INC-CROSS-019` | testing | `awaiting_acceptance` | Stage 2（1v1 / 1v2 / 1v3）运行时终局收敛与重开清洁证据 | 2026-09-25T23:55:00+08:00 | 验证通过（单套件 gameplay 2 cases / 0 orphans；1v1 / 1v2 / 1v3 均在 10~19s 内跑到终局，1v2 胜利需打掉两名敌人；统一门禁 399 cases + 549 assertions PASS） | 待验收 | `develop` / `6d7b388` |
+| `INC-TESTING-014` | `INC-CROSS-019` | testing | `awaiting_acceptance` | 人工轮 CombatEvent 取证（实机每局应对序列落盘） | 2026-09-25T23:01:35+08:00 | 验证通过（单套件 2 cases / 0 failures / 0 orphans；入口体检 6 入口 × 2 次 FAILURES=0；统一门禁 401 cases + 549 assertions PASS） | 待验收 | `develop` / `3549aa1` |
 | `INC-SECT-001` | `INC-CROSS-017` | sect | `accepted` | 宗门设施静态定义与六座设施数据 | 2026-09-25T19:38:41+08:00 | 通过 | 已验收 | `main` / `c25ffbc` |
 | `INC-SECT-002` | `INC-CROSS-017` | sect | `accepted` | SectState 运行时：库存 / 设施等级 / 升级 / 修炼 / 收获 | 2026-09-25T19:38:41+08:00 | 通过 | 已验收 | `main` / `8c65ff1` |
 | `INC-SECT-003` | `INC-CROSS-017` | sect | `accepted` | 转化设施：藏经阁参悟 / 炼器房强化 / 丹房炼丹 | 2026-09-25T19:38:41+08:00 | 通过 | 已验收 | `main` / `9c97ef9` |
@@ -610,6 +611,7 @@
 
 | 版本 | 时间 | 变更 |
 |---|---|---|
+| v5.25 | 2026-09-25T23:01:35+08:00 | 完成 `INC-TESTING-014`（人工轮 CombatEvent 取证）：人工入口 `tests/scenario_build_replay.tscn` 原有 `SCENARIO_READY` 但没有 CombatEvent 落盘，Gate D 的「事件佐证」未绑定人工轮；本 Increment 在 `tests/scenario_entry.gd` 加只读事件记录器（每局结算追加局号 / 遭遇 / 结算 / 时钟 / 装配 / 完整事件行到不入库的 `.mcp/godot-runtime/screenshots/human_replay_events.md`），新增 `entry_ready` 就绪标志避免记录器挂载前结算，并新增 `test/gameplay/human_round_record_test.gd` 覆盖「未结算不写 + 首局落盘 + 第二局追加」；单套件 `2 cases | 0 failures | 0 orphans`，入口体检 6 入口 × 2 次 `FAILURES=0`，统一门禁 `RESULT: PASS`（GdUnit4 401 cases / headless 549 assertions，exit 0）；状态 `awaiting_acceptance`，不新增玩法内容、不改数值与实现 |
 | v5.24 | 2026-09-25T23:55:00+08:00 | 完成 `INC-TESTING-013`（Stage 2：1v1 / 1v2 / 1v3 运行时终局收敛与重开清洁证据）：`INC-CROSS-019` §27「技术」退出条件要求「1v1 / 1v2 / 1v3 可稳定运行、同一遭遇可以重复挑战」，复核后确认 1v2 / 1v3 原来只有数据目录用例（`build_test_encounter_catalog_test.gd`）与 `tests/` 入口加载体检（`verify_scenario_entries.gd`），缺真实运行时终局证据，故新增 gameplay 用例 `test/gameplay/build_test_stage2_stability_test.gd`：用正式 `EncounterSession` + 真实 `PlayerController` / `AIController` 把三份遭遇跑到终局（1v1 16.68s 落败、1v2 12.32s 胜利且换目标 2 次、1v3 9.93s 落败），并验证 `restart()` 后满血 / 无定身 / 事件清空 / 无残留单位且能第二次跑到终局；单套件 `2 test cases | 0 failures | 0 orphans`，统一门禁 `RESULT: PASS`（GdUnit4 399 cases / headless 549 assertions，exit 0）；不新增玩法内容、不改数值与实现 |
 | v5.23 | 2026-09-25T23:05:40+08:00 | 完成 `INC-CROSS-019` 开发顺序最后一步 `INC-TESTING-011`（Build Replay 实验记录）：新增共用驱动层 `test/tools/build_replay_driver.gd`（真实 `main.tscn` → 关默认秘境 → 跨物理帧走位到定身距离 → 危险窗口 Round 1 不干预 / Round 2 施放定身 → 走到原结算时刻之外确认无补结算）、玩法用例 `test/gameplay/build_replay_loop_test.gd`（2 cases：机制事实 + 跨局不污染与 Failure 4 客观判据）、取证脚本 `test/tools/capture_build_replay_record.gd`（产出 `build_replay_record` md/json，自动段填机制事实、人工段留「待人工」）与人工入口 `tests/scenario_build_replay.tscn`（登记进入口体检）；记录事实 Round 1 `danger_window_opened → skill_cast → skill_hit`（承伤 5.0/40.0）、Round 2 `... → skill_stunned → skill_cancelled`（承伤 0.0/0.0），Failure 4 未触发；单套件 2 cases、取证 `FAILURES=0`、入口体检 `FAILURES=0`（6 入口）、统一门禁 `RESULT: PASS`（GdUnit4 397 cases / headless 549 assertions，exit 0）；不新增 Increment、不改玩法数值 |
 | v5.22 | 2026-09-25T22:33:49+08:00 | 完成 `INC-CROSS-019` 开发顺序第 5 步 `INC-TESTING-012`（场景化测试入口拆分到 `tests/`）：新增 `tests/` 目录与 `tests/README.md`（职责边界、入口清单、命令行 / MCP 运行方式）、唯一入口脚本 `tests/scenario_entry.gd`（`scenario_id` / `encounter` / 前置条件导出 + 窗口标题 + `SCENARIO_READY` 报告）与 5 个入口场景（1v1 / 1v2 / 1v3 / Build 切换 / 首通奖励），`game/main/main.tscn` 移出 `INC-WORLD-007` 临时接入的三份试剑遭遇（只剩三份正式遭遇），`test/README.md` 与 `test/gameplay/main_scene_encounter_test.gd` 同步（新增 `buttons.size() == 3`），新增 `test/tools/verify_scenario_entries.gd` 入口体检；入口体检真实窗口 `FAILURES=0`（5 入口 × 2 次），统一门禁 `RESULT: PASS`（GdUnit4 395 cases / headless 549 assertions，exit 0）；不新增 Increment、不改玩法数值 |
