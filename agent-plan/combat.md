@@ -1,6 +1,6 @@
 # Combat 主题计划
 
-> 最后修改：2026-09-26T02:01:11+08:00
+> 最后修改：2026-09-26T02:16:27+08:00
 > 主题：combat  
 > 规则来源：`../AGENTS.md`
 
@@ -423,9 +423,9 @@
 
 ## INC-COMBAT-011：敌人技能特征差异化（问题型敌人）
 
-- 状态：planned
+- 状态：awaiting_acceptance
 - 创建时间：2026-09-26T01:56:11+08:00
-- 最后修改：2026-09-26T01:56:11+08:00
+- 最后修改：2026-09-26T02:16:27+08:00
 - 主题：combat
 - 目标：把「敌人变强」改成「敌人提出的问题不同」——在既有危险窗口机制之外，为 6~8 类敌人各自锁定一个可被特定技能回答的战斗问题（近战持续压力 / 远程压制 / 蓄力可打断 / 高爆发 / 高防御 / 召唤增援），使同一个 Build 面对不同阵容时表现出可测的差异。
 - 验收标准：
@@ -439,13 +439,13 @@
 - 依赖：`INC-COMBAT-010`（位移 / 范围 / 吸血效果）、`INC-COMBAT-009`（危险窗口契约）。
 - 检索证据：2026-09-26T01:56+08:00 `git grep` 确认 `INC-COMBAT` 已用至 010；`Get-ChildItem game/pawns/data/enemies` 显示现有 6 份档案（赤拳战修 / 灵弓修者 / 血刃刺客 / 铁壁傀儡 / 镇狱影傀 / 镇狱魔君），其中只有两份带 `dangerous_skill`，且无召唤与增援机制。
 - 风险：① 增援单位会改变既有「敌方全灭才判胜」的终局判定路径，必须同步终局用例；② 敌人行为分支增多后 1v2 / 1v3 的运行时稳定性（既有 Stage 2 结论）需要重跑；③ 问题标签如果只写在文档里而数据看不出来，玩家无法形成「换技能」的因果预期。
-- 实现说明：
-- 变更文件：
-- 测试证据：
-- 验证状态：未验证
-- 验证时间：
-- 已知问题：
+- 实现说明：① 问题标签——`PawnData` 新增 `ProblemTag` 枚举（NONE / SUSTAINED_MELEE / RANGED_PRESSURE / BURST_PRESSURE / HIGH_DEFENSE / CHARGE_INTERRUPT / SUMMON_REINFORCEMENT）与 `problem_tag` 导出字段，六份既有敌人档案各自标上唯一标签（赤拳战修=持续近战 / 灵弓修者=远程压制 / 血刃刺客=爆发压迫 / 铁壁傀儡=高防御 / 镇狱影傀与镇狱魔君=蓄力可打断）；`get_problem_tag_label()` 与 `get_skill_value_axis()` 把标签映射到六类技能价值轴（近战→单体伤害、远程→位移、爆发→防御、高防→吸血、蓄力→控制、召唤→范围），对应关系写在数据侧而不是文档里。② 召唤契约——`PawnData` 新增 `summon_minion` / `summon_initial_delay` / `summon_interval` / `summon_max_count` 与 `can_summon()`；新增 `game/combat/summon/summon_scheduler.gd`（`RefCounted`，与 `DangerWindowScheduler` 同模式：首次用 `summon_initial_delay`、之后用 `summon_interval`，每次 `advance()` 最多生成一个，施法者死亡或达上限后停止，只广播 `summon_requested` 不实例化节点）。③ 增援接线——`EncounterSession` 新增 `_summon_schedulers`，在 `_setup_combat_events()` 里为 `can_summon()` 的敌人建调度器，并新增 `_on_summon_requested()` / `_spawn_reinforcement()` / `_count_units_with_id()` / `_reinforcement_offset()`：增援走既有 `_spawn_unit()`，加入 `_enemy_units` 并接 `died` / `skill_cast`、绑定 `AIController` 与玩家目标，因此终局自动要求「敌方全灭」；站位围绕召唤者 70px 六边形排布，使范围剑气（半径 90）能覆盖成组增援。`CombatEvent` 新增 `SUMMONED` 事件类型。④ 首次修复——初版把召唤调度器建在 `has_danger_window()` 分支之后并被该分支的 `continue` 短路，导致召唤者（无危险技能）的增援永不生成；改为两个条件各自独立判断后，增援按 1.0s / 3.0s 节奏生成。⑤ 新增敌人档案 `enemy_summoner.tres`（聚魂邪修 / 240HP + 30 护盾 / 远程 150）与 `enemy_summon_minion.tres`（召魂傀 / 60HP）。
+- 变更文件：`game/shared/resources/pawn_data.gd`、`game/combat/events/combat_event.gd`、`game/combat/summon/summon_scheduler.gd`（新增）、`game/world/encounter_session.gd`、`game/pawns/data/enemies/enemy_melee_raider.tres`、`enemy_spirit_archer.tres`、`enemy_blood_blade.tres`、`enemy_iron_guard.tres`、`enemy_build_test_boss.tres`、`enemy_dungeon_boss.tres`、`enemy_summoner.tres`（新增）、`enemy_summon_minion.tres`（新增）、`test/unit/enemy_threat_profile_test.gd`、`test/unit/combat_event_test.gd`、`test/integration/summon_reinforcement_test.gd`（新增）、`test/integration/problem_enemy_differentiation_test.gd`（新增）。
+- 测试证据：① `mcp__godot::validate` 对 4 个生产文件（`pawn_data.gd` / `combat_event.gd` / `summon_scheduler.gd` / `encounter_session.gd`）与 4 个测试文件均返回 `valid: true` / `errors: []`。② 单套件 `test/unit/enemy_threat_profile_test.gd` → `Statistics: 6 test cases | 0 errors | 0 failures | 0 flaky | 0 skipped | 0 orphans | PASSED`，含 `test_problem_profiles_cover_six_distinct_skill_value_axes`（六档案标签与价值轴各自唯一）、`test_summoner_declares_reinforcement_contract`、`test_charge_interrupt_profiles_keep_danger_window_contract`（危险窗口契约不变）、`test_non_problem_profiles_return_none_axis`。③ 单套件 `test/integration/summon_reinforcement_test.gd` → `Statistics: 4 test cases | 0 errors | 0 failures | 0 flaky | 0 skipped | 0 orphans | PASSED`，含按 1.0s 固定节奏生成增援并接 AI、召唤者死后增援仍要求打完才判胜、召唤者死后调度停止、范围剑气对成组增援的输出高于单体御剑斩。④ 单套件 `test/integration/problem_enemy_differentiation_test.gd` → `Statistics: 1 test cases | 0 errors | 0 failures | 0 flaky | 0 skipped | 0 orphans | PASSED`，同一套 Build（御剑斩 + 护体真气）跑高防御与高爆发两类敌人：高防御档耗时更长、高爆发档护盾吸收峰值更高。⑤ 统一门禁 `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` → `GdUnit4 424 cases, 0 failures` / `headless 10 suites, 549 assertions, 0 failing suites` / `RESULT: PASS`，exit 0。
+- 验证状态：验证通过（问题标签 / 召唤契约 / 增援接线 / 终局判定 / 危险窗口不变四条链路均有单套件证据；同一 Build 对两类问题的可测差异由真实 PlayerController + AIController 驱动得出；统一门禁 PASS）
+- 验证时间：2026-09-26T02:16:27+08:00
+- 已知问题：① 增援只有单一「定时召唤」形态，没有落点碰撞校验（当前战场无静态碰撞体故未暴露）；② `problem_tag` 目前只被数据与测试消费，正式 HUD 尚未把敌人标签展示给玩家，玩家侧「换技能」的因果预期仍靠遭遇选择与实战体感（`INC-WORLD-008` / `INC-TESTING-019` 再解决编排与对照）；③ `problem_enemy_differentiation_test.gd` 只覆盖高防御 vs 高爆发一组对照，六类标签的完整交互矩阵留给 `INC-TESTING-019`；④ 既有 orphan 债务（integration / gameplay）与本次无关。
 - 用户验收：未验收
 - 验收时间：
-- Git：待提交
+- Git：develop / 5f5ffeb
 - 备注：父 Increment 为 `INC-CROSS-021`；本项是「不同敌人让不同技能价值变化」的敌人侧承载，先于秘境房间组合（`INC-WORLD-008`）落地。

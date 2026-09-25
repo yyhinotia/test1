@@ -1,6 +1,6 @@
 # Agent Plan Index
 
-> 最后修改：2026-09-26T02:01:11+08:00
+> 最后修改：2026-09-26T02:16:27+08:00
 > 规则来源：`../AGENTS.md`
 
 ## 主题索引
@@ -8,7 +8,7 @@
 | 主题 | 计划文件 | 状态 | 当前 Increment | 最后修改 |
 |---|---|---|---|---|
 | UI | `ui.md` | 待验收 | `INC-UI-019` | 2026-09-26T01:48:20+08:00 |
-| 战斗 | `combat.md` | 已验收 | `INC-COMBAT-010` | 2026-09-26T02:01:11+08:00 |
+| 战斗 | `combat.md` | 待验收 | `INC-COMBAT-011` | 2026-09-26T02:16:27+08:00 |
 | Pawns | `pawns.md` | 已验收 | `INC-PAWNS-022` | 2026-09-26T02:01:11+08:00 |
 | 修炼 | `cultivation.md` | 已验收 | `INC-CULT-005` | 2026-09-25T20:16:30+08:00 |
 | 宗门 | `sect.md` | 已验收 | `INC-SECT-003` | 2026-09-25T19:38:41+08:00 |
@@ -44,6 +44,7 @@
 | `INC-CROSS-018` | `in_progress` | `INC-CULT-005`、`INC-PAWNS-019`、`INC-WORLD-006`、`INC-UI-017`、`INC-CORE-011`、`INC-TESTING-010` | 突破 → Build 重构：突破执行、运行时境界覆盖、跨遭遇延续、玩家入口与再战证据 | 进行中（4/6 子项已验收） | 待验收 | 2026-09-25T20:39:32+08:00 |
 | `INC-CROSS-019` | `accepted` | `INC-COMBAT-009`、`INC-PAWNS-021`、`INC-WORLD-007`、`INC-UI-018`、`INC-TESTING-011`、`INC-TESTING-012`、`INC-TESTING-013`、`INC-TESTING-014`、`INC-TESTING-015`、`INC-TESTING-016`、`INC-TESTING-017`（已实现前置：`INC-PAWNS-020` 多单位运行时；已退役：`INC-CORE-012`） | 1v1 → 1vN Build 玩法验证（Build Gameplay Validation） | 验证通过（Gate 0 机制层 + 1v1 首通奖励、Build 切换面板与跨遭遇延续、`tests/` 场景化人工入口、Build Replay 自动化证据与 Round 1/2 客观对照、Stage 2 `1v1 / 1v2 / 1v3` 运行时终局收敛与重开清洁、测试入口自证（横幅 / 名牌 / `enemy_names` / `run_scenario.ps1`）） | 已验收 | 2026-09-26T02:09:20+08:00 |
 | `INC-CROSS-020` | `accepted` | `INC-CORE-013`、`INC-UI-019`、`INC-TESTING-018` | 左键统一操作模型：选择 / 移动 / 技能目标选择，选中敌方显示敌方信息 | 验证通过（gameplay 输入路由用例 + 统一门禁 `RESULT: PASS` + 真实窗口与 OS 级鼠标输入冒烟） | 已验收 | 2026-09-26T01:48:20+08:00 |
+| `INC-CROSS-021` | `in_progress` | `INC-COMBAT-010`、`INC-COMBAT-011`、`INC-PAWNS-022`、`INC-WORLD-008`、`INC-TESTING-019` | Skill × Enemy Interaction 验证：技能池 / 问题型敌人 / 问题房间 | 进行中（3/5 子项：`INC-COMBAT-010` / `INC-PAWNS-022` 已验收，`INC-COMBAT-011` 待验收） | 待验收 | 2026-09-26T02:16:27+08:00 |
 
 ### INC-CROSS-001：第一个 Pawn MVP
 
@@ -453,9 +454,9 @@
 | `INC-CORE-013` | `INC-CROSS-020` | core | `accepted` | 左键统一入口：选中任意单位 / 左键移动 / 右键不再移动 | 2026-09-26T01:48:20+08:00 | 验证通过（gameplay 5 个输入路由用例 + 真实窗口 `指令：移动到 (320, 520)` / 右键零命令；统一门禁 `RESULT: PASS`） | 已验收 | `develop` / `d405bbe` |
 | `INC-UI-019` | `INC-CROSS-020` | ui | `accepted` | 选中敌方单位时的信息 UI 口径（信息卡绑定 / 玩家面板解绑 / HUD 文案） | 2026-09-26T01:48:20+08:00 | 验证通过（gameplay 断言信息卡绑定敌方且技能栏与 Build 面板解绑；可见控件清单无 `SkillBar`、信息卡显示 `气血/护体` 无灵力行） | 已验收 | `develop` / `bb1d502` |
 | `INC-TESTING-018` | `INC-CROSS-020` | testing | `accepted` | 输入模型测试矩阵（左键移动 / 敌方选中 / 右键不移动） | 2026-09-26T01:48:20+08:00 | 验证通过（删除 1 个旧契约用例、新增 5 个；统一门禁 `RESULT: PASS`，GdUnit4 402 → 406 cases / 0 failures，exit 0） | 已验收 | `develop` / `3955517` |
-| `INC-CROSS-021` | - | cross | `in_progress` | Skill × Enemy Interaction 验证：技能池 / 问题型敌人 / 问题房间 | 2026-09-26T02:01:11+08:00 | 部分通过（2/5 子项：`INC-COMBAT-010` / `INC-PAWNS-022` 已验证并验收；其余 3 项待开发） | 进行中 | `develop` / `4c0061d`、`0f20ed2`、`f3537e2` |
+| `INC-CROSS-021` | - | cross | `in_progress` | Skill × Enemy Interaction 验证：技能池 / 问题型敌人 / 问题房间 | 2026-09-26T02:16:27+08:00 | 部分通过（3/5 子项：`INC-COMBAT-010` / `INC-PAWNS-022` 已验证并验收，`INC-COMBAT-011` 待验收；其余 2 项待开发） | 进行中 | `develop` / `4c0061d`、`0f20ed2`、`f3537e2`、`1f222b6`、`5f5ffeb` |
 | `INC-COMBAT-010` | `INC-CROSS-021` | combat | `accepted` | 技能效果类型扩展（位移 / 范围伤害 / 吸血） | 2026-09-26T02:01:11+08:00 | 验证通过（unit 8 cases / integration 8 cases / 0 failures；统一门禁 GdUnit4 415 cases / 0 failures + headless 549 assertions，`RESULT: PASS`，exit 0） | 已验收 | `develop` / `4c0061d` |
-| `INC-COMBAT-011` | `INC-CROSS-021` | combat | `planned` | 敌人技能特征差异化（问题型敌人） | 2026-09-26T01:56:11+08:00 | 未验证 | 未验收 | 未开始 |
+| `INC-COMBAT-011` | `INC-CROSS-021` | combat | `awaiting_acceptance` | 敌人技能特征差异化（问题型敌人） | 2026-09-26T02:16:27+08:00 | 验证通过（unit 6 cases + integration 4 + 1 cases / 0 failures；六档案问题标签与价值轴各自唯一、召唤增援按 1.0s / 3.0s 节奏生成且计入终局、召唤者死后调度停止、危险窗口契约不变；统一门禁 GdUnit4 424 cases + headless 549 assertions PASS） | 待验收 | `develop` / `5f5ffeb` |
 | `INC-PAWNS-022` | `INC-CROSS-021` | pawns | `accepted` | 玩家技能池扩到六类价值轴（保持 2 槽） | 2026-09-26T02:01:11+08:00 | 验证通过（unit 10 cases / 0 failures，六技能 id / effect_type 唯一且覆盖六类价值轴；统一门禁 GdUnit4 415 cases / 0 failures + headless 549 assertions，`RESULT: PASS`，exit 0） | 已验收 | `develop` / `0f20ed2` |
 | `INC-WORLD-008` | `INC-CROSS-021` | world | `planned` | 秘境问题房间（按战斗问题组合） | 2026-09-26T01:56:11+08:00 | 未验证 | 未验收 | 未开始 |
 | `INC-TESTING-019` | `INC-CROSS-021` | testing | `planned` | Skill × Enemy 交互矩阵（同一 Build 面对不同问题） | 2026-09-26T01:56:11+08:00 | 未验证 | 未验收 | 未开始 |
@@ -625,6 +626,7 @@
 
 | 版本 | 时间 | 变更 |
 |---|---|---|
+| v5.36 | 2026-09-26T02:16:27+08:00 | 完成 `INC-COMBAT-011`（敌人技能特征差异化 / 问题型敌人）：① `PawnData` 新增 `ProblemTag` 七值枚举与 `problem_tag`，六份既有敌人档案各自标上唯一问题标签，`get_skill_value_axis()` 把标签映射到六类技能价值轴；② 新增召唤契约 `summon_minion` / `summon_initial_delay` / `summon_interval` / `summon_max_count` 与 `can_summon()`，新增 `game/combat/summon/summon_scheduler.gd`（RefCounted，与危险窗口调度器同模式，只广播请求不实例化节点）；③ `EncounterSession` 接线增援：`_spawn_reinforcement()` 走既有 `_spawn_unit()`、加入 `_enemy_units`、接 `died` / `skill_cast`、绑定 `AIController` 与玩家目标，终局自动要求「敌方全灭」；④ `CombatEvent` 新增 `SUMMONED`；⑤ 新增敌人档案 `enemy_summoner.tres`（聚魂邪修 / 240HP + 30 护盾 / 远程 150）与 `enemy_summon_minion.tres`（召魂傀 / 60HP）；⑥ 首次修复：初版召唤调度器建在 `has_danger_window()` 之后被 `continue` 短路（召唤者无危险技能导致增援永不生成），改为两个条件独立判断。验证：`mcp__godot::validate` 8 文件全通过；单套件 unit 6 cases / integration 4 + 1 cases 均 0 failures；统一门禁 `RESULT: PASS`（GdUnit4 424 cases / 0 failures、headless 10 suites / 549 assertions）。 |
 | v5.35 | 2026-09-26T02:09:20+08:00 | 用户验收通过 `INC-CROSS-019`（1v1 → 1vN Build 玩法验证）及其三个测试入口补强子 Increment（`INC-TESTING-015` 人工轮可控开局 / `INC-TESTING-016` 测试入口聚焦 Build / `INC-TESTING-017` 测试入口自证与敌我标识），用户原话「本次验收通过」；本批只改测试入口装置与记录口径，不改玩法数值与 `game/` 实现。 |
 | v5.34 | 2026-09-26T02:01:11+08:00 | 用户验收通过 `INC-CROSS-021` 本轮两个子 Increment：`INC-COMBAT-010`（技能效果扩展 DASH / AOE_DAMAGE / LIFESTEAL，枚举末尾追加、归一化字段、位移不越目标、AOE 每单位一次、吸血按实际伤害回血）与 `INC-PAWNS-022`（技能池扩到 6 个、覆盖六类价值轴、初始装配不变、炼气期仍 2 槽）；`mcp__godot::validate` 全部通过，单套件 integration 8 cases / unit 8 cases / catalog 10 cases 均 0 failures，统一门禁 `RESULT: PASS`（GdUnit4 415 cases / 0 failures、headless 10 suites / 549 assertions / 0 failing），exit 0；父级保持 `in_progress`（2/5），后续按 `INC-COMBAT-011` → `INC-WORLD-008` → `INC-TESTING-019` 顺序推进 |
 | v5.33 | 2026-09-26T01:56:11+08:00 | 新建父 Increment `INC-CROSS-021`（**Skill × Enemy Interaction 验证**）：按用户 objective 把下一阶段从「增加技能数量」重定义为「证明不同敌人让不同 Skill 的价值发生变化，玩家据此主动重构 Build」；据此解冻 `INC-CROSS-019` objective §28 里冻结的 AOE / 新技能约束，但保留边界——不同时扩张装备、属性、随机掉落与职业系统；子 Increment：`INC-COMBAT-010`（效果扩展：位移 / 范围 / 吸血）、`INC-PAWNS-022`（技能池扩到六类价值轴）、`INC-COMBAT-011`（问题型敌人）、`INC-WORLD-008`（问题房间）、`INC-TESTING-019`（交互矩阵）；本轮先实现 `INC-COMBAT-010` 与 `INC-PAWNS-022` |
@@ -871,7 +873,7 @@
 - Failure 条件：做完 6 个技能与 6 类敌人后，玩家仍然只会按面板伤害选技能，或不同敌人对 Build 选择没有可测影响——此时结论应为「当前仍是技能数值系统，不是 Build 系统」，而不是继续堆技能。
 - 子 Increment：`INC-COMBAT-010`（技能效果扩展：位移 / 范围 / 吸血，本轮实现）、`INC-PAWNS-022`（玩家技能池扩到六类价值轴，本轮实现）、`INC-COMBAT-011`（问题型敌人，含召唤）、`INC-WORLD-008`（秘境问题房间）、`INC-TESTING-019`（Skill × Enemy 交互矩阵）。
 - 判定顺序：先 `INC-COMBAT-010`（效果能不能表达）→ 再 `INC-PAWNS-022`（玩家有没有可选项）→ 再 `INC-COMBAT-011`（敌人是否提出问题）→ 再 `INC-WORLD-008`（问题是否被编排成链）→ 最后 `INC-TESTING-019`（对照是否客观成立）；父级只有在五个子项全部通过验证后才进入 `awaiting_acceptance`。
-- 进度：2026-09-26T02:01:11+08:00 用户验收通过本轮两个子 Increment——`INC-COMBAT-010`（效果扩展）与 `INC-PAWNS-022`（技能池扩到六类价值轴），均为 `accepted`；父级仍为 `in_progress`（2/5），后续按 `INC-COMBAT-011` → `INC-WORLD-008` → `INC-TESTING-019` 顺序推进。
+- 进度：2026-09-26T02:16:27+08:00 完成 `INC-COMBAT-011`（问题型敌人 + 召唤增援），子项进度 3/5——`INC-COMBAT-010` / `INC-PAWNS-022` 已验收，`INC-COMBAT-011` 处于 `awaiting_acceptance`（待用户验收）；后续按 `INC-WORLD-008` → `INC-TESTING-019` 顺序推进。
 - 非范围（保留 CROSS-019 冻结思路，只解冻必要部分）：技能树、技能升级与等级、装备词条与属性膨胀、随机掉落、存档迁移、联网同步、4v4 与队友系统、正式美术与动画、平衡数值定稿。
 - 检索证据：2026-09-26T01:56+08:00 在仓库根目录执行 `git status --short --branch`（`develop...origin/develop` 一致，工作区含尚未验收的 `INC-TESTING-015/016/017` 与若干非本次改动）、`git grep -h -o -E "INC-...-[0-9]{3}" -- agent-plan/`（各主题最大编号：COMBAT 009 / PAWNS 021 / WORLD 007 / UI 019 / TESTING 018 / CROSS 020，本批编号均未被占用）；读取 `game/shared/resources/active_skill_definition.gd`（`SkillEffectType` 只有 DAMAGE / HEAL / SHIELD / STUN）、`game/combat/skill/skill_effect_resolver.gd`（单效果分派与「先扣灵力后生效」顺序）、`game/pawns/data/` 下的技能与敌人资源（玩家技能 3 个、敌人档案 6 份）、`game/cultivation/data/realms/qi_refining.tres`（`active_skill_slots = 2`）确认「技能池只有 3 个、效果类型无法表达位移 / 范围 / 吸血、玩家只有 2 个槽位」是当前的真实瓶颈。
 - 风险：① 效果扩展会同时改枚举、分派与 Pawn 接口，边界若失控会滑向通用 Buff 系统——必须严格限制为「单效果 + 三类新类型」；② 六技能只有两槽，若出现「任何情况下都不值得装」的技能，说明问题设计重叠，必须靠问题差异化解决而不是加槽位；③ 敌人问题型与房间链两件事同时上会互相掩盖因果，必须按判定顺序串行落地；④ 客观对照容易受 AI 时序影响，必须先解决确定性与噪声阈值。
