@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="PawnData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/shared/resources/pawn_data.gd" id="1_pawn_data"]
+
+[resource]
+script = ExtResource("1_pawn_data")
+id = &"enemy_001"
+display_name = "试炼傀儡"
+faction = &"enemy"
+max_health = 80.0
+max_shield = 20.0
+attack = 12.0
+defense = 3.0
+move_speed = 90.0
+attack_range = 66.0
+attack_interval = 1.1
+display_color = Color(1.0, 0.35, 0.32, 1.0)

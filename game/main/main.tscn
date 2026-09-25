@@ -1,0 +1,121 @@
+[gd_scene format=3 uid="uid://njh3eh6dvo7n"]
+
+[ext_resource type="PackedScene" path="res://game/pawns/player_pawn.tscn" id="1_player_pawn"]
+[ext_resource type="Script" uid="uid://m8gwn5pmdc8h" path="res://game/main/main.gd" id="1_yil3p"]
+[ext_resource type="Script" uid="uid://dy1qqrpvay2d4" path="res://game/ui/arena_backdrop.gd" id="2_8y833"]
+[ext_resource type="PackedScene" path="res://game/pawns/enemy_pawn.tscn" id="2_enemy_pawn"]
+
+[node name="Main" type="Node2D" unique_id=539579646]
+process_mode = 3
+script = ExtResource("1_yil3p")
+
+[node name="Background" type="ColorRect" parent="." unique_id=238189977]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0.025, 0.035, 0.045, 1)
+
+[node name="ArenaBackdrop" type="Node2D" parent="." unique_id=722182152]
+position = Vector2(40, 40)
+script = ExtResource("2_8y833")
+
+[node name="Pawns" type="Node2D" parent="." unique_id=569280582]
+
+[node name="PlayerPawn" parent="Pawns" unique_id=1821916831 instance=ExtResource("1_player_pawn")]
+position = Vector2(870, 410)
+
+[node name="EnemyPawn" parent="Pawns" unique_id=699654266 instance=ExtResource("2_enemy_pawn")]
+position = Vector2(300, 250)
+
+[node name="HUD" type="CanvasLayer" parent="." unique_id=1870880984]
+layer = 10
+
+[node name="HudMargin" type="MarginContainer" parent="HUD" unique_id=88689193]
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 16.0
+offset_top = 16.0
+offset_right = -16.0
+offset_bottom = 158.0
+mouse_filter = 2
+
+[node name="HudPanel" type="PanelContainer" parent="HUD/HudMargin" unique_id=1927505442]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="HudContent" type="VBoxContainer" parent="HUD/HudMargin/HudPanel" unique_id=390045409]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="InstructionsLabel" type="Label" parent="HUD/HudMargin/HudPanel/HudContent" unique_id=706925719]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.86, 0.95, 0.92, 1)
+theme_override_font_sizes/font_size = 18
+text = "左键：选择玩家 Pawn    右键：移动/攻击目标    空格：暂停/恢复"
+autowrap_mode = 2
+
+[node name="SelectedLabel" type="Label" parent="HUD/HudMargin/HudPanel/HudContent" unique_id=1891443701]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "未选中单位"
+
+[node name="OrderLabel" type="Label" parent="HUD/HudMargin/HudPanel/HudContent" unique_id=842700250]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "指令：-"
+
+[node name="PauseStateLabel" type="Label" parent="HUD" unique_id=1887259999]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -260.0
+offset_top = 16.0
+offset_right = -16.0
+offset_bottom = 52.0
+theme_override_colors/font_color = Color(0.8, 0.95, 0.86, 1)
+theme_override_font_sizes/font_size = 18
+text = "实时运行中"
+horizontal_alignment = 2
+
+[node name="PauseOverlay" type="Control" parent="HUD" unique_id=535022588]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Dim" type="ColorRect" parent="HUD/PauseOverlay" unique_id=1066326765]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0, 0, 0, 0.38)
+
+[node name="Center" type="CenterContainer" parent="HUD/PauseOverlay" unique_id=1592948352]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="PausePanel" type="PanelContainer" parent="HUD/PauseOverlay/Center" unique_id=851732886]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="PauseLabel" type="Label" parent="HUD/PauseOverlay/Center/PausePanel" unique_id=610545997]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "游戏已暂停
+按 Space 恢复
+暂停时仍可下达移动/攻击指令"
+horizontal_alignment = 1
+
+[connection signal="died" from="Pawns/PlayerPawn" to="." method="_on_pawn_died"]
+[connection signal="health_changed" from="Pawns/PlayerPawn" to="." method="_on_health_changed"]
+[connection signal="shield_changed" from="Pawns/PlayerPawn" to="." method="_on_shield_changed"]
+[connection signal="state_changed" from="Pawns/PlayerPawn" to="." method="_on_player_state_changed"]
+[connection signal="died" from="Pawns/EnemyPawn" to="." method="_on_pawn_died"]

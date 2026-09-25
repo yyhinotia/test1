@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="PawnData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/shared/resources/pawn_data.gd" id="1_pawn_data"]
+
+[resource]
+script = ExtResource("1_pawn_data")
+id = &"player_001"
+display_name = "测试修士"
+faction = &"player"
+max_health = 120.0
+max_shield = 40.0
+attack = 28.0
+defense = 5.0
+move_speed = 145.0
+attack_range = 76.0
+attack_interval = 0.8
+display_color = Color(0.30, 0.72, 1.0, 1.0)

@@ -1,0 +1,11 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="PackedScene" path="res://game/pawns/pawn.tscn" id="1_base"]
+[ext_resource type="Resource" path="res://game/pawns/data/player_pawn.tres" id="2_data"]
+[ext_resource type="Script" path="res://game/pawns/controllers/player_controller.gd" id="3_controller"]
+
+[node name="PlayerPawn" instance=ExtResource("1_base")]
+data = ExtResource("2_data")
+
+[node name="Controller" parent="." index="5"]
+script = ExtResource("3_controller")

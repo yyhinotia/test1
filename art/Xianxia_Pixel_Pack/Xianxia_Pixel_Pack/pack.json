@@ -1,0 +1,789 @@
+{
+ "backgrounds": {
+  "bg_far_01_00": {
+   "factor": 0.06,
+   "flat_base": true,
+   "ground": true,
+   "h": 239,
+   "layer": "far",
+   "lum": 193.1,
+   "sat": 0.162,
+   "theme": "仙俠",
+   "w": 626
+  },
+  "bg_far_01_01": {
+   "factor": 0.06,
+   "flat_base": false,
+   "ground": true,
+   "h": 349,
+   "layer": "far",
+   "lum": 171.5,
+   "sat": 0.142,
+   "theme": "仙俠",
+   "w": 167
+  },
+  "bg_far_01_02": {
+   "factor": 0.06,
+   "flat_base": true,
+   "ground": false,
+   "h": 241,
+   "layer": "far",
+   "lum": 239.2,
+   "sat": 0.113,
+   "theme": "仙俠",
+   "w": 644
+  },
+  "bg_far_01_03": {
+   "factor": 0.06,
+   "flat_base": true,
+   "ground": false,
+   "h": 343,
+   "layer": "far",
+   "lum": 228.0,
+   "sat": 0.147,
+   "theme": "仙俠",
+   "w": 344
+  },
+  "bg_far_02_00": {
+   "factor": 0.06,
+   "flat_base": false,
+   "ground": true,
+   "h": 287,
+   "layer": "far",
+   "lum": 219.0,
+   "sat": 0.076,
+   "theme": "仙俠",
+   "w": 533
+  },
+  "bg_far_02_01": {
+   "factor": 0.06,
+   "flat_base": false,
+   "ground": true,
+   "h": 304,
+   "layer": "far",
+   "lum": 216.3,
+   "sat": 0.083,
+   "theme": "仙俠",
+   "w": 148
+  },
+  "bg_far_02_02": {
+   "factor": 0.06,
+   "flat_base": true,
+   "ground": true,
+   "h": 125,
+   "layer": "far",
+   "lum": 215.1,
+   "sat": 0.094,
+   "theme": "仙俠",
+   "w": 596
+  },
+  "bg_far_02_03": {
+   "factor": 0.06,
+   "flat_base": true,
+   "ground": true,
+   "h": 298,
+   "layer": "far",
+   "lum": 208.3,
+   "sat": 0.105,
+   "theme": "仙俠",
+   "w": 320
+  },
+  "bg_mid_01_00": {
+   "factor": 0.18,
+   "flat_base": true,
+   "ground": true,
+   "h": 334,
+   "layer": "mid",
+   "lum": 87.1,
+   "sat": 0.291,
+   "theme": "仙俠",
+   "w": 426
+  },
+  "bg_mid_01_01": {
+   "factor": 0.18,
+   "flat_base": true,
+   "ground": true,
+   "h": 200,
+   "layer": "mid",
+   "lum": 101.2,
+   "sat": 0.193,
+   "theme": "仙俠",
+   "w": 436
+  },
+  "bg_mid_01_03": {
+   "factor": 0.18,
+   "flat_base": true,
+   "ground": true,
+   "h": 352,
+   "layer": "mid",
+   "lum": 77.6,
+   "sat": 0.375,
+   "theme": "仙俠",
+   "w": 292
+  },
+  "bg_mid_01_04": {
+   "factor": 0.18,
+   "flat_base": false,
+   "ground": true,
+   "h": 347,
+   "layer": "mid",
+   "lum": 66.4,
+   "sat": 0.345,
+   "theme": "仙俠",
+   "w": 396
+  },
+  "bg_mid_01_05": {
+   "factor": 0.18,
+   "flat_base": false,
+   "ground": true,
+   "h": 194,
+   "layer": "mid",
+   "lum": 116.7,
+   "sat": 0.195,
+   "theme": "仙俠",
+   "w": 420
+  },
+  "bg_mid_02_00": {
+   "factor": 0.18,
+   "flat_base": true,
+   "ground": true,
+   "h": 286,
+   "layer": "mid",
+   "lum": 55.9,
+   "sat": 0.387,
+   "theme": "仙俠",
+   "w": 395
+  },
+  "bg_mid_02_01": {
+   "factor": 0.18,
+   "flat_base": false,
+   "ground": true,
+   "h": 368,
+   "layer": "mid",
+   "lum": 63.6,
+   "sat": 0.298,
+   "theme": "仙俠",
+   "w": 286
+  },
+  "bg_mid_02_02": {
+   "factor": 0.18,
+   "flat_base": true,
+   "ground": true,
+   "h": 237,
+   "layer": "mid",
+   "lum": 97.7,
+   "sat": 0.188,
+   "theme": "仙俠",
+   "w": 395
+  },
+  "bg_mid_02_03": {
+   "factor": 0.18,
+   "flat_base": true,
+   "ground": true,
+   "h": 245,
+   "layer": "mid",
+   "lum": 77.4,
+   "sat": 0.254,
+   "theme": "仙俠",
+   "w": 400
+  },
+  "bg_mid_02_04": {
+   "factor": 0.18,
+   "flat_base": false,
+   "ground": true,
+   "h": 282,
+   "layer": "mid",
+   "lum": 102.8,
+   "sat": 0.182,
+   "theme": "仙俠",
+   "w": 319
+  },
+  "bg_mid_02_05": {
+   "factor": 0.18,
+   "flat_base": false,
+   "ground": true,
+   "h": 325,
+   "layer": "mid",
+   "lum": 68.9,
+   "sat": 0.328,
+   "theme": "仙俠",
+   "w": 338
+  },
+  "bg_near_01_00": {
+   "factor": 1.0,
+   "flat_base": true,
+   "ground": true,
+   "h": 341,
+   "layer": "near",
+   "lum": 14.5,
+   "sat": 0.329,
+   "theme": "仙俠",
+   "w": 350
+  },
+  "bg_near_01_01": {
+   "factor": 1.0,
+   "flat_base": false,
+   "ground": true,
+   "h": 322,
+   "layer": "near",
+   "lum": 35.2,
+   "sat": 0.353,
+   "theme": "仙俠",
+   "w": 201
+  },
+  "bg_near_01_02": {
+   "factor": 1.0,
+   "flat_base": true,
+   "ground": true,
+   "h": 224,
+   "layer": "near",
+   "lum": 22.9,
+   "sat": 0.35,
+   "theme": "仙俠",
+   "w": 344
+  },
+  "bg_near_01_04": {
+   "factor": 1.0,
+   "flat_base": true,
+   "ground": true,
+   "h": 298,
+   "layer": "near",
+   "lum": 14.3,
+   "sat": 0.421,
+   "theme": "仙俠",
+   "w": 338
+  },
+  "bg_near_01_05": {
+   "factor": 1.0,
+   "flat_base": true,
+   "ground": true,
+   "h": 184,
+   "layer": "near",
+   "lum": 21.4,
+   "sat": 0.433,
+   "theme": "仙俠",
+   "w": 379
+  },
+  "bg_near_02_00": {
+   "factor": 1.0,
+   "flat_base": true,
+   "ground": true,
+   "h": 333,
+   "layer": "near",
+   "lum": 29.0,
+   "sat": 0.388,
+   "theme": "仙俠",
+   "w": 247
+  },
+  "bg_near_02_01": {
+   "factor": 1.0,
+   "flat_base": true,
+   "ground": true,
+   "h": 331,
+   "layer": "near",
+   "lum": 20.1,
+   "sat": 0.404,
+   "theme": "仙俠",
+   "w": 270
+  },
+  "bg_near_02_02": {
+   "factor": 1.0,
+   "flat_base": true,
+   "ground": true,
+   "h": 322,
+   "layer": "near",
+   "lum": 22.5,
+   "sat": 0.388,
+   "theme": "仙俠",
+   "w": 195
+  },
+  "bg_near_02_03": {
+   "factor": 1.0,
+   "flat_base": true,
+   "ground": true,
+   "h": 256,
+   "layer": "near",
+   "lum": 24.1,
+   "sat": 0.397,
+   "theme": "仙俠",
+   "w": 258
+  },
+  "bg_near_02_04": {
+   "factor": 1.0,
+   "flat_base": true,
+   "ground": true,
+   "h": 290,
+   "layer": "near",
+   "lum": 29.0,
+   "sat": 0.392,
+   "theme": "仙俠",
+   "w": 276
+  },
+  "bg_near_02_05": {
+   "factor": 1.0,
+   "flat_base": true,
+   "ground": true,
+   "h": 284,
+   "layer": "near",
+   "lum": 27.9,
+   "sat": 0.391,
+   "theme": "仙俠",
+   "w": 396
+  }
+ },
+ "counts": {
+  "backgrounds": 30,
+  "fx": 356,
+  "weapons": 36
+ },
+ "fx": {
+  "xf_array_seal": {
+   "anchor": "bottom",
+   "cell": 256,
+   "cols_src": 6,
+   "dropped_tail": 0,
+   "frames": 12,
+   "rows_src": 2
+  },
+  "xf_ascend": {
+   "anchor": "bottom",
+   "cell": 256,
+   "cols_src": 6,
+   "dropped_tail": 0,
+   "frames": 12,
+   "rows_src": 2
+  },
+  "xf_bell_ward": {
+   "anchor": "bottom",
+   "cell": 256,
+   "cols_src": 6,
+   "dropped_tail": 0,
+   "frames": 12,
+   "rows_src": 2
+  },
+  "xf_crane": {
+   "anchor": "center",
+   "cell": 256,
+   "cols_src": 6,
+   "dropped_tail": 1,
+   "frames": 17,
+   "rows_src": 3
+  },
+  "xf_dragon_coil": {
+   "anchor": "center",
+   "cell": 256,
+   "cols_src": 6,
+   "dropped_tail": 0,
+   "frames": 12,
+   "rows_src": 2
+  },
+  "xf_flying_sword": {
+   "anchor": "center",
+   "cell": 256,
+   "cols_src": 6,
+   "dropped_tail": 0,
+   "frames": 18,
+   "rows_src": 3
+  },
+  "xf_frost_shard": {
+   "anchor": "center",
+   "cell": 256,
+   "cols_src": 6,
+   "dropped_tail": 0,
+   "frames": 18,
+   "rows_src": 3
+  },
+  "xf_gale_vortex": {
+   "anchor": "bottom",
+   "cell": 256,
+   "cols_src": 6,
+   "dropped_tail": 0,
+   "frames": 12,
+   "rows_src": 2
+  },
+  "xf_ink_splash": {
+   "anchor": "center",
+   "cell": 256,
+   "cols_src": 6,
+   "dropped_tail": 0,
+   "frames": 12,
+   "rows_src": 2
+  },
+  "xf_lotus": {
+   "anchor": "bottom",
+   "cell": 256,
+   "cols_src": 6,
+   "dropped_tail": 0,
+   "frames": 12,
+   "rows_src": 2
+  },
+  "xf_mirror_shatter": {
+   "anchor": "center",
+   "cell": 256,
+   "cols_src": 4,
+   "dropped_tail": 0,
+   "frames": 16,
+   "rows_src": 4
+  },
+  "xf_moon_arc": {
+   "anchor": "left",
+   "cell": 256,
+   "cols_src": 6,
+   "dropped_tail": 0,
+   "frames": 12,
+   "rows_src": 2
+  },
+  "xf_phoenix": {
+   "anchor": "center",
+   "cell": 256,
+   "cols_src": 6,
+   "dropped_tail": 0,
+   "frames": 12,
+   "rows_src": 2
+  },
+  "xf_pill_light": {
+   "anchor": "center",
+   "cell": 256,
+   "cols_src": 6,
+   "dropped_tail": 0,
+   "frames": 18,
+   "rows_src": 3
+  },
+  "xf_qi_palm": {
+   "anchor": "left",
+   "cell": 256,
+   "cols_src": 6,
+   "dropped_tail": 1,
+   "frames": 17,
+   "rows_src": 3
+  },
+  "xf_soul_wisp": {
+   "anchor": "center",
+   "cell": 256,
+   "cols_src": 6,
+   "dropped_tail": 0,
+   "frames": 12,
+   "rows_src": 2
+  },
+  "xf_star_array": {
+   "anchor": "center",
+   "cell": 256,
+   "cols_src": 6,
+   "dropped_tail": 0,
+   "frames": 12,
+   "rows_src": 2
+  },
+  "xf_stone_spike": {
+   "anchor": "bottom",
+   "cell": 256,
+   "cols_src": 6,
+   "dropped_tail": 1,
+   "frames": 11,
+   "rows_src": 2
+  },
+  "xf_sword_qi": {
+   "anchor": "left",
+   "cell": 256,
+   "cols_src": 5,
+   "dropped_tail": 0,
+   "frames": 13,
+   "rows_src": 3
+  },
+  "xf_sword_rain": {
+   "anchor": "bottom",
+   "cell": 256,
+   "cols_src": 6,
+   "dropped_tail": 0,
+   "frames": 12,
+   "rows_src": 2
+  },
+  "xf_taiji": {
+   "anchor": "center",
+   "cell": 256,
+   "cols_src": 6,
+   "dropped_tail": 0,
+   "frames": 18,
+   "rows_src": 3
+  },
+  "xf_talisman": {
+   "anchor": "center",
+   "cell": 256,
+   "cols_src": 6,
+   "dropped_tail": 0,
+   "frames": 12,
+   "rows_src": 2
+  },
+  "xf_tiger_claw": {
+   "anchor": "center",
+   "cell": 256,
+   "cols_src": 6,
+   "dropped_tail": 0,
+   "frames": 18,
+   "rows_src": 3
+  },
+  "xf_tribulation": {
+   "anchor": "bottom",
+   "cell": 256,
+   "cols_src": 6,
+   "dropped_tail": 0,
+   "frames": 12,
+   "rows_src": 2
+  }
+ },
+ "project": "v2_xianxia-pixel-pack",
+ "released": "2026-09-22",
+ "weapons": {
+  "wp_xianxia_blade_01_00": {
+   "h": 71,
+   "sheet": "wp_xianxia_blade_01",
+   "target_len": 64,
+   "theme": "仙俠",
+   "w": 128
+  },
+  "wp_xianxia_blade_01_01": {
+   "h": 74,
+   "sheet": "wp_xianxia_blade_01",
+   "target_len": 64,
+   "theme": "仙俠",
+   "w": 128
+  },
+  "wp_xianxia_blade_01_02": {
+   "h": 63,
+   "sheet": "wp_xianxia_blade_01",
+   "target_len": 64,
+   "theme": "仙俠",
+   "w": 128
+  },
+  "wp_xianxia_blade_01_03": {
+   "h": 64,
+   "sheet": "wp_xianxia_blade_01",
+   "target_len": 64,
+   "theme": "仙俠",
+   "w": 128
+  },
+  "wp_xianxia_blade_01_04": {
+   "h": 69,
+   "sheet": "wp_xianxia_blade_01",
+   "target_len": 64,
+   "theme": "仙俠",
+   "w": 128
+  },
+  "wp_xianxia_blade_01_05": {
+   "h": 48,
+   "sheet": "wp_xianxia_blade_01",
+   "target_len": 64,
+   "theme": "仙俠",
+   "w": 128
+  },
+  "wp_xianxia_dark_01_00": {
+   "h": 25,
+   "sheet": "wp_xianxia_dark_01",
+   "target_len": 40,
+   "theme": "仙俠",
+   "w": 80
+  },
+  "wp_xianxia_dark_01_01": {
+   "h": 68,
+   "sheet": "wp_xianxia_dark_01",
+   "target_len": 40,
+   "theme": "仙俠",
+   "w": 80
+  },
+  "wp_xianxia_dark_01_02": {
+   "h": 26,
+   "sheet": "wp_xianxia_dark_01",
+   "target_len": 40,
+   "theme": "仙俠",
+   "w": 80
+  },
+  "wp_xianxia_dark_01_03": {
+   "h": 35,
+   "sheet": "wp_xianxia_dark_01",
+   "target_len": 40,
+   "theme": "仙俠",
+   "w": 80
+  },
+  "wp_xianxia_dark_01_04": {
+   "h": 18,
+   "sheet": "wp_xianxia_dark_01",
+   "target_len": 40,
+   "theme": "仙俠",
+   "w": 80
+  },
+  "wp_xianxia_dark_01_05": {
+   "h": 44,
+   "sheet": "wp_xianxia_dark_01",
+   "target_len": 40,
+   "theme": "仙俠",
+   "w": 80
+  },
+  "wp_xianxia_heavy_01_00": {
+   "h": 27,
+   "sheet": "wp_xianxia_heavy_01",
+   "target_len": 40,
+   "theme": "仙俠",
+   "w": 80
+  },
+  "wp_xianxia_heavy_01_01": {
+   "h": 20,
+   "sheet": "wp_xianxia_heavy_01",
+   "target_len": 40,
+   "theme": "仙俠",
+   "w": 80
+  },
+  "wp_xianxia_heavy_01_02": {
+   "h": 69,
+   "sheet": "wp_xianxia_heavy_01",
+   "target_len": 40,
+   "theme": "仙俠",
+   "w": 80
+  },
+  "wp_xianxia_heavy_01_03": {
+   "h": 18,
+   "sheet": "wp_xianxia_heavy_01",
+   "target_len": 40,
+   "theme": "仙俠",
+   "w": 80
+  },
+  "wp_xianxia_heavy_01_04": {
+   "h": 26,
+   "sheet": "wp_xianxia_heavy_01",
+   "target_len": 40,
+   "theme": "仙俠",
+   "w": 80
+  },
+  "wp_xianxia_heavy_01_05": {
+   "h": 46,
+   "sheet": "wp_xianxia_heavy_01",
+   "target_len": 40,
+   "theme": "仙俠",
+   "w": 80
+  },
+  "wp_xianxia_ranged_01_00": {
+   "h": 51,
+   "sheet": "wp_xianxia_ranged_01",
+   "target_len": 64,
+   "theme": "仙俠",
+   "w": 128
+  },
+  "wp_xianxia_ranged_01_01": {
+   "h": 98,
+   "sheet": "wp_xianxia_ranged_01",
+   "target_len": 64,
+   "theme": "仙俠",
+   "w": 128
+  },
+  "wp_xianxia_ranged_01_02": {
+   "h": 91,
+   "sheet": "wp_xianxia_ranged_01",
+   "target_len": 64,
+   "theme": "仙俠",
+   "w": 128
+  },
+  "wp_xianxia_ranged_01_03": {
+   "h": 47,
+   "sheet": "wp_xianxia_ranged_01",
+   "target_len": 64,
+   "theme": "仙俠",
+   "w": 128
+  },
+  "wp_xianxia_ranged_01_04": {
+   "h": 67,
+   "sheet": "wp_xianxia_ranged_01",
+   "target_len": 64,
+   "theme": "仙俠",
+   "w": 128
+  },
+  "wp_xianxia_ranged_01_05": {
+   "h": 37,
+   "sheet": "wp_xianxia_ranged_01",
+   "target_len": 40,
+   "theme": "仙俠",
+   "w": 80
+  },
+  "wp_xianxia_relic_01_00": {
+   "h": 76,
+   "sheet": "wp_xianxia_relic_01",
+   "target_len": 40,
+   "theme": "仙俠",
+   "w": 80
+  },
+  "wp_xianxia_relic_01_01": {
+   "h": 120,
+   "sheet": "wp_xianxia_relic_01",
+   "target_len": 40,
+   "theme": "仙俠",
+   "w": 80
+  },
+  "wp_xianxia_relic_01_02": {
+   "h": 85,
+   "sheet": "wp_xianxia_relic_01",
+   "target_len": 64,
+   "theme": "仙俠",
+   "w": 128
+  },
+  "wp_xianxia_relic_01_03": {
+   "h": 32,
+   "sheet": "wp_xianxia_relic_01",
+   "target_len": 40,
+   "theme": "仙俠",
+   "w": 80
+  },
+  "wp_xianxia_relic_01_04": {
+   "h": 40,
+   "sheet": "wp_xianxia_relic_01",
+   "target_len": 40,
+   "theme": "仙俠",
+   "w": 80
+  },
+  "wp_xianxia_relic_01_05": {
+   "h": 51,
+   "sheet": "wp_xianxia_relic_01",
+   "target_len": 40,
+   "theme": "仙俠",
+   "w": 80
+  },
+  "wp_xianxia_relic_02_00": {
+   "h": 57,
+   "sheet": "wp_xianxia_relic_02",
+   "target_len": 40,
+   "theme": "仙俠",
+   "w": 80
+  },
+  "wp_xianxia_relic_02_01": {
+   "h": 38,
+   "sheet": "wp_xianxia_relic_02",
+   "target_len": 40,
+   "theme": "仙俠",
+   "w": 80
+  },
+  "wp_xianxia_relic_02_02": {
+   "h": 45,
+   "sheet": "wp_xianxia_relic_02",
+   "target_len": 40,
+   "theme": "仙俠",
+   "w": 80
+  },
+  "wp_xianxia_relic_02_03": {
+   "h": 67,
+   "sheet": "wp_xianxia_relic_02",
+   "target_len": 40,
+   "theme": "仙俠",
+   "w": 80
+  },
+  "wp_xianxia_relic_02_04": {
+   "h": 27,
+   "sheet": "wp_xianxia_relic_02",
+   "target_len": 40,
+   "theme": "仙俠",
+   "w": 80
+  },
+  "wp_xianxia_relic_02_05": {
+   "h": 81,
+   "sheet": "wp_xianxia_relic_02",
+   "target_len": 40,
+   "theme": "仙俠",
+   "w": 80
+  }
+ }
+}

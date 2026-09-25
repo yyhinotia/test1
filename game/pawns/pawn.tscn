@@ -1,0 +1,46 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/pawns/pawn.gd" id="1_npvev"]
+[ext_resource type="Texture2D" path="res://game/pawns/art/pawn_placeholder.svg" id="1_qn51p"]
+[ext_resource type="Script" path="res://game/ui/pawn_health_bar.gd" id="3_c1mxi"]
+[ext_resource type="Script" path="res://game/pawns/controllers/pawn_controller.gd" id="4_aotyo"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_npvev"]
+radius = 20.0
+
+[node name="Pawn" type="CharacterBody2D" unique_id=1821916831]
+process_mode = 1
+motion_mode = 1
+script = ExtResource("1_npvev")
+
+[node name="Visual" type="Node2D" parent="." unique_id=627173137]
+
+[node name="Sprite2D" type="Sprite2D" parent="Visual" unique_id=174312135]
+texture = ExtResource("1_qn51p")
+
+[node name="Collision" type="Node2D" parent="." unique_id=350398282]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Collision" unique_id=414157954]
+position = Vector2(0, 5)
+shape = SubResource("CircleShape2D_npvev")
+
+[node name="HealthBar" type="Control" parent="." unique_id=601924100]
+layout_mode = 3
+anchors_preset = 0
+offset_left = -36.0
+offset_top = -54.0
+offset_right = 36.0
+offset_bottom = -38.0
+mouse_filter = 2
+script = ExtResource("3_c1mxi")
+
+[node name="SelectionIndicator" type="Line2D" parent="." unique_id=1539328049]
+visible = false
+points = PackedVector2Array(-30, -30, 30, -30, 30, 30, -30, 30)
+closed = true
+width = 3.0
+default_color = Color(1, 0.92, 0.22, 1)
+
+[node name="Controller" type="Node" parent="." unique_id=2018758486]
+process_mode = 1
+script = ExtResource("4_aotyo")
