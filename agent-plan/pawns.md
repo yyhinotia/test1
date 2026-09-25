@@ -1,6 +1,6 @@
 # Pawns 主题计划
 
-> 最后修改：2026-09-25T16:50:57+08:00
+> 最后修改：2026-09-25T18:53:44+08:00
 > 主题：pawns  
 > 规则来源：`../AGENTS.md`
 
@@ -644,3 +644,32 @@
 - 验收时间：2026-09-25T18:28:15+08:00
 - Git：`main` / `090949a`
 - 备注：父 Increment 为 `INC-CROSS-014`；本 Increment 是父级「威胁轴差异化」的数据基线。验收依据：用户 2026-09-25 指令「推送，保持本地远端一致」（承接「验收通过，分increment提交」），按 AGENTS.md §4.1 记录为明确验收。
+
+## INC-PAWNS-017：秘境 Boss 敌人档案（镇狱魔君）
+
+- 状态：accepted
+- 创建时间：2026-09-25T18:53:44+08:00
+- 最后修改：2026-09-25T19:07:54+08:00
+- 主题：pawns
+- 目标：新增一份「秘境终局」敌人档案，作为房间链最后一间的对手，让「继续深入」有明确的终局目标；只使用既有 `PawnData` 字段，不新增数值系统、不新增技能、不改 `PawnData` 契约。
+- 验收标准：
+  - 新增 `game/pawns/data/enemies/enemy_dungeon_boss.tres`，`script_class="PawnData"`，`id = &"enemy_dungeon_boss"`，`faction = &"enemy"`，`display_name` 非空。
+  - 数值定位为「持续压制的终局」：`max_health > enemy_iron_guard.max_health`（520）、`max_shield >= enemy_iron_guard.max_shield`（80）、`attack > enemy_iron_guard.attack`（16）且 `attack < enemy_blood_blade.attack`（60）、`move_speed <= enemy_iron_guard.move_speed`（70）。刻意不复制「血刃刺客」的单发高伤，否则房间链会退化成「谁先手谁赢」。
+  - 不配置 `realm`、`techniques`、`weapon`、`active_skill` / `active_skills`（与既有傀儡 / 敌人档案一致），`get_active_skills()` 必须为空。
+  - 不修改既有三份敌人档案与玩家档案的任何字段。
+  - 新增单元用例断言上述数值关系，并断言既有档案未被改动（按 `resource_path` 读取真实资源，不复制公式）。
+- 范围：`game/pawns/data/enemies/enemy_dungeon_boss.tres`（新增）、`test/unit/dungeon_boss_profile_test.gd`（新增）。
+- 非范围：Boss 专属技能 / 分阶段 / 召唤 / 狂暴、Boss 专属血条 UI、动画、掉落表、专属 AI 行为、难度自适应。
+- 依赖：`INC-PAWNS-016`（已验收，敌人档案写法与威胁轴基线）、`INC-COMBAT-008`（已验收，技能价值标定，用于选值参考）。
+- 检索证据：`git status --short` 干净；`git diff --unified=0 -- agent-plan/` 与 `git diff --cached --unified=0 -- agent-plan/` 均为空；`git log --oneline -3 -- agent-plan/` 顶部为 `781195a`（CROSS-015 收尾）；`git grep -o -E "INC-[A-Z]+-[0-9]{3}"` 确认 PAWNS 最高为 016、CROSS 最高为 015，全部 `accepted`，无 pending Increment。`game/pawns/data/enemies/` 现有两份档案（铁壁傀儡 520+80 / 攻 16、血刃刺客 140 / 攻 60），`game/world/data/encounters/` 现有三份遭遇，均无终局对手。
+- 风险：Boss 数值过高会让「继续深入」永远不划算，过低则让深潜失去风险，两种都会破坏父级要验证的「贪不贪」决策；因此本档案保持「高生命 + 高护盾 + 中高攻 + 慢速」，把胜负交给玩家的资源延续与技能选择，而不是数值碾压。另一风险是把 Boss 机制提前写进数据层，因此本 Increment 只填字段、不新增系统。
+- 实现说明：新增 `game/pawns/data/enemies/enemy_dungeon_boss.tres`，只使用 `PawnData` 既有字段：900 生命 / 150 护盾 / 攻击 34 / 防御 8 / 移速 68 / 攻击间隔 1.8s。相对铁壁傀儡更硬且单发更高，但仍低于血刃刺客的 60 攻击与 140 移速，定位为「持续压制的终局对手」，不引入技能、境界、功法、武器或 Boss 专属机制。新增 `test/unit/dungeon_boss_profile_test.gd`，用数值关系锁定该定位，并加一条既有三份敌人档案不可被顺手改动的回归护栏。
+- 变更文件：`game/pawns/data/enemies/enemy_dungeon_boss.tres`（新增）、`test/unit/dungeon_boss_profile_test.gd`（新增）。
+- 测试证据：`pwsh -File test/run_tests.ps1 -Godot <godot> -Layer unit` → PASS（GdUnit4 unit 106 cases / 0 failures，退出码 0）；新增 `test_boss_profile_is_configured`、`test_boss_is_tougher_than_iron_guard_but_not_a_burst_killer`、`test_boss_has_no_build_contract_and_no_skills`、`test_existing_enemy_profiles_are_untouched` 四个用例全部通过。运行前已执行 `godot --headless --path . --import` 生成 `.gd.uid`。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T18:57:12+08:00
+- 已知问题：Boss 专属技能 / 分阶段 / 召唤 / 狂暴与掉落表沿用非范围，不在本 Increment；数值只锁定相对关系，真实终局难度由 CROSS-016 的房间链闭环与后续调参验证。
+- 用户验收：已验收（依据用户 2026-09-25 指令「验收通过，分increment提交」与「分批incre单独推送后继续开发」）
+- 验收时间：2026-09-25T19:07:54+08:00
+- Git：
+- 备注：父 Increment 为 `INC-CROSS-016`；本 Increment 只提供「更强的对手」，不提供新机制。

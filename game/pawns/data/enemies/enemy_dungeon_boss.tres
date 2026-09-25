@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="PawnData" format=3]
+
+[ext_resource type="Script" uid="uid://ewp2akokimur" path="res://game/shared/resources/pawn_data.gd" id="1_pawn_data"]
+
+[resource]
+script = ExtResource("1_pawn_data")
+id = &"enemy_dungeon_boss"
+display_name = "镇狱魔君"
+faction = &"enemy"
+max_health = 900.0
+max_shield = 150.0
+attack = 34.0
+defense = 8.0
+move_speed = 68.0
+attack_range = 72.0
+attack_interval = 1.8
+display_color = Color(0.62, 0.2, 0.72, 1)
