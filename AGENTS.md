@@ -4,7 +4,7 @@
 > 项目定位：修仙 RPG + 宗门经营 + 秘境探索 + 暂停式实时战术战斗  
 > 设计源：`docs/project_summary.md`  
 > 引擎版本：Godot `4.7.2.stable`  
-> 文档最后修改：`2026-09-25T13:43:00+08:00`
+> 文档最后修改：`2026-09-25T13:44:31+08:00`
 
 ## 0. 指令优先级
 
@@ -478,7 +478,7 @@ res://
 - 像素素材过滤策略需要统一为 Nearest：project.godot 目前未设置 rendering/textures/canvas_textures/default_texture_filter，仍是引擎默认线性过滤；MVP 场景只使用占位 SVG，因此不影响本次验收。
 - `EverRogueTileset 2.0` 缺少许可证。
 - `agent-plan/` 已建立 `_index.md`、`_template.md`、`pawns.md`、`combat.md`、`ui.md`、`core.md` 和 `tools.md`。
-- 首个 Pawn MVP 对应 `INC-CROSS-001` 及其四个子 Increment，当前等待用户验收；验收前不得提交。
+- 首个 Pawn MVP（`INC-CROSS-001` 及 `INC-PAWNS-001/COMBAT-001/UI-001/CORE-001`）已通过用户验收，并在 `main` 上提交为 `d7c2e1e`；尚未 push 到 origin，push 前需用户授权。
 - 这些是已知基线问题，不得在无对应 Increment 的情况下顺手修复。
 
 ---
