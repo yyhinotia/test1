@@ -405,3 +405,62 @@
 - 验收时间：2026-09-25T16:50:57+08:00
 - Git：`main` / `c21d8ec`
 - 备注：父 Increment 为 `INC-CROSS-010`；本 Increment 只做只读展示，不做槽位点击与装备更换。
+
+## INC-UI-010：SkillSlot 固定技能格组件
+
+- 状态：accepted
+- 创建时间：2026-09-25T17:01:58+08:00
+- 最后修改：2026-09-25T17:17:48+08:00
+- 主题：ui
+- 目标：实现固定尺寸、状态清晰的单个技能格组件，显示技能图标占位、冷却遮罩、冷却剩余秒数、灵力消耗、快捷键与状态高亮。
+- 验收标准：
+  - `SkillSlot` 根节点固定为 64×64，节点名严格包含 `Background`、`Icon`、`CooldownOverlay`、`CooldownLabel`、`CostLabel`、`HotkeyLabel`、`StateHighlight`。
+  - 快捷键固定左上角；灵力消耗固定右下角；图标为主体视觉；冷却剩余数字居中；不把消耗放到格子外。
+  - `READY` 正常显示；`COOLDOWN` 使用按 `cooldown_ratio` 从上往下覆盖的半透明灰色遮罩和居中剩余秒数；`NO_RESOURCE` 整体变暗且消耗数字强调；`DISABLED` 整体灰暗；空槽显示稳定占位。
+  - `SELECTED` 通过 `StateHighlight` 高亮边框表达；鼠标点击有有效技能时只发出 `cast_requested(skill)`，不修改 Pawn/资源/冷却。
+  - 场景与脚本通过 Godot validate；新增集成/单元用例验证结构、固定尺寸、状态渲染和点击信号。
+- 范围：新增 `game/ui/skill_slot.gd`、`game/ui/skill_slot.tscn`、对应 unit/integration 测试。
+- 非范围：技能栏容器、主场景接线、输入映射、技能范围指示器、正式技能图标素材、目标选择。
+- 依赖：`INC-COMBAT-004`（状态读模型）。
+- 检索证据：已执行 `git status --short --branch`（`main...origin/main`，仅 `docs/战斗技能ui.md` 未跟踪）、`git diff --unified=0 -- agent-plan/`（空）、`git diff --cached --unified=0 -- agent-plan/`（暂存区为空）、`git log --oneline -- agent-plan/`（最新计划提交 `ae16ef9`）与 `git grep -n -E "INC-[A-Z]+-[0-9]{3}" -- agent-plan/`（UI 最高 `INC-UI-009`、战斗最高 `INC-COMBAT-003`、Pawns 最高 `INC-PAWNS-012`、Core 最高 `INC-CORE-004`、Testing 最高 `INC-TESTING-002`）。Graphify 图谱缺失且本机缺少 `networkx`，本轮以 Godot MCP 场景树 + 定向源码读取补足结构基线；主场景当前 `HUD/PawnInfoPanel` 为右下锚定，尚无 SkillBar / SkillSlot。；现有 `game/ui/resource_bar.*` 可作为固定尺寸子组件的命名参考，当前 `game/ui/` 无 SkillSlot。
+- 风险：Godot Container 可能覆盖固定尺寸；冷却遮罩锚点必须明确从上往下，不能依赖默认 ProgressBar 填充方向。
+- 实现说明：使用 Control + 锚定子节点，`CooldownOverlay` 通过 `cooldown_ratio` 设置高度；图标先用技能名首字占位，避免引入无许可证素材。
+- 变更文件：`game/ui/skill_slot.gd`（+.uid）、`game/ui/skill_slot.tscn`、`test/integration/skill_slot_test.gd`（+.uid）。
+- 测试证据：统一门禁通过：unit 80 / integration 54 / gameplay 26，共 160 cases、0 failures；`skill_slot_test.gd` 7 例覆盖 64×64 固定尺寸、节点结构、冷却遮罩方向、状态显示与点击信号；headless 10 suites、549 assertions、0 failing；Godot MCP validate 通过。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T17:17:48+08:00
+- 已知问题：暂无图标资源，第一版使用文字占位，后续素材 Increment 再替换。
+- 用户验收：已验收
+- 验收时间：2026-09-25T17:17:48+08:00
+- Git：`main` / `3938038`
+- 备注：父 Increment 为 `INC-CROSS-011`。
+
+## INC-UI-011：SkillBar 动态技能栏与左下角 HUD 起点
+
+- 状态：accepted
+- 创建时间：2026-09-25T17:01:58+08:00
+- 最后修改：2026-09-25T17:17:48+08:00
+- 主题：ui
+- 目标：实现支持 2/3/4/5/6 个技能槽自动横向排列的 SkillBar，并将 PawnInfoPanel 与 SkillBar 放入屏幕左下角统一 Dock，使左下角成为建筑/操作/信息卡的显示起点，向右、向上扩展。
+- 验收标准：
+  - `SkillBar` 根据 Pawn 的境界主动技能容量和已配置技能数自动创建槽位，容量为 2 时显示 2 个、容量为 3~6 时分别显示对应数量；不为境界写独立 UI。
+  - 空槽仍显示快捷键编号；有效槽位由 `SkillSlot` 显示真实状态；Pawn 的冷却、灵力和技能列表变化会驱动刷新；点击槽位向上转发 `skill_requested(skill)`。
+  - `HUD/BottomLeftDock` 锚定左下角，`grow_horizontal = END`、`grow_vertical = BEGIN`；信息卡位于 Dock 左侧/底部起点，技能栏排在其右侧并底部对齐，未来建筑/操作面板可继续向右追加。
+  - `PawnInfoPanel` 的锚点、偏移和场景路径同步迁移到 `HUD/BottomLeftDock/PawnInfoPanel`；暂停遮罩仍排在 Dock 之后绘制，覆盖信息卡与技能栏。
+  - 16:9、16:10、窄屏三档真实渲染中，Dock 不越出视口、不与顶部 HUD 或暂停状态标签重叠，信息卡内容与技能格不溢出。
+  - 更新所有既有场景路径引用和真实窗口取证脚本；MCP `validate`、聚合测试、布局证据全部通过。
+- 范围：新增 `game/ui/skill_bar.gd`、`game/ui/skill_bar.tscn`；修改 `game/ui/pawn_info_panel.tscn`、`game/main/main.tscn`、`test/tools/capture_pawn_info_panel_evidence.gd` 及必要测试路径。
+- 非范围：主场景输入路由、技能释放命令（由 `INC-CORE-005` 接入）、建筑面板、操作菜单、技能装配界面、目标选择。
+- 依赖：`INC-UI-010`、`INC-PAWNS-013`、`INC-COMBAT-004`。
+- 检索证据：已执行 `git status --short --branch`（`main...origin/main`，仅 `docs/战斗技能ui.md` 未跟踪）、`git diff --unified=0 -- agent-plan/`（空）、`git diff --cached --unified=0 -- agent-plan/`（暂存区为空）、`git log --oneline -- agent-plan/`（最新计划提交 `ae16ef9`）与 `git grep -n -E "INC-[A-Z]+-[0-9]{3}" -- agent-plan/`（UI 最高 `INC-UI-009`、战斗最高 `INC-COMBAT-003`、Pawns 最高 `INC-PAWNS-012`、Core 最高 `INC-CORE-004`、Testing 最高 `INC-TESTING-002`）。Graphify 图谱缺失且本机缺少 `networkx`，本轮以 Godot MCP 场景树 + 定向源码读取补足结构基线；主场景当前 `HUD/PawnInfoPanel` 为右下锚定，尚无 SkillBar / SkillSlot。；截图脚本当前只检查 `HUD/PawnInfoPanel` 与顶部 HUD。
+- 风险：`.tscn` 高冲突文件必须串行修改；Container 可能改变技能栏宽度；左下 Dock 与窄屏顶部 HUD 的垂直重叠需真实窗口验证。
+- 实现说明：Dock 使用 HBoxContainer，信息卡为左起点、技能栏为右侧操作区并底部对齐；所有组件仍由自身场景负责尺寸与状态，Dock 只负责统一方向扩展。
+- 变更文件：`game/ui/skill_bar.gd`（+.uid）、`game/ui/skill_bar.tscn`、`game/ui/pawn_info_panel.tscn`、`test/integration/skill_bar_test.gd`（+.uid）、`test/headless/pawn_info_panel_display_test.gd`；主场景 Dock 接入与路径同步由共享文件 `game/main/main.tscn`、`game/main/main.gd` 在 `INC-CORE-005` 提交中落地。
+- 测试证据：统一门禁通过：unit 80 / integration 54 / gameplay 26，共 160 cases、0 failures；`skill_bar_test.gd` 5 例覆盖 2~6 槽位、空槽与解绑；headless `pawn_info_panel_display_test.gd` 69 checks、FAILURES=0；真实窗口取证 `res://.mcp/godot-runtime/screenshots/pawn_info_panel_evidence_report.txt` 通过，容量 2/3/4/5/6 → SLOTS=2/3/4/5/6、SLOT_SIZE=(64,64)，三档窗口全部 INSIDE/PANEL_LEFT_OF_BAR/BOTTOM_ALIGNED 通过。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T17:17:48+08:00
+- 已知问题：本轮只预留建筑/操作起点，不创建对应业务面板。
+- 用户验收：已验收
+- 验收时间：2026-09-25T17:17:48+08:00
+- Git：`main` / `84d5ef7`
+- 备注：父 Increment 为 `INC-CROSS-011`。

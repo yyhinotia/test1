@@ -526,3 +526,32 @@
 - 验收时间：2026-09-25T16:50:57+08:00
 - Git：`main` / `c21d8ec`
 - 备注：父 Increment 为 `INC-CROSS-010`；武器槽容量为 1 的约束来自 `INC-CULT-004`，本 Increment 不重复实现容量规则。
+
+## INC-PAWNS-013：多主动技能配置与 Build 汇总
+
+- 状态：accepted
+- 创建时间：2026-09-25T17:01:58+08:00
+- 最后修改：2026-09-25T17:17:48+08:00
+- 主题：pawns
+- 目标：让 PawnData 能以有序列表配置多个主动技能，同时保留既有单技能字段兼容路径；Pawn 与 Build 汇总向技能 UI/控制器提供同一份技能列表。
+- 验收标准：
+  - `PawnData.get_active_skills()` 在 `active_skills` 非空时按列表顺序返回非空、已配置技能；列表为空时回退到旧字段 `active_skill`；同一技能不会因新旧字段同时存在而重复。
+  - `Pawn.get_build_loadout()` 的主动技能条目来自同一 `get_active_skills()`，Build 校验仍按容量、重复、空条目和境界门槛规则工作。
+  - `PlayerController.order_skill()` 保持旧行为（默认第一个技能）；新增按技能实例下达命令的入口，命令记录具体技能，接近后调用既有 `Pawn.cast_skill()`。
+  - `AIController` 能按顺序尝试多个主动技能，第一个满足距离、冷却与灵力条件的技能优先；没有可用技能时保持普通攻击回退。
+  - 既有 `active_skill` 资源、测试和场景继续可用；新增 unit/integration 用例覆盖列表顺序、旧字段回退、去重与多技能命令。
+- 范围：`game/shared/resources/pawn_data.gd`、`game/pawns/pawn.gd`、`game/pawns/controllers/player_controller.gd`、`game/pawns/controllers/ai_controller.gd`、`game/pawns/data/player_pawn.tres`、`game/ui/pawn_info_model.gd`、对应 unit/integration 测试。
+- 非范围：技能装配/卸载界面、被动技能、技能图标资源、技能目标选择 UI、技能效果扩展。
+- 依赖：`INC-COMBAT-003`（主动技能执行闭环）、`INC-CROSS-010`（Build 汇总与信息卡基线），均已验收。
+- 检索证据：已执行 `git status --short --branch`（`main...origin/main`，仅 `docs/战斗技能ui.md` 未跟踪）、`git diff --unified=0 -- agent-plan/`（空）、`git diff --cached --unified=0 -- agent-plan/`（暂存区为空）、`git log --oneline -- agent-plan/`（最新计划提交 `ae16ef9`）与 `git grep -n -E "INC-[A-Z]+-[0-9]{3}" -- agent-plan/`（UI 最高 `INC-UI-009`、战斗最高 `INC-COMBAT-003`、Pawns 最高 `INC-PAWNS-012`、Core 最高 `INC-CORE-004`、Testing 最高 `INC-TESTING-002`）。Graphify 图谱缺失且本机缺少 `networkx`，本轮以 Godot MCP 场景树 + 定向源码读取补足结构基线；主场景当前 `HUD/PawnInfoPanel` 为右下锚定，尚无 SkillBar / SkillSlot。
+- 风险：新旧字段同时配置时的重复与顺序语义；旧预设反序列化；AI 多技能顺序可能改变既有冒烟行为。
+- 实现说明：以 `active_skills` 为新数据源，`active_skill` 仅作为兼容输入；运行时查询统一走 `PawnData.get_active_skills()`，避免 UI、控制器和 Build 各自解释字段。具体技能命令通过技能实例传递，不在 UI 层复制冷却/资源逻辑。
+- 变更文件：`docs/战斗技能ui.md`（来源文档）、`game/shared/resources/pawn_data.gd`、`game/pawns/pawn.gd`、`game/pawns/controllers/player_controller.gd`、`game/pawns/controllers/ai_controller.gd`、`game/ui/pawn_info_model.gd`、`game/pawns/data/player_pawn.tres`、`test/unit/pawn_data_active_skills_test.gd`（+.uid）、`test/integration/multi_skill_order_test.gd`（+.uid）、`test/integration/active_skill_execution_test.gd`、`test/integration/player_skill_order_test.gd`。
+- 测试证据：统一门禁 `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` 通过：GdUnit4 unit 80 / integration 54 / gameplay 26，共 160 cases、0 failures；headless 10 suites、549 assertions、0 failing；其中 `pawn_data_active_skills_test.gd` 3 例、`multi_skill_order_test.gd` 3 例。`git diff --check` 通过。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T17:17:48+08:00
+- 已知问题：当前玩家预设应先迁移为技能列表，同时保留 `active_skill` 以验证兼容路径。
+- 用户验收：已验收
+- 验收时间：2026-09-25T17:17:48+08:00
+- Git：`main` / `200e822`
+- 备注：父 Increment 为 `INC-CROSS-011`；本 Increment 只提供数据与命令能力，不实现技能栏视觉。

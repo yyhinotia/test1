@@ -189,3 +189,32 @@
 - 验收时间：2026-09-25T16:50:57+08:00
 - Git：`main` / `78ecb97`
 - 备注：父 Increment 为 `INC-CROSS-008`；本 Increment 只做场景接线与状态路由，不改变 `PawnInfoPanel` 内部渲染逻辑。
+
+## INC-CORE-005：主场景技能栏接入与 1~6 快捷键
+
+- 状态：accepted
+- 创建时间：2026-09-25T17:01:58+08:00
+- 最后修改：2026-09-25T17:17:48+08:00
+- 主题：core
+- 目标：把左下角 Dock、选中 Pawn、SkillBar 与既有玩家技能命令接通，支持鼠标点击技能格和 1~6 快捷键释放当前目标。
+- 验收标准：
+  - `project.godot` 注册 `cast_skill_1`~`cast_skill_6` 输入动作，对应数字键 1~6；主场景只读取 InputMap，不硬编码物理按键。
+  - 选中玩家 Pawn 后 SkillBar 绑定该 Pawn；取消选中或单位死亡后解绑并清空槽位状态。
+  - 点击有效技能格或按下对应数字键时，把具体 `ActiveSkillDefinition` 交给 `PlayerController`；Q 保持释放第一个主动技能的兼容行为。
+  - 无选中、无目标、技能不存在、冷却中或灵力不足时不产生资源/伤害副作用；HUD 技能行和 SkillBar 状态同步刷新。
+  - 既有 `test/gameplay` 与集成用例保持通过，新增玩法用例覆盖点击请求、数字键路由、Q 默认技能和解绑。
+- 范围：`project.godot`、`game/main/main.gd`、`test/gameplay/main_scene_gameplay_test.gd`、必要的 integration 测试。
+- 非范围：技能目标选择 UI、按住施法、连发、技能队列、4v4 编队控制。
+- 依赖：`INC-PAWNS-013`、`INC-UI-011`。
+- 检索证据：已执行 `git status --short --branch`（`main...origin/main`，仅 `docs/战斗技能ui.md` 未跟踪）、`git diff --unified=0 -- agent-plan/`（空）、`git diff --cached --unified=0 -- agent-plan/`（暂存区为空）、`git log --oneline -- agent-plan/`（最新计划提交 `ae16ef9`）与 `git grep -n -E "INC-[A-Z]+-[0-9]{3}" -- agent-plan/`（UI 最高 `INC-UI-009`、战斗最高 `INC-COMBAT-003`、Pawns 最高 `INC-PAWNS-012`、Core 最高 `INC-CORE-004`、Testing 最高 `INC-TESTING-002`）。Graphify 图谱缺失且本机缺少 `networkx`，本轮以 Godot MCP 场景树 + 定向源码读取补足结构基线；主场景当前 `HUD/PawnInfoPanel` 为右下锚定，尚无 SkillBar / SkillSlot。；当前主场景只有 `cast_skill`（Q）动作，`main.gd` 直接绑定 `HUD/PawnInfoPanel`。
+- 风险：输入动作与鼠标事件可能重复触发；暂停状态下命令仍需可在恢复后执行；高冲突文件需要串行写入。
+- 实现说明：主场景保留唯一路由层，SkillBar 只发技能请求；快捷键通过统一的 `_request_selected_skill(skill)` 方法进入同一命令路径。
+- 变更文件：`project.godot`（`cast_skill_1`~`cast_skill_6`）、`game/main/main.gd`、`game/main/main.tscn`（`HUD/BottomLeftDock` 与 SkillBar 接线）、`test/gameplay/main_scene_gameplay_test.gd`。
+- 测试证据：统一门禁通过：unit 80 / integration 54 / gameplay 26，共 160 cases、0 failures；gameplay 新增 5 例覆盖 InputMap 1~6、SkillBar 生命周期、Dock 结构/绘制顺序、数字键具体技能路由、点击槽位与无目标 no-op；headless 10 suites、549 assertions、0 failing；Godot MCP validate 通过。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T17:17:48+08:00
+- 已知问题：当前只支持“当前攻击目标”的施法，不做目标选择。
+- 用户验收：已验收
+- 验收时间：2026-09-25T17:17:48+08:00
+- Git：`main` / `182190b`
+- 备注：父 Increment 为 `INC-CROSS-011`。

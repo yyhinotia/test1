@@ -171,3 +171,31 @@
 - 验收时间：2026-09-25T16:50:57+08:00
 - Git：`main` / `193c1c5`
 - 备注：本 Increment 是主动技能系统的第一个可验证切片，只证明“技能可以安全消耗灵力、造成一次伤害并进入冷却”；玩家操作、技能栏和技能编辑/装配不在此范围。
+
+## INC-COMBAT-004：SkillSlot 战斗状态读模型
+
+- 状态：accepted
+- 创建时间：2026-09-25T17:01:58+08:00
+- 最后修改：2026-09-25T17:17:48+08:00
+- 主题：combat
+- 目标：把技能格的可用状态、冷却比例与资源不足原因收敛为只读状态模型，供 UI 显示，不把冷却/资源计算复制到 SkillSlot。
+- 验收标准：
+  - 对空技能、无效 Pawn、死亡 Pawn、冷却中、灵力不足和可用技能分别返回稳定状态：`EMPTY` / `DISABLED` / `COOLDOWN` / `NO_RESOURCE` / `READY`；同时保留 `SELECTED` / `TARGETING` 状态常量供交互层扩展。
+  - 冷却状态返回 `cooldown_remaining`、`cooldown_total`、`cooldown_ratio = remaining / total`，并满足 `1.0` 为刚进入冷却、`0.0` 为冷却完成。
+  - 灵力不足时即使冷却完成也返回 `NO_RESOURCE`，并返回当前灵力、消耗与可读原因；模型不得修改 Pawn、资源池或冷却状态。
+  - 纯逻辑用例覆盖边界（无技能、冷却中点、冷却完成、刚好够灵力、灵力不足、死亡单位）。
+- 范围：新增 `game/combat/skill/skill_slot_state.gd`、对应 unit 测试。
+- 非范围：SkillSlot 场景/视觉、技能目标选择、冷却推进、资源扣除、技能释放。
+- 依赖：`INC-COMBAT-003`、`INC-PAWNS-013`（技能列表）；均需满足后开始。
+- 检索证据：已执行 `git status --short --branch`（`main...origin/main`，仅 `docs/战斗技能ui.md` 未跟踪）、`git diff --unified=0 -- agent-plan/`（空）、`git diff --cached --unified=0 -- agent-plan/`（暂存区为空）、`git log --oneline -- agent-plan/`（最新计划提交 `ae16ef9`）与 `git grep -n -E "INC-[A-Z]+-[0-9]{3}" -- agent-plan/`（UI 最高 `INC-UI-009`、战斗最高 `INC-COMBAT-003`、Pawns 最高 `INC-PAWNS-012`、Core 最高 `INC-CORE-004`、Testing 最高 `INC-TESTING-002`）。Graphify 图谱缺失且本机缺少 `networkx`，本轮以 Godot MCP 场景树 + 定向源码读取补足结构基线；主场景当前 `HUD/PawnInfoPanel` 为右下锚定，尚无 SkillBar / SkillSlot。
+- 风险：状态判定顺序必须固定（DISABLED / COOLDOWN / NO_RESOURCE / READY），否则 UI 与测试容易对同一状态给出不同解释。
+- 实现说明：模型只读取 `Pawn.get_skill_cooldown_remaining()`、`Pawn.current_spirit` 与 `ActiveSkillDefinition` 的规范化字段；状态名称使用 StringName，UI 不解析中文文案。
+- 变更文件：`game/combat/skill/skill_slot_state.gd`（+.uid）、`test/unit/skill_slot_state_test.gd`（+.uid）。
+- 测试证据：统一门禁通过：unit 80 / integration 54 / gameplay 26，共 160 cases、0 failures；`skill_slot_state_test.gd` 6 例覆盖 EMPTY / DISABLED / COOLDOWN / NO_RESOURCE / READY 与冷却比例边界。headless 10 suites、549 assertions、0 failing；Godot MCP validate 通过。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T17:17:48+08:00
+- 已知问题：`SELECTED` / `TARGETING` 本轮只提供状态常量与高亮接口，不是目标选择系统。
+- 用户验收：已验收
+- 验收时间：2026-09-25T17:17:48+08:00
+- Git：`main` / `70a09f1`
+- 备注：父 Increment 为 `INC-CROSS-011`。

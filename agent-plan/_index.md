@@ -1,24 +1,24 @@
 # Agent Plan Index
 
-> 最后修改：2026-09-25T16:51:32+08:00
+> 最后修改：2026-09-25T17:17:48+08:00
 > 规则来源：`../AGENTS.md`
 
 ## 主题索引
 
 | 主题 | 计划文件 | 状态 | 当前 Increment | 最后修改 |
 |---|---|---|---|---|
-| UI | `ui.md` | 已验收 | `INC-UI-009` | 2026-09-25T16:51:32+08:00 |
-| 战斗 | `combat.md` | 已验收 | `INC-COMBAT-003` | 2026-09-25T16:51:32+08:00 |
-| Pawns | `pawns.md` | 已验收 | `INC-PAWNS-012` | 2026-09-25T16:51:32+08:00 |
+| UI | `ui.md` | 已验收 | `INC-UI-011` | 2026-09-25T17:17:48+08:00 |
+| 战斗 | `combat.md` | 已验收 | `INC-COMBAT-004` | 2026-09-25T17:17:48+08:00 |
+| Pawns | `pawns.md` | 已验收 | `INC-PAWNS-013` | 2026-09-25T17:17:48+08:00 |
 | 修炼 | `cultivation.md` | 已验收 | `INC-CULT-004` | 2026-09-25T16:51:32+08:00 |
 | 宗门 | `sect.md` | 未创建 | - | - |
 | 世界 | `world.md` | 未创建 | - | - |
 | 背包 | `inventory.md` | 已验收 | `INC-INVENTORY-001` | 2026-09-25T16:51:32+08:00 |
 | 存档 | `save.md` | 未创建 | - | - |
 | 音频 | `audio.md` | 未创建 | - | - |
-| 核心 | `core.md` | 已验收 | `INC-CORE-004` | 2026-09-25T16:51:32+08:00 |
+| 核心 | `core.md` | 已验收 | `INC-CORE-005` | 2026-09-25T17:17:48+08:00 |
 | 工具 | `tools.md` | 已验收 | `INC-TOOLS-002` | 2026-09-25T13:54:46+08:00 |
-| 测试 | `testing.md` | 已验收 | `INC-TESTING-002` | 2026-09-25T16:51:32+08:00 |
+| 测试 | `testing.md` | 已验收 | `INC-TESTING-003` | 2026-09-25T17:17:48+08:00 |
 
 ## 跨主题父 Increment
 
@@ -34,6 +34,7 @@
 | `INC-CROSS-008` | `accepted` | `INC-PAWNS-009`、`INC-PAWNS-010`、`INC-UI-007`、`INC-CORE-004` | Pawn 信息卡 MVP：数据契约、身份/资源/属性/Build 只读面板与主场景路由 | 通过 | 已验收 | 2026-09-25T16:51:32+08:00 |
 | `INC-CROSS-009` | `accepted` | `INC-CULT-003`、`INC-PAWNS-011`、`INC-UI-008` | 修为进度与下一境界：境界进阶链、运行时修为组件与信息卡展示 | 通过 | 已验收 | 2026-09-25T16:51:32+08:00 |
 | `INC-CROSS-010` | `accepted` | `INC-INVENTORY-001`、`INC-CULT-004`、`INC-PAWNS-012`、`INC-UI-009` | Build 信息卡与武器槽（Phase 2 第一步）：武器静态定义与五行、武器槽容量、PawnData 武器字段与校验、信息卡四类槽位显示 | 通过 | 已验收 | 2026-09-25T16:51:32+08:00 |
+| `INC-CROSS-011` | `accepted` | `INC-PAWNS-013`、`INC-COMBAT-004`、`INC-UI-010`、`INC-UI-011`、`INC-CORE-005`、`INC-TESTING-003` | 战斗技能栏 SkillBar、技能状态读模型、1~6/点击施法入口与左下角 HUD 布局起点 | 通过 | 已验收 | 2026-09-25T17:17:48+08:00 |
 
 ### INC-CROSS-001：第一个 Pawn MVP
 
@@ -272,6 +273,30 @@
 - 验收时间：2026-09-25T16:51:32+08:00
 - Git：`main` / `c21d8ec`
 - 备注：父 Increment 只有在子 Increment 验证通过且用户明确验收后才能进入 `accepted`；验收前不创建 Git commit。本父级只做 Phase 2 第一步，不做槽位交互与 Phase 3。
+
+### INC-CROSS-011：战斗技能栏与左下角 HUD 布局基线
+
+- 状态：accepted
+- 创建时间：2026-09-25T17:01:58+08:00
+- 最后修改：2026-09-25T17:17:48+08:00
+- 来源：`docs/战斗技能ui.md`，以及用户要求把 Pawn 信息卡移至屏幕左下角，并固定左下角为建筑/操作/信息卡的显示起点。
+- 目标：建立可复用的 SkillBar / SkillSlot，使玩家能在暂停式战斗中通过点击或 1~6 释放当前目标的主动技能；同时把 Pawn 信息卡与技能栏纳入统一左下 Dock，由左下向右、向上扩展。
+- 子 Increment：`INC-PAWNS-013`、`INC-COMBAT-004`、`INC-UI-010`、`INC-UI-011`、`INC-CORE-005`、`INC-TESTING-003`。
+- 实施顺序：`INC-PAWNS-013` → `INC-COMBAT-004` → `INC-UI-010` → `INC-UI-011` → `INC-CORE-005` → `INC-TESTING-003`；`main.tscn`、`main.gd`、`project.godot`、`agent-plan/_index.md` 串行写入。
+- 验收标准与证据：
+  - SkillSlot 固定 64×64，节点结构完整；冷却使用真实剩余比例从上往下覆盖，显示剩余秒数；消耗固定右下角、快捷键固定左上角。
+  - SkillBar 按境界主动技能容量自动支持 2/3/4/5/6 个槽位；技能状态至少区分 READY / COOLDOWN / NO_RESOURCE / DISABLED，并保留 SELECTED / TARGETING 扩展状态。
+  - 灵力不足时即使冷却完成也不显示为可释放，SkillSlot 不修改资源、冷却或伤害；点击只发出使用请求。
+  - 选中玩家后可通过鼠标点击技能格和 1~6 快捷键释放当前有效目标，Q 保持释放第一个技能的兼容行为。
+  - PawnInfoPanel 迁至左下 Dock，Dock 从屏幕左下方向右、向上扩展；建筑/操作/信息卡后续可在同一 Dock 追加，不与顶部 HUD、暂停标签或暂停遮罩冲突。
+  - 验证证据包含 Godot MCP validate、统一测试门禁、真实窗口 16:9 / 16:10 / 窄屏报告与截图、`git diff --check`。
+- 非范围：技能装配/卸载、技能树、目标选择圈、范围指示器、4v4 编队栏、正式技能图标素材、建筑与操作菜单业务实现。
+- 风险：多主动技能数据兼容；tscn 冲突；Container 尺寸；左下 Dock 与窄屏顶部 HUD 的重叠；点击与快捷键重复触发。
+- 验证结论：验证通过。统一门禁 160 cases、0 failures；headless 10 suites、549 assertions、0 failing；Godot MCP validate 通过；真实窗口布局报告 `FAILURES=0`。
+- 验收时间：2026-09-25T17:17:48+08:00（用户要求推送并保持本地远端一致，视为验收授权）
+- Git：`main` / `200e822`、`70a09f1`、`3938038`、`84d5ef7`、`182190b`、`cecc91d`
+- 备注：六个子 Increment 均已验证并按 Increment 拆分提交；最终计划回写提交记录在 `_index.md` v4.6。
+
 ## 活跃 Increment
 
 | ID | 父 Increment | 主题 | 状态 | 摘要 | 最后修改 | 验证 | 验收 | Git |
@@ -322,6 +347,12 @@
 | `INC-CULT-004` | `INC-CROSS-010` | cultivation | `accepted` | 武器槽容量与境界容量表扩展 | 2026-09-25T16:51:32+08:00 | 通过 | 已验收 | `main` / `c21d8ec` |
 | `INC-PAWNS-012` | `INC-CROSS-010` | pawns | `accepted` | PawnData 武器字段与 Build 汇总校验接入 | 2026-09-25T16:51:32+08:00 | 通过 | 已验收 | `main` / `c21d8ec` |
 | `INC-UI-009` | `INC-CROSS-010` | ui | `accepted` | 信息卡 Build 区四类槽位与武器显示 | 2026-09-25T16:51:32+08:00 | 通过 | 已验收 | `main` / `c21d8ec` |
+| `INC-PAWNS-013` | `INC-CROSS-011` | pawns | `accepted` | 多主动技能配置与 Build 汇总 | 2026-09-25T17:17:48+08:00 | 通过 | 已验收 | `main` / `200e822` |
+| `INC-COMBAT-004` | `INC-CROSS-011` | combat | `accepted` | SkillSlot 战斗状态读模型 | 2026-09-25T17:17:48+08:00 | 通过 | 已验收 | `main` / `70a09f1` |
+| `INC-UI-010` | `INC-CROSS-011` | ui | `accepted` | SkillSlot 固定技能格组件 | 2026-09-25T17:17:48+08:00 | 通过 | 已验收 | `main` / `3938038` |
+| `INC-UI-011` | `INC-CROSS-011` | ui | `accepted` | SkillBar 动态技能栏与左下角 HUD 起点 | 2026-09-25T17:17:48+08:00 | 通过 | 已验收 | `main` / `84d5ef7` |
+| `INC-CORE-005` | `INC-CROSS-011` | core | `accepted` | 主场景技能栏接入与 1~6 快捷键 | 2026-09-25T17:17:48+08:00 | 通过 | 已验收 | `main` / `182190b` |
+| `INC-TESTING-003` | `INC-CROSS-011` | testing | `accepted` | 技能栏与左下角布局证据 | 2026-09-25T17:17:48+08:00 | 通过 | 已验收 | `main` / `cecc91d` |
 
 ## 已完成 Increment
 
@@ -344,11 +375,20 @@
 | `INC-TESTING-002` | testing（自动隐藏计时墙钟断言） | 2026-09-25T16:19:12+08:00 | 2026-09-25T16:51:32+08:00 | `ab4755d` |
 | `INC-CROSS-009` | cross（含 cultivation / pawns / ui 子 Increment） | 2026-09-25T16:33:34+08:00 | 2026-09-25T16:51:32+08:00 | `8e1f0de` |
 | `INC-CROSS-010` | cross（含 inventory / cultivation / pawns / ui 子 Increment） | 2026-09-25T16:46:30+08:00 | 2026-09-25T16:51:32+08:00 | `c21d8ec` |
+| `INC-CROSS-011` | cross（含 pawns / combat / ui / core / testing 子 Increment） | 2026-09-25T17:17:48+08:00 | 2026-09-25T17:17:48+08:00 | `200e822`、`70a09f1`、`3938038`、`84d5ef7`、`182190b`、`cecc91d` |
+| `INC-PAWNS-013` | pawns（多主动技能配置与 Build 汇总） | 2026-09-25T17:17:48+08:00 | 2026-09-25T17:17:48+08:00 | `200e822` |
+| `INC-COMBAT-004` | combat（SkillSlot 状态读模型） | 2026-09-25T17:17:48+08:00 | 2026-09-25T17:17:48+08:00 | `70a09f1` |
+| `INC-UI-010` | ui（SkillSlot 固定技能格） | 2026-09-25T17:17:48+08:00 | 2026-09-25T17:17:48+08:00 | `3938038` |
+| `INC-UI-011` | ui（SkillBar 与左下角布局） | 2026-09-25T17:17:48+08:00 | 2026-09-25T17:17:48+08:00 | `84d5ef7` |
+| `INC-CORE-005` | core（主场景技能栏与 1~6 快捷键） | 2026-09-25T17:17:48+08:00 | 2026-09-25T17:17:48+08:00 | `182190b` |
+| `INC-TESTING-003` | testing（真实窗口布局证据） | 2026-09-25T17:17:48+08:00 | 2026-09-25T17:17:48+08:00 | `cecc91d` |
 
 ## 流程版本
 
 | 版本 | 时间 | 变更 |
 |---|---|---|
+| v4.6 | 2026-09-25T17:17:48+08:00 | 完成 `INC-CROSS-011` 六个子 Increment 并验收落库：多主动技能、SkillSlot 状态读模型、固定技能格、动态 SkillBar/左下 Dock、主场景 1~6/点击接线与真实窗口布局证据；GdUnit4 160 cases、0 failures，headless 549 assertions、0 failing；按 Increment 拆分 6 个功能/测试提交（`200e822`、`70a09f1`、`3938038`、`84d5ef7`、`182190b`、`cecc91d`），随后执行本计划回写提交 |
+| v4.5 | 2026-09-25T17:01:58+08:00 | 启动 `INC-CROSS-011`（战斗技能栏与左下角 HUD 布局，来源 `docs/战斗技能ui.md`）：按 pawns → combat → ui → core → testing 顺序登记六个子 Increment，先建立多主动技能数据/命令、冷却与灵力状态读模型和固定 SkillSlot，再实现动态 SkillBar、左下 Dock 与主场景 1~6/点击接线 |
 | v4.4 | 2026-09-25T16:51:32+08:00 | 用户验收通过 `INC-CROSS-003`~`INC-CROSS-010`（含独立 Increment `INC-COMBAT-003`、`INC-PAWNS-006`、`INC-PAWNS-009`）并按 Increment 回溯拆分提交：12 个功能/测试提交 + 1 个文档回写提交，工作区自 `3bd28fb` 起累积的全部待验收变更落库；被多个 Increment 共同修改的文件按其最终内容归入首次引入它的提交 |
 | v4.3 | 2026-09-25T16:46:30+08:00 | 完成 `INC-CROSS-010` 全部四个子 Increment 并进入待验收：`INC-INVENTORY-001` 建立武器静态定义与五行标签、`INC-CULT-004` 把武器槽纳入境界容量表（四类槽位、不随境界递增）、`INC-PAWNS-012` 接入 `PawnData.weapon` 与 Build 汇总校验（顺序 功法→武器→主动→被动）、`INC-UI-009` 让信息卡 Build 区显示四类槽位与武器标签（移除修为区标题与分隔线以容纳第四行）；GdUnit4 用例增至 130 个（unit 71 / integration 39 / gameplay 20），10 个 headless 套件 549 项断言，真实窗口三档布局与 MCP 校验全部通过 |
 | v4.2 | 2026-09-25T16:38:52+08:00 | 启动 `INC-CROSS-010`（Build 信息卡与武器槽，来源 `docs/pawns信息ui.md` Phase 2）：先建立武器静态定义与五行、把武器槽纳入境界容量表，再接入 `PawnData` 武器字段与 Build 校验，最后让信息卡 Build 区显示四类槽位；槽位点击详情、装备更换与 Phase 3 突破预览不在本父级范围 |

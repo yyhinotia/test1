@@ -118,3 +118,31 @@
 - 验收时间：2026-09-25T16:50:57+08:00
 - Git：`main` / `ab4755d`
 - 备注：父 Increment 为 `INC-CROSS-005`。本 Increment 只修测试的测量口径，不修改 `game/` 下任何业务代码。
+
+## INC-TESTING-003：技能栏与左下角布局证据
+
+- 状态：accepted
+- 创建时间：2026-09-25T17:01:58+08:00
+- 最后修改：2026-09-25T17:17:48+08:00
+- 主题：testing
+- 目标：扩展真实窗口取证与回归断言，覆盖 SkillBar 状态、2~6 槽位数量、左下 Dock 方向、信息卡/技能栏/顶部 HUD/暂停遮罩的几何关系。
+- 验收标准：
+  - 取证脚本在 16:9、16:10、窄屏三档窗口下输出 Dock、信息卡、技能栏、顶部 HUD、暂停标签和暂停遮罩的矩形证据。
+  - 断言信息卡与技能栏均位于视口内、互不重叠、不与顶部 HUD 或暂停标签重叠；`CONTENT_FITS=true`；暂停遮罩绘制顺序仍在 Dock 之后。
+  - 通过构造不同境界容量验证 SkillBar 槽位数 2/3/4/5/6 的自动排列，不建立境界专用 UI。
+  - 测试证据包含真实窗口报告路径、截图文件、GdUnit4/headless 汇总和退出码；`.mcp/` 产物不入库。
+- 范围：`test/tools/capture_pawn_info_panel_evidence.gd`、必要的 headless/gameplay 测试、`test/README.md`（如运行方式变化）。
+- 非范围：修改业务技能逻辑、引入新测试框架、CI 平台接入。
+- 依赖：`INC-UI-011`、`INC-CORE-005`。
+- 检索证据：已执行 `git status --short --branch`（`main...origin/main`，仅 `docs/战斗技能ui.md` 未跟踪）、`git diff --unified=0 -- agent-plan/`（空）、`git diff --cached --unified=0 -- agent-plan/`（暂存区为空）、`git log --oneline -- agent-plan/`（最新计划提交 `ae16ef9`）与 `git grep -n -E "INC-[A-Z]+-[0-9]{3}" -- agent-plan/`（UI 最高 `INC-UI-009`、战斗最高 `INC-COMBAT-003`、Pawns 最高 `INC-PAWNS-012`、Core 最高 `INC-CORE-004`、Testing 最高 `INC-TESTING-002`）。Graphify 图谱缺失且本机缺少 `networkx`，本轮以 Godot MCP 场景树 + 定向源码读取补足结构基线；主场景当前 `HUD/PawnInfoPanel` 为右下锚定，尚无 SkillBar / SkillSlot。；现有取证脚本只覆盖信息卡三档布局。
+- 风险：真实窗口尺寸在不同 DPI 下可能延迟生效，需要保留重试与失败报告；headless 不能替代多分辨率视觉结论。
+- 实现说明：沿用现有脚本的 print + 报告文件 + PNG 模式，仅扩大测量对象与断言范围；业务失败另立 Increment。
+- 变更文件：`test/tools/capture_pawn_info_panel_evidence.gd`。
+- 测试证据：真实窗口取证 `EXIT=0 FAILURES=0`，报告 `res://.mcp/godot-runtime/screenshots/pawn_info_panel_evidence_report.txt`，6 张 PNG；容量 2/3/4/5/6 → SLOTS=2/3/4/5/6、SLOT_SIZE=(64,64)；1152x648、1152x720、800x720 三档 COMBAT/PAUSED 均满足 DOCK_INSIDE/PANEL_INSIDE/BAR_INSIDE、PANEL_BAR_OVERLAP=false、CONTENT_FITS=true、BOTTOM_ALIGNED=true、PANEL_LEFT_OF_BAR=true、DRAWN_ABOVE_DOCK=true；统一门禁 160 cases、0 failures，headless 549 assertions、0 failing。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T17:17:48+08:00
+- 已知问题：无。
+- 用户验收：已验收
+- 验收时间：2026-09-25T17:17:48+08:00
+- Git：`main` / `cecc91d`
+- 备注：父 Increment 为 `INC-CROSS-011`。
