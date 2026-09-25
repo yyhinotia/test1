@@ -1,6 +1,6 @@
 # Pawns 主题计划
 
-> 最后修改：2026-09-25T21:14:43+08:00
+> 最后修改：2026-09-26T02:01:11+08:00
 > 主题：pawns  
 > 规则来源：`../AGENTS.md`
 
@@ -798,3 +798,32 @@
 - 验收时间：待验收
 - Git：`develop` / `4e92091`
 - 备注：本 Increment 是 Gate C（主动 Build 重构）的机制基础，只提供 API 与读模型收敛，不替玩家做选择；奖励解锁与 Build 预设界面分别由 `INC-WORLD-007`、`INC-UI-018` 接入。
+
+## INC-PAWNS-022：玩家技能池扩到六类价值轴（含 Build 组合空间）
+
+- 状态：accepted
+- 创建时间：2026-09-26T01:56:11+08:00
+- 最后修改：2026-09-26T02:01:11+08:00
+- 主题：pawns
+- 目标：把玩家可用技能池从 3 个扩到 6 个，覆盖「单体输出 / 防御 / 控制 / 位移 / 范围 / 生存」六类价值轴，使「从 6 个技能里按敌人问题挑 2 个」成为真实可感的选择。本 Increment 刻意不改境界槽位：炼气期保持 `active_skill_slots = 2`，因为 C(6,2) = 15 种组合已足够承载 3~4 种核心 Build，同时避免在同一轮里连带扩张容量系统（容量曲线留给突破 / 境界类 Increment）。
+- 验收标准：
+  - 新增 3 个技能资源并各自配置完整字段：突进（`DASH`，接近目标，可带少量伤害）、范围剑气（`AOE_DAMAGE`，以目标为中心打击一群敌人）、吸血（`LIFESTEAL`，造成伤害并按比例回复自身）。
+  - 六个技能与六类价值轴一一对应：御剑斩=单体输出、护体真气=防御、定身术=控制、突进=位移、范围剑气=范围、吸血=生存；不出现两个技能回答同一个问题的情况。
+  - 炼气期 `active_skill_slots` 保持 2 不变，既有容量断言（`BuildValidator` / `realm_definition_test` / `pawn_build_test` / `tactical_skill_catalog_test`）全部原样通过，证明本轮只扩技能池、不扩容量。
+  - 玩家初始装配仍是「御剑斩 + 护体真气」两个技能；其余四个技能只能通过学习 / 首通奖励进入已掌握列表，未解锁技能不出现在技能栏。
+  - 统一门禁 `test/run_tests.ps1 -Layer all` → `RESULT: PASS`。
+- 范围：`game/pawns/data/` 下新增 3 个技能 `.tres`（突进 / 范围剑气 / 吸血）、技能编目与学习路径用例（`test/unit/tactical_skill_catalog_test.gd`、`test/unit/pawn_active_skill_loadout_test.gd`、`test/integration/runtime_active_skill_loadout_test.gd`）。**不改** `game/cultivation/data/realms/*.tres` 与任何容量断言。
+- 非范围：技能升级与等级、技能树、被动技能实装、装备词条、境界突破后的容量曲线（留给后续）、技能图标与动画、平衡数值定稿。
+- 依赖：`INC-COMBAT-010`（三种新效果的运行时支持）、`INC-PAWNS-021`（已掌握 / 已装配双事实与 Build 重配 API，已实现）。
+- 检索证据：2026-09-26T01:56+08:00 `git grep` 确认 `INC-PAWNS` 已用至 021；`Get-ChildItem game/pawns/data -Filter *.tres` 显示现有玩家技能只有 `player_sword_skill.tres`（御剑斩）、`player_guard_skill.tres`（护体真气）与 `skills/player_binding_skill.tres`（定身术，首通奖励）；`Get-Content game/cultivation/data/realms/qi_refining.tres` 显示 `active_skill_slots = 2`；`game/ui/skill_bar.gd` 的 `MAX_SLOTS = 6` 已支持 6 个槽位，不需要改布局结构。
+- 风险：① 六个技能只有两个槽位，若某个技能在任何敌人面前都不值得占一格，说明它回答的问题与其它技能重叠——这是本 Increment 要暴露的问题，不允许靠加槽位掩盖；② 新增技能若默认进入 `player_pawn.tres` 的 `active_skills`，会绕过「解锁 → 重配」的实验闭环，因此初始装配必须保持不变；③ 定身术当前由 `build_test_1v1` 首通奖励发放，新的三个技能需要各自的解锁来源，否则玩家永远拿不到——解锁来源由 `INC-WORLD-008` 的房间链承担，本 Increment 只保证「资源存在且可被学习」。
+- 实现说明：新增 3 个玩家技能资源，全部放在 `game/pawns/data/skills/` 并复用既有 `ActiveSkillDefinition` 脚本 UID（`uid://d4crksxfpy623`）：`player_dash_skill.tres`（踏风突进，`effect_type = 4` DASH，灵力 20 / 冷却 6.0s / 射程 180 / `effect_value = 0.9`）、`player_sword_aoe_skill.tres`（范围剑气，`effect_type = 5` AOE_DAMAGE，灵力 40 / 冷却 7.0s / 射程 100 / `effect_value = 1.2` / `aoe_radius = 90`）、`player_lifesteal_skill.tres`（血引术，`effect_type = 6` LIFESTEAL，灵力 30 / 冷却 6.0s / 射程 90 / `effect_value = 1.3` / `lifesteal_ratio = 0.5`）。三者 `target_type = 2`（ENEMY）。六个技能与六类价值轴一一对应：御剑斩=单体输出、护体真气=防御、定身术=控制、踏风突进=位移、范围剑气=范围、血引术=生存；三个新技能均不进入 `player_pawn.tres` 的初始 `active_skills`，`qi_refining.tres` 的 `active_skill_slots = 2` 未改。`test/unit/tactical_skill_catalog_test.gd` 新增 3 个资源契约用例、1 个「六技能 id / effect_type 唯一且覆盖六类价值轴」用例与 1 个「新技能不在初始装配且槽位仍为 2」用例，并新增 `_unique_count()` 辅助断言。
+- 变更文件：`game/pawns/data/skills/player_dash_skill.tres`、`game/pawns/data/skills/player_sword_aoe_skill.tres`、`game/pawns/data/skills/player_lifesteal_skill.tres`、`test/unit/tactical_skill_catalog_test.gd`。
+- 测试证据：`mcp__godot::validate` 对 3 个新技能资源与 `test/unit/tactical_skill_catalog_test.gd` 均返回 `valid: true` / `errors: []`；单套件 `res://test/unit/tactical_skill_catalog_test.gd` → `Statistics: 10 test cases | 0 errors | 0 failures | 0 flaky | 0 skipped | 0 orphans | PASSED 114ms`，含 `test_dash_skill_is_enemy_dash` / `test_sword_aoe_skill_is_enemy_area_damage` / `test_blood_drain_skill_is_enemy_lifesteal` / `test_six_tactical_skills_cover_distinct_value_axes` / `test_new_skills_stay_out_of_the_initial_loadout`，exit 0；统一门禁 `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` → `GdUnit4 415 cases, 0 failures` / `headless 10 suites, 549 assertions, 0 failing suites` / `RESULT: PASS`，exit 0。
+- 验证状态：验证通过
+- 验证时间：2026-09-26T02:01:11+08:00
+- 已知问题：① 三个新技能目前没有解锁来源，玩家在正常流程中还拿不到——解锁来源由 `INC-WORLD-008` 的房间链承担（本 Increment 只保证资源存在且可被学习）；② 炼气期仍是 2 槽，六技能里同时只能装 2 个，是否出现「任何场合都不值得装」的技能要等 `INC-COMBAT-011` 问题型敌人落地后才能判断；③ 技能栏 `MAX_SLOTS = 6` 但当前境界只显示 2 个可用槽位，属于既有容量投影行为。
+- 用户验收：已验收
+- 验收时间：2026-09-26T02:01:11+08:00
+- Git：`develop` / 待提交（提交后补记 hash）
+- 备注：父 Increment 为 `INC-CROSS-021`；本 Increment 只提供「可选项变多」，是否真的形成 Build 由 `INC-TESTING-019` 的交互矩阵与人工轮回答。
