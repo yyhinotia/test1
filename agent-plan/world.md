@@ -1,6 +1,6 @@
 # World 主题计划（地图 / 秘境 / 遭遇 / 事件 / 探索）
 
-> 最后修改：2026-09-25T18:52:41+08:00
+> 最后修改：2026-09-25T18:53:44+08:00
 > 主题：world
 > 规则来源：`../AGENTS.md`
 > 设计源：`../docs/project_summary.md` §十（秘境系统）、§十八 MVP ④（一个秘境 + 房间 + Boss）
@@ -76,3 +76,33 @@
 - 验收时间：2026-09-25T18:52:41+08:00
 - Git：`main` / `5646769`（+ `INC-CROSS-015` 计划回写提交）
 - 备注：父 Increment 为 `INC-CROSS-015`；本 Increment 是父级「选择遭遇 → 战斗 → 结果」闭环的运行时核心。验收依据：用户 2026-09-25 指令「推送，保持本地远端一致」，按 `AGENTS.md` §4.1 与本仓库 `INC-CROSS-011`~ `INC-CROSS-014` 的既有约定记录为明确验收。
+
+## INC-WORLD-003：秘境房间链定义（DungeonRoom / DungeonDefinition）
+
+- 状态：accepted
+- 创建时间：2026-09-25T18:53:44+08:00
+- 最后修改：2026-09-25T19:07:54+08:00
+- 主题：world
+- 来源：`docs/project_summary.md` §十 秘境系统基本循环、§十八 MVP ④「一个秘境 + 5～10 个房间 + 1 个 Boss」。
+- 目标：把「一个秘境 = 若干房间 + 1 个 Boss」表达成数据资源，让运行时与 UI 只依赖定义，不硬编码房间数、奖励与 Boss 位置。
+- 验收标准：
+  - 新增 `game/shared/resources/dungeon_room.gd`（`class_name DungeonRoom extends Resource`）：`display_name: String`、`encounter: EncounterDefinition`、`reward_spirit_stones: int`、`is_boss: bool`；`is_configured()` 要求 `display_name` 非空、`encounter` 已配置（`encounter.is_configured()`）、`reward_spirit_stones >= 0`。
+  - 新增 `game/shared/resources/dungeon_definition.gd`（`class_name DungeonDefinition extends Resource`）：`id: StringName`、`display_name: String`、`description: String`、`rooms: Array[DungeonRoom]`；提供 `is_configured()`（id / 名称非空、房间数 ≥ 1、每个房间都已配置）、`get_room_count()`、`get_room(index)`（越界返回 null）、`has_boss()`、`get_boss_index()`（无 Boss 返回 -1）、`get_room_reward(index)`、`get_max_reward()`（全部房间奖励之和，用于显示「最多能拿多少」）。
+  - 新增 `game/world/data/encounters/encounter_dungeon_boss.tres`：引用 `INC-PAWNS-017` 的 Boss 档案，`threat_tag` 取 `ENDURANCE`（持续压制），不复制任何数值。
+  - 新增 `game/world/data/dungeons/trial_dungeon.tres`：一个秘境、6 个房间（5 个普通房间 + 1 个 Boss 房间），最后一间 `is_boss = true`；房间奖励随深度递增且 Boss 房间最高；威胁逐层升级（试炼傀儡 → 试炼傀儡 → 铁壁傀儡 → 血刃刺客 → 铁壁傀儡 → 镇狱魔君），全部引用既有正式敌人档案。
+  - 单元用例覆盖：未配置实例与空房间列表为 false；越界 `get_room()` / `get_room_reward()` 安全返回；试炼秘境恰好 6 间、恰好 1 间 Boss 且位于最后一间；奖励单调不减且末间最高；房间引用的敌人档案全部来自 `game/pawns/data/` 正式目录。
+- 范围：`game/shared/resources/dungeon_room.gd`（新增）、`game/shared/resources/dungeon_definition.gd`（新增）、`game/world/data/encounters/encounter_dungeon_boss.tres`（新增）、`game/world/data/dungeons/trial_dungeon.tres`（新增）、`test/unit/dungeon_definition_test.gd`（新增）。
+- 非范围：随机生成 / 分支路线 / 房间事件 / 掉落表 / 存档 / 难度自适应 / 多秘境目录 / 房间 UI。
+- 依赖：`INC-WORLD-001`（已验收，EncounterDefinition）、`INC-PAWNS-017`（Boss 档案）。
+- 检索证据：同一轮检索（工作区干净、无 pending Increment）；`game/world/data/` 下现有 `encounters/` 三份遭遇，尚无秘境（dungeon）层定义；`EncounterDefinition` 已确立「只引用 PawnData、不复制数值」的写法，本 Increment 沿用同一模式把多个遭遇串成有序房间链。
+- 风险：如果把「房间数、奖励、Boss 在第几间」写进脚本常量，后续调难度就必须改代码；因此房间链的全部内容都放在资源里，脚本只读不判。另一风险是奖励过早做成掉落表（物品 / 权重 / 稀有度），MVP 阶段只保留一种可累加货币（灵石）与一个整数奖励。
+- 实现说明：新增 `DungeonRoom` / `DungeonDefinition` 两个只读资源类，并用一个正式秘境数据把它们串起来：`trial_dungeon.tres` 共 6 间房（5 普通 + 1 Boss），奖励 10 / 15 / 25 / 40 / 60 / 100 单调递增，敌人顺序为试炼傀儡 → 试炼傀儡 → 铁壁傀儡 → 血刃刺客 → 铁壁傀儡 → 镇狱魔君，全部引用 `game/pawns/data/` 的正式档案；`encounter_dungeon_boss.tres` 只引用 `enemy_dungeon_boss.tres` 并标记 `ENDURANCE`，不复制数值。越界读取返回 null / 0，未配置房间与空房间链一律 `is_configured() == false`。
+- 变更文件：`game/shared/resources/dungeon_room.gd`（新增）、`game/shared/resources/dungeon_definition.gd`（新增）、`game/world/data/encounters/encounter_dungeon_boss.tres`（新增）、`game/world/data/dungeons/trial_dungeon.tres`（新增）、`test/unit/dungeon_definition_test.gd`（新增）。
+- 测试证据：`pwsh -File test/run_tests.ps1 -Godot <godot> -Layer unit` → PASS（GdUnit4 unit 112 cases / 0 failures，退出码 0）。新增 6 个用例覆盖：未配置 / 空房间链拒绝；越界 `get_room()` / `get_room_reward()` 安全返回；试炼秘境恰好 6 间、恰好 1 间 Boss 且在最后一间；奖励单调不减且末间最高、`get_max_reward()` 等于逐间求和；威胁顺序与正式敌人档案 id 一致；所有房间的敌人档案都来自 `game/pawns/data/`。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T19:01:28+08:00
+- 已知问题：「恰好一个 Boss」由配置与测试约束，`DungeonDefinition` 只提供返回首个 Boss 的 `get_boss_index()`，不在运行时拦截多 Boss；随机生成与多秘境目录属于非范围。
+- 用户验收：已验收（依据用户 2026-09-25 指令「验收通过，分increment提交」与「分批incre单独推送后继续开发」）
+- 验收时间：2026-09-25T19:07:54+08:00
+- Git：
+- 备注：父 Increment 为 `INC-CROSS-016`；本 Increment 是「秘境 = 5～10 个房间 + 1 个 Boss」的数据表达。

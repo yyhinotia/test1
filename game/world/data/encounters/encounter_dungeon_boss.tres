@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://ms821o3x51t2" path="res://game/shared/resources/encounter_definition.gd" id="1_encounter"]
+[ext_resource type="Resource" path="res://game/pawns/data/enemies/enemy_dungeon_boss.tres" id="2_enemy"]
+
+[resource]
+script = ExtResource("1_encounter")
+id = &"encounter_dungeon_boss"
+display_name = "镇狱魔君"
+description = "秘境最深处的镇狱者，护体与血肉都远超沿途傀儡；它出手不快，但会把每一次冒进都熬成代价。"
+enemy_profile = ExtResource("2_enemy")
+threat_tag = 1

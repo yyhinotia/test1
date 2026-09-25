@@ -1,0 +1,57 @@
+[gd_resource type="Resource" script_class="DungeonDefinition" load_steps=13 format=3]
+
+[ext_resource type="Script" uid="uid://0bmf5nm2g8ft" path="res://game/shared/resources/dungeon_definition.gd" id="1_dungeon"]
+[ext_resource type="Script" uid="uid://bso6xo4qyb7am" path="res://game/shared/resources/dungeon_room.gd" id="2_room"]
+[ext_resource type="Resource" path="res://game/world/data/encounters/encounter_trial_puppet.tres" id="3_trial"]
+[ext_resource type="Resource" path="res://game/world/data/encounters/encounter_iron_guard.tres" id="4_iron_guard"]
+[ext_resource type="Resource" path="res://game/world/data/encounters/encounter_blood_blade.tres" id="5_blood_blade"]
+[ext_resource type="Resource" path="res://game/world/data/encounters/encounter_dungeon_boss.tres" id="6_boss"]
+
+[sub_resource type="Resource" script_class="DungeonRoom" id="Room_1"]
+script = ExtResource("2_room")
+display_name = "第一层·试炼"
+encounter = ExtResource("3_trial")
+reward_spirit_stones = 10
+is_boss = false
+
+[sub_resource type="Resource" script_class="DungeonRoom" id="Room_2"]
+script = ExtResource("2_room")
+display_name = "第二层·前行"
+encounter = ExtResource("3_trial")
+reward_spirit_stones = 15
+is_boss = false
+
+[sub_resource type="Resource" script_class="DungeonRoom" id="Room_3"]
+script = ExtResource("2_room")
+display_name = "第三层·重甲"
+encounter = ExtResource("4_iron_guard")
+reward_spirit_stones = 25
+is_boss = false
+
+[sub_resource type="Resource" script_class="DungeonRoom" id="Room_4"]
+script = ExtResource("2_room")
+display_name = "第四层·杀机"
+encounter = ExtResource("5_blood_blade")
+reward_spirit_stones = 40
+is_boss = false
+
+[sub_resource type="Resource" script_class="DungeonRoom" id="Room_5"]
+script = ExtResource("2_room")
+display_name = "第五层·封锁"
+encounter = ExtResource("4_iron_guard")
+reward_spirit_stones = 60
+is_boss = false
+
+[sub_resource type="Resource" script_class="DungeonRoom" id="Room_6"]
+script = ExtResource("2_room")
+display_name = "第六层·镇狱"
+encounter = ExtResource("6_boss")
+reward_spirit_stones = 100
+is_boss = true
+
+[resource]
+script = ExtResource("1_dungeon")
+id = &"trial_dungeon"
+display_name = "试炼秘境"
+description = "六层递进的试炼：越深入，奖励越高，损耗也越难挽回；最后一层由镇狱魔君把守。"
+rooms = Array[DungeonRoom]([SubResource("Room_1"), SubResource("Room_2"), SubResource("Room_3"), SubResource("Room_4"), SubResource("Room_5"), SubResource("Room_6")])
