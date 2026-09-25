@@ -6,6 +6,7 @@ signal shield_changed(pawn: Pawn, current_shield: float, max_shield: float)
 signal spirit_changed(pawn: Pawn, current_spirit: float, max_spirit: float)
 signal cultivation_changed(pawn: Pawn, current_exp: float, required_exp: float)
 signal cultivation_ready(pawn: Pawn)
+signal realm_changed(pawn: Pawn, previous_realm: RealmDefinition, current_realm: RealmDefinition)
 signal state_changed(pawn: Pawn, new_state: int)
 signal attack_performed(target: Pawn)
 signal skill_cast(pawn: Pawn, skill: ActiveSkillDefinition, target: Pawn)
@@ -161,8 +162,15 @@ func get_resource_ids() -> Array[StringName]:
 		return empty_ids
 	return resources.get_resource_ids()
 
-## 本单位的境界；没有配置修炼体系时返回 null，由调用方决定显示策略。
+## 本单位的运行时境界；没有配置修炼体系时返回 null，由调用方决定显示策略。
+## 运行时真相由 CultivationProgressComponent 持有；突破后这里随组件推进，绝不改写 PawnData.realm。
 func get_realm() -> RealmDefinition:
+	if cultivation_progress != null and cultivation_progress.is_configured():
+		return cultivation_progress.get_realm()
+	return get_base_realm()
+
+## 静态档案定义的起始境界；用于恢复校验与“突破前基线”查询。
+func get_base_realm() -> RealmDefinition:
 	if data == null:
 		return null
 	return data.realm
@@ -175,7 +183,7 @@ func get_build_loadout() -> BuildLoadout:
 	var loadout: BuildLoadout = BuildLoadout.new()
 	if data == null:
 		return loadout
-	loadout.realm = data.realm
+	loadout.realm = get_realm()
 	# 功法 = 静态预设（保持原顺序）+ 运行时领悟（按领悟顺序追加）。
 	# 运行时覆盖层只改变本单位的读模型，不改写 `PawnData.techniques`。
 	loadout.techniques.assign(data.techniques)
@@ -307,6 +315,46 @@ func get_active_skill_slot_index(skill: ActiveSkillDefinition) -> int:
 func is_active_skill_enabled(skill: ActiveSkillDefinition) -> bool:
 	return get_active_skill_slot_index(skill) >= 0
 
+## 突破入口：只委托修为组件的唯一裁决；Pawn 不复制阈值、不直接改写境界。
+func try_breakthrough() -> bool:
+	if cultivation_progress == null:
+		return false
+	return cultivation_progress.advance_realm()
+
+## 恢复运行时境界：只接受从静态起始境界沿 next_realm 可达、且不低于当前境界的资源。
+## 这是会话延续 / 测试恢复入口，不绕过境界链；恢复后容量读模型立即反映目标境界。
+func restore_realm(realm: RealmDefinition, initial_exp: float = 0.0) -> bool:
+	if cultivation_progress == null or realm == null or not realm.is_configured():
+		return false
+	if not _is_realm_reachable(realm):
+		return false
+	var current_realm: RealmDefinition = get_realm()
+	if current_realm != null:
+		if realm.tier < current_realm.tier:
+			return false
+		var adjacent_realm: RealmDefinition = current_realm.get_next_realm()
+		if realm != current_realm and realm != adjacent_realm:
+			return false
+
+	var changed: bool = current_realm != realm
+	var previous_realm: RealmDefinition = current_realm
+	cultivation_progress.configure(realm, initial_exp)
+	if changed:
+		realm_changed.emit(self, previous_realm, realm)
+		build_changed.emit(self)
+	return true
+
+## 可达性只沿静态 next_realm 链判断，拒绝越级 / 无关资源；循环上限防止损坏资源形成死循环。
+func _is_realm_reachable(target: RealmDefinition) -> bool:
+	var cursor: RealmDefinition = get_base_realm()
+	var visited: int = 0
+	while cursor != null and visited < 100:
+		if cursor == target:
+			return true
+		cursor = cursor.get_next_realm()
+		visited += 1
+	return false
+
 ## 修为运行时接口：组件是唯一状态源，Pawn 只暴露只读查询与受控增加入口。
 func get_cultivation_progress() -> CultivationProgressComponent:
 	return cultivation_progress
@@ -356,8 +404,10 @@ func _setup_cultivation_progress() -> void:
 		cultivation_progress.progress_changed.connect(_on_cultivation_progress_changed)
 	if not cultivation_progress.became_ready.is_connected(_on_cultivation_became_ready):
 		cultivation_progress.became_ready.connect(_on_cultivation_became_ready)
+	if not cultivation_progress.realm_advanced.is_connected(_on_cultivation_realm_advanced):
+		cultivation_progress.realm_advanced.connect(_on_cultivation_realm_advanced)
 	var initial_exp: float = data.initial_cultivation_exp if data != null else 0.0
-	cultivation_progress.configure(get_realm(), initial_exp)
+	cultivation_progress.configure(get_base_realm(), initial_exp)
 
 
 func _on_cultivation_progress_changed(
@@ -372,6 +422,15 @@ func _on_cultivation_progress_changed(
 
 func _on_cultivation_became_ready(_component: CultivationProgressComponent) -> void:
 	cultivation_ready.emit(self)
+
+
+func _on_cultivation_realm_advanced(
+		_component: CultivationProgressComponent,
+		previous_realm: RealmDefinition,
+		current_realm: RealmDefinition
+	) -> void:
+	realm_changed.emit(self, previous_realm, current_realm)
+	build_changed.emit(self)
 
 
 ## 灵力池只在 PawnData 配置了正上限时创建；默认 max_spirit = 0 的单位不创建池、也不显示灵力条。
