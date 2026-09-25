@@ -138,3 +138,42 @@
 - 验收时间：2026-09-25T19:07:54+08:00
 - Git：`main` / `7b8f1b1`
 - 备注：父 Increment 为 `INC-CROSS-016`；本 Increment 是「贪不贪」决策的运行时主体，收益只在 `CLEARED` / `RETREATED` 时保留。
+
+## INC-WORLD-005：跨对局修士运行时进度延续（功法 / 强化 / 修为）
+
+- 状态：accepted
+- 创建时间：2026-09-25T19:58:19+08:00
+- 最后修改：2026-09-25T20:04:33+08:00
+- 主题：world
+- 目标：让 EncounterSession 在同一场景生命周期内，把玩家单位的运行时 Build（领悟功法 / 武器强化）与修为进度，从旧单位延续到新单位，使秘境换房与重新开局后仍然带着宗门成长再战。
+- 验收标准：
+  - EncounterSession 在每次重建玩家单位前采集当前玩家运行时的强化等级、领悟功法与修为；新玩家入树后、广播 `encounter_started` 前写回。
+  - `begin()` / `begin_with_state()` / `restart()` 的既有资源与胜负语义不变；资源是否延续仍由传入的 `PawnResourceSnapshot` 决定，新一局资源重置，但运行时进度继续。
+  - 静态 `PawnData` / `TechniqueDefinition` / `WeaponDefinition` 不被修改；同类功法不重复、强化不越上限、修为按目标单位上限截断；空单位 / 无修炼组件安全降级。
+  - 集成用例证明连续两次 `begin()` 后强化等级、领悟功法 id、修为当前值保持一致；`INC-TESTING-009` 的真实主场景闭环用例重新开局后攻击力确实高于未强化基线。
+  - 统一门禁 `pwsh -File test/run_tests.ps1 -Godot $env:GODOT_BIN -Layer all` 全绿，headless 10 suites / 549 assertions 不下降。
+- 范围：`game/world/encounter_session.gd`、`test/integration/encounter_session_test.gd`，以及只读消费本能力的 `test/gameplay/sect_loop_test.gd`。
+- 非范围：存档落盘、跨进程 / 跨场景持久化、装备替换、境界突破、技能冷却延续、敌人运行时进度、宗门规则改动。
+- 依赖：`INC-WORLD-004`（资源延续语义）、`INC-PAWNS-018`（运行时 Build API）、`INC-CORE-010`（宗门接线）；由 `INC-TESTING-009` 的真实闭环失败证据触发。
+- 检索证据（2026-09-25T19:58:19+08:00）：`INC-TESTING-009` 的 `test/gameplay/sect_loop_test.gd` 在真实 `main.tscn` 上跑通收益 / 设施 / 修炼 / 炼丹 / 强化后，第一次重开断言修为 12.0 但新单位为 0.0，第二次重开断言强化等级 1 但新单位为 0，攻击力仍为 28.0；`game/world/encounter_session.gd` 只通过 `PawnResourceSnapshot` 延续生命 / 护盾 / 灵力，`begin_with_state()` 重建玩家时没有采集或写回 Pawn 的运行时覆盖层与 `CultivationProgressComponent`。因此本 Increment 是缺口修复的唯一写入者。
+- 风险：EncounterSession 是已验收的高复用会话层，新增延续只扩展现有 `begin_with_state()` 的起局顺序，不改变资源快照与胜负判定；写回必须发生在新单位 `_ready()` 初始化之后，否则会被档案初始值覆盖。另一风险是重复恢复功法 / 强化触发多余信号，因此写回固定在 `encounter_started` 广播之前，并依赖 Pawn 现有去重与封顶规则。
+- 实现说明：
+  - `begin_with_state()` 在调用 `_retire_units()` 之前用 `_capture_player_progress()` 采集旧玩家进度；新单位入树、资源快照写回校验通过之后、`encounter_started` 广播之前用 `_apply_player_progress()` 写回。
+  - 新增私有辅助 `_capture_player_progress()` / `_apply_player_progress(player, progress)`：只读公开 API，不持有 Pawn 引用、不新建资源；写回复用 `Pawn.strengthen_weapon()`（沿用 `MAX_FORGE_LEVEL` 封顶）、`Pawn.learn_technique()`（沿用 Pawn 去重）、`Pawn.set_cultivation_exp()`（沿用目标单位突破阈值截断）。
+  - 资源快照语义保持不变：是否延续生命 / 护盾 / 灵力仍由调用方传入的 `PawnResourceSnapshot` 决定；`state == null` 的新一局仍按档案满状态起局，只有同代修士的运行时进度延续。
+  - 空单位 / 空进度 / 缺组件一律安全降级，不报错也不代建资源；失败路径（快照为死亡状态、单位创建失败）不写回进度。
+- 变更文件：
+  - `game/world/encounter_session.gd`（进度采集 / 写回与两处调用点）
+  - `test/integration/encounter_session_test.gd`（新增两个用例、`APPROX` 常量与 `_cultivation_exp()` 读取辅助）
+- 测试证据：
+  - `& $env:GODOT_BIN --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://test/integration/encounter_session_test.gd -rd res://reports/debug_world005 --ignoreHeadlessMode`：退出码 0，`Overall Summary: 14 test cases | 0 errors | 0 failures | 0 flaky | 0 skipped | 0 orphans`；新增的 `test_runtime_build_and_cultivation_survive_repeated_begin` 与 `test_carried_cultivation_is_clamped_by_target_realm` 均 PASSED。
+  - `& $env:GODOT_BIN --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://test/gameplay/sect_loop_test.gd -rd res://reports/debug_sect_loop --ignoreHeadlessMode`：退出码 0，`2 test cases | 0 errors | 0 failures | 0 orphans`；重开后修为 / 强化等级 / 攻击力三处失败断言全部转为通过。
+  - `pwsh -File test/run_tests.ps1 -Godot $env:GODOT_BIN -Layer all`：退出码 0，`GdUnit4 : 324 cases, 0 failures`（unit 125 / integration 139 / gameplay 60）、`headless : 10 suites, 549 assertions, 0 failing suites`、`RESULT: PASS`。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T20:04:33+08:00
+- 已知问题：`INC-UI-016` 遗留的 `test/integration/sect_panel_test.gd` 在 GdUnit4 目录模式下报 288 orphans，使该层进程退出码为 101（该文件自身 0 failures / 0 errors）；`run_tests.ps1` 汇总仍为 `RESULT: PASS`。该孤儿由 `INC-UI-016` 引入，与本次改动无关，属既有测试整洁度债务。
+- 用户验收：已验收
+- 验收时间：2026-09-25T20:04:33+08:00
+- 验收依据：用户指令「分批increment单独推送后继续开发」（2026-09-25），授权本批次按 Increment 分批提交并逐一推送。
+- Git：`main` / `<commit>`（提交后由 `docs(plan)` 回填）
+- 备注：父 Increment 为 `INC-CROSS-017`；这是「宗门产出 → 修士成长 → 再战」闭环的会话层延续补丁，不改变第一间房资源满状态起局的既有设计。

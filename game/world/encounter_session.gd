@@ -109,6 +109,8 @@ func begin_with_state(encounter: EncounterDefinition, state: PawnResourceSnapsho
 	if resolved_player_data == null:
 		return false
 
+	# 运行时进度必须在退场前采集：旧单位一旦退场，覆盖层与修为随节点一起释放。
+	var carried_progress: Dictionary = _capture_player_progress()
 	_retire_units()
 	var player: Pawn = _spawn_unit(
 		container, PLAYER_SCENE_PATH, PLAYER_NODE_NAME, resolved_player_data, player_spawn_position
@@ -136,6 +138,8 @@ func begin_with_state(encounter: EncounterDefinition, state: PawnResourceSnapsho
 			_state = State.IDLE
 			_encounter = null
 			return false
+	# 运行时进度与资源快照分开：资源是否延续由 state 决定，本代修士的 Build / 修为始终延续。
+	_apply_player_progress(player, carried_progress)
 	_state = State.RUNNING
 	encounter_started.emit(_encounter, _player, _enemy)
 	return true
@@ -144,6 +148,35 @@ func begin_with_state(encounter: EncounterDefinition, state: PawnResourceSnapsho
 ## 采集当前玩家单位的全部资源池，供 DungeonRun 跨房间延续（INC-WORLD-004）。
 func capture_player_state() -> PawnResourceSnapshot:
 	return PawnResourceSnapshot.capture(_player)
+
+## 采集当前玩家单位的运行时进度（INC-WORLD-005）：强化等级、运行时领悟功法、修为当前值。
+## 与 `capture_player_state()` 的资源快照分开：资源快照由调用方决定是否延续，
+## 运行时进度属于同一代修士的身份，换房与重新开局都必须延续；空单位返回空字典。
+func _capture_player_progress() -> Dictionary:
+	if _player == null or not is_instance_valid(_player):
+		return {}
+	return {
+		"forge_level": _player.get_forge_level(),
+		"techniques": _player.get_learned_techniques(),
+		"cultivation_exp": float(_player.get_cultivation_snapshot().get("current_exp", 0.0)),
+	}
+
+
+## 写回运行时进度：强化沿用 Pawn 的封顶规则逐级应用，功法依赖 Pawn 自身去重，
+## 修为按目标单位的突破阈值截断。空进度 / 空单位安全降级，不新建任何资源。
+func _apply_player_progress(player: Pawn, progress: Dictionary) -> void:
+	if player == null or not is_instance_valid(player) or progress.is_empty():
+		return
+	for _level: int in range(maxi(int(progress.get("forge_level", 0)), 0)):
+		player.strengthen_weapon()
+	var techniques: Variant = progress.get("techniques", [])
+	if techniques is Array:
+		for technique: Variant in techniques:
+			if technique is TechniqueDefinition:
+				player.learn_technique(technique)
+	player.set_cultivation_exp(
+		float(progress.get("cultivation_exp", 0.0)), &"encounter_carry"
+	)
 
 
 ## 重新挑战当前遭遇；没有当前遭遇时返回 false，不隐式开局。

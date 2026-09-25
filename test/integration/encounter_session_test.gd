@@ -10,6 +10,7 @@ const TRIAL_ENCOUNTER_PATH: String = "res://game/world/data/encounters/encounter
 const IRON_GUARD_ENCOUNTER_PATH: String = "res://game/world/data/encounters/encounter_iron_guard.tres"
 const PLAYER_DATA_PATH: String = "res://game/pawns/data/player_pawn.tres"
 
+const APPROX: float = 0.001
 const DELTA: float = 1.0 / 60.0
 ## 终局上限 60 秒，与 gameplay 层同一口径；到点未分胜负即视为未结算，不伪造结果。
 const MAX_STEPS: int = 3600
@@ -239,3 +240,62 @@ func test_outcome_labels_cover_every_state() -> void:
 	assert_str(EncounterSession.get_outcome_label(EncounterSession.State.RUNNING)).is_equal("进行中")
 	assert_str(EncounterSession.get_outcome_label(EncounterSession.State.PLAYER_WIN)).is_equal("胜利")
 	assert_str(EncounterSession.get_outcome_label(EncounterSession.State.ENEMY_WIN)).is_equal("失败")
+
+## INC-WORLD-005：同代修士的运行时 Build 与修为跨对局延续，资源快照语义不变。
+func test_runtime_build_and_cultivation_survive_repeated_begin() -> void:
+	var session: EncounterSession = _spawn_session()
+	var encounter: EncounterDefinition = _load_encounter(TRIAL_ENCOUNTER_PATH)
+	assert_bool(session.begin(encounter)).is_true()
+
+	var player: Pawn = session.get_player_pawn()
+	var data_before: PawnData = player.data
+	var static_technique_count: int = data_before.techniques.size()
+	var static_attack: float = data_before.attack
+	assert_int(player.strengthen_weapon()).is_equal(1)
+	var learned: TechniqueDefinition = TechniqueDefinition.new()
+	learned.id = &"encounter_carry_technique"
+	learned.display_name = "延续功法"
+	assert_bool(player.learn_technique(learned)).is_true()
+	assert_float(player.set_cultivation_exp(12.0, &"test_carry")).is_equal_approx(12.0, APPROX)
+
+	assert_bool(session.begin(encounter)).is_true()
+	var next_player: Pawn = session.get_player_pawn()
+
+	assert_object(next_player).is_not_same(player)
+	# 运行时进度延续：强化等级 / 领悟功法 / 修为跟着同一代修士走。
+	assert_int(next_player.get_forge_level()).is_equal(1)
+	assert_float(next_player.get_attack_power()).is_equal_approx(
+		static_attack + Pawn.FORGE_ATTACK_BONUS_PER_LEVEL, APPROX
+	)
+	assert_bool(next_player.has_learned_technique(&"encounter_carry_technique")).is_true()
+	assert_float(_cultivation_exp(next_player)).is_equal_approx(12.0, APPROX)
+	# 静态档案零污染：延续只活在运行时覆盖层。
+	assert_object(next_player.data).is_same(data_before)
+	assert_int(data_before.techniques.size()).is_equal(static_technique_count)
+	assert_float(data_before.attack).is_equal_approx(static_attack, APPROX)
+	# 资源快照语义不变：state 为 null 的新一局仍按档案满状态起局。
+	assert_float(next_player.current_health).is_equal_approx(data_before.max_health, APPROX)
+	assert_float(next_player.current_shield).is_equal_approx(data_before.max_shield, APPROX)
+	await await_idle_frame()
+
+
+## INC-WORLD-005：延续写入按目标单位自身的突破阈值截断，不越过境界上限。
+func test_carried_cultivation_is_clamped_by_target_realm() -> void:
+	var session: EncounterSession = _spawn_session()
+	var encounter: EncounterDefinition = _load_encounter(TRIAL_ENCOUNTER_PATH)
+	assert_bool(session.begin(encounter)).is_true()
+	var player: Pawn = session.get_player_pawn()
+	var required: float = float(player.get_cultivation_snapshot().get("required_exp", 0.0))
+	assert_float(required).is_greater(0.0)
+	player.set_cultivation_exp(required + 500.0, &"test_clamp")
+	assert_float(_cultivation_exp(player)).is_equal_approx(required, APPROX)
+
+	assert_bool(session.restart()).is_true()
+	var next_player: Pawn = session.get_player_pawn()
+
+	assert_float(_cultivation_exp(next_player)).is_equal_approx(required, APPROX)
+	await await_idle_frame()
+
+
+func _cultivation_exp(pawn: Pawn) -> float:
+	return float(pawn.get_cultivation_snapshot().get("current_exp", 0.0))
