@@ -1,6 +1,6 @@
 # World 主题计划（地图 / 秘境 / 遭遇 / 事件 / 探索）
 
-> 最后修改：2026-09-25T21:14:43+08:00
+> 最后修改：2026-09-25T22:12:40+08:00
 > 主题：world
 > 规则来源：`../AGENTS.md`
 > 设计源：`../docs/project_summary.md` §十（秘境系统）、§十八 MVP ④（一个秘境 + 房间 + Boss）
@@ -210,10 +210,10 @@
 
 - 状态：planned
 - 创建时间：2026-09-25T20:47:54+08:00
-- 最后修改：2026-09-25T21:50:38+08:00
+- 最后修改：2026-09-25T22:12:40+08:00
 - 主题：world
 - 重定义说明：本 Increment 原定义「4v4 Vertical Slice 秘境、奖励与定点数据」于 2026-09-25T21:45:00+08:00 按用户 objective 重定义为「固定 1v1 / 1v2 / 1v3 Build 验证遭遇」；原定义原文保留在 Git 历史 `b36e9c0`（`develop`）。
-- 调整说明（2026-09-25T21:50:38+08:00）：按外部设计评审意见补齐 Stage 2 的两处前提——① 1v3 的第三名敌人必须复用 1v1 的同一个核心 Boss，否则 Stage 3 的「同一 Boss」对照不成立；② 1v2 / 1v3 的胜利条件依赖 `INC-COMBAT-009` 的「敌方全灭才判胜」，否则第一名敌人死亡即提前终局。奖励口径不变：首通只给 `player_binding_skill.tres`，不含灵石 / 装备 / 强化 / 随机掉落。
+- 调整说明（2026-09-25T22:12:40+08:00）：按 objective §25「资源结构」把定身术资源纳入本 Increment 的验收标准——`player_binding_skill.tres` 当前仍在 `game/pawns/data/` 根目录，而 `INC-COMBAT-009` 新增的 `enemy_boss_cleave.tres` 已落在 `game/pawns/data/skills/`，为保持技能资源同目录、避免后续技能继续散落在 `data/` 根，本 Increment 顺带完成目录整理与引用更新；不新增 Increment、不改任何技能数值。原调整说明（2026-09-25T21:50:38+08:00）：按外部设计评审意见补齐 Stage 2 的两处前提——① 1v3 的第三名敌人必须复用 1v1 的同一个核心 Boss，否则 Stage 3 的「同一 Boss」对照不成立；② 1v2 / 1v3 的胜利条件依赖 `INC-COMBAT-009` 的「敌方全灭才判胜」，否则第一名敌人死亡即提前终局。奖励口径不变：首通只给 `player_binding_skill.tres`，不含灵石 / 装备 / 强化 / 随机掉落。
 - 目标：用三份独立、可重复挑战的遭遇数据支撑 Build 玩法验证——1v1 用来产生并观察「战斗问题」，1v2 / 1v3 用来观察 Build 是否带来多目标决策差异；首次通关 1v1 只发放定身术，不叠加任何资源奖励。
 - 验收标准：
   - 新增 `game/world/data/encounters/build_test_1v1.tres`、`build_test_1v2.tres`、`build_test_1v3.tres` 三份独立遭遇资源，不覆盖既有 `trial_dungeon.tres` 与既有遭遇目录。
@@ -225,8 +225,8 @@
   - 首次通关 1v1 后 100% 解锁 `player_binding_skill.tres`（定身术）并立即可装备；重复通关不重复发放首次解锁。
   - 首通奖励只有定身术：不得同时发放灵石、装备、强化或随机掉落，避免污染 Build 动机归因。
   - 数据测试断言三份遭遇的玩家 / 敌人数量、阵营、敌人 id 唯一性与奖励数量；不依赖截图或人工数值复述。
-- 范围：`game/world/data/encounters/build_test_1v1.tres` / `build_test_1v2.tres` / `build_test_1v3.tres`、必要的首通解锁奖励字段、1v2 / 1v3 敌人组合所需的既有敌人档案复用或最小新增、相关数据测试。
-- 非范围：四人队伍与任何多玩家单位、2v2 / 3v3 / 4v4、随机掉落、装备生成、境界属性公式、正式美术、存档、联网。
+  - 定身术资源按 objective §25 的建议结构移动到 `game/pawns/data/skills/player_binding_skill.tres`，与 `enemy_boss_cleave.tres` 同目录，并更新全部引用路径（`.tres` / `.tscn` / 脚本 / 测试）；移动后既有 unit / integration 用例（含 `INC-PAWNS-021` 的装配用例）必须全绿。
+- 范围：`game/world/data/encounters/build_test_1v1.tres` / `build_test_1v2.tres` / `build_test_1v3.tres`、必要的首通解锁奖励字段、1v2 / 1v3 敌人组合所需的既有敌人档案复用或最小新增、`player_binding_skill.tres` 的目录整理（`game/pawns/data/` → `game/pawns/data/skills/`）与全量引用更新、相关数据测试。
 - 依赖：`INC-COMBAT-009`（危险窗口与事件）、`INC-PAWNS-021`（技能掌握与装配）；父 Increment `INC-CROSS-019`。
 - 检索证据：2026-09-25T21:50:38+08:00 执行 `git status --short`（工作区干净）、`git diff --unified=0 -- agent-plan/`（空）、`git diff --cached --unified=0 -- agent-plan/`（空）、`git log --oneline -- agent-plan/`（HEAD `0f8fb41`）与 `git grep -n -E "INC-(COMBAT-009|WORLD-007|TESTING-011)" -- agent-plan/`；结论：三个 Increment 均为 `planned`、未实现，可安全调整；`game/world/encounter_session.gd` 头部注释与 `_on_unit_died()` 仍为单点终局（敌人死亡即 PLAYER_WIN），证明 1vN 全灭判胜确实未实现。历史记录（2026-09-25T21:45:00+08:00） `git status --short`、`git diff --unified=0 -- agent-plan/`（读取本批重定义）、`git log --oneline -5 -- agent-plan/`（最新 `1dbdba5`）与 `git grep -n "INC-WORLD-007"`；`INC-WORLD-007` 仍为 `planned`、未实现。既有 `game/world/data/dungeons/trial_dungeon.tres` 与 `game/world/data/encounters/` 已提供单人遭遇；`EncounterDefinition` 在 `INC-PAWNS-020` 后已支持可选 `enemy_squad`，多敌人数据无需新契约。
 - 风险：如果首通奖励同时给资源，玩家第二轮再战的动机无法归因到定身术；必须坚持「奖励 = 新能力」单一变量。第二个风险是 1v2 / 1v3 退化成同一敌人复制，导致目标选择没有真实差异，必须使用行为角色不同的敌人组合。第三个风险是重复挑战残留上一局状态，必须由重开路径显式清理。

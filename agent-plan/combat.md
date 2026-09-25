@@ -350,7 +350,7 @@
 
 - 状态：awaiting_acceptance
 - 创建时间：2026-09-25T20:47:54+08:00
-- 最后修改：2026-09-25T22:05:26+08:00
+- 最后修改：2026-09-25T22:15:00+08:00
 - 主题：combat
 - 重定义说明：本 Increment 原定义「四方战队遭遇、团队胜负与 AI 目标重选」于 2026-09-25T21:45:00+08:00 按用户 objective 重定义为「1v1 战斗问题窗口与轻量 CombatEvent」；原定义原文保留在 Git 历史 `b36e9c0`（`develop`）。重定义原因：父 Increment `INC-CROSS-019` 从 4v4 Vertical Slice 改为 1v1 → 1vN Build 玩法验证，4v4 专用范围冻结。
 - 调整说明（2026-09-25T21:50:38+08:00）：按外部设计评审意见（对 4v4 版 `INC-CROSS-019` 的评审第 8 节「Gate A：战斗技术成立」中的「敌方全灭胜利 / 主角死亡失败」条目），把本 Increment 的终局判定从「敌人死亡即胜利」修正为 1vN「敌方全灭才判胜」。修正原因：Stage 2 的 1v2 / 1v3 若沿用单点判胜，会在第一名敌人死亡时提前结束对局，Stage 2 无法成立。`agent-plan/pawns.md` 的 `INC-PAWNS-020` 已注明「主角死亡或敌方全灭的终局判定留给 `INC-COMBAT-009` 接线」，`game/world/encounter_session.gd` 头部注释写了同一约定，本次直接对齐该约定，不新增 Increment。
@@ -387,5 +387,5 @@
 - 已知问题：`integration` / `gameplay` 层在统一门禁输出里仍打印 `FAIL` 标签（既有噪音，实际 `0 errors / 0 failures`，以 `RESULT: PASS` 为准）；既有测试债务 `test/gameplay/main_scene_sect_test.gd` 324 orphans、`test/integration/sect_panel_test.gd` 288 orphans 未清理。危险窗口目前只有 Boss 一个数据实例，1v2 / 1v3 的阵容数据留给 `INC-WORLD-007`。
 - 用户验收：待验收
 - 验收时间：待验收
-- Git：待提交
+- Git：`develop` / `a8a3c9e`
 - 备注：本 Increment 是 `INC-CROSS-019` 开发顺序的第 1 步，只负责「制造一个可被 Build 改变的问题」；Build 重构机制由 `INC-PAWNS-021` 提供，实验场景与首通奖励由 `INC-WORLD-007` 提供。用户 2026-09-25 指令「进行incre调整并推送到dev分支」要求把本 Increment 成果推送到开发分支 `develop`；本 Increment 的代码进入 `develop`、未进入 `main`，仍在等待用户对验收标准的明确结论。
