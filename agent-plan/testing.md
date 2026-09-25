@@ -387,45 +387,49 @@
 - Git：待提交
 - 备注：父 Increment 为 `INC-CROSS-018`；这是本批的玩法验收证据，而不是单纯 unit 覆盖。
 
-## INC-TESTING-011：4v4 闭环证据、同 Boss 再战对照与人工玩法验收剧本
+## INC-TESTING-011：Build Replay 实验记录（自动化证据 + 人工三问）
 
 - 状态：planned
 - 创建时间：2026-09-25T20:47:54+08:00
-- 最后修改：2026-09-25T21:14:43+08:00
+- 最后修改：2026-09-25T21:45:00+08:00
 - 主题：testing
-- 目标：把父 Increment `INC-CROSS-019` 的两层 Gate 变成可复核证据——Gate A 用 2v2 → 3v3 → 4v4 证明多人战斗技术成立，Gate B 用同一个 4v4 Boss 的 A / B 对照 + 人工五问回答「奖励是否驱动 Build 重构，且重构是否真的改变战斗决策」；两者同时成立才允许父级 `accepted`。
+- 重定义说明：本 Increment 原定义「4v4 闭环证据、同 Boss 再战对照与人工玩法验收剧本」于 2026-09-25T21:45:00+08:00 按用户 objective 重定义为「1v1 → 1vN 的 Build Replay 实验记录」；4v4 专用证据口径退役，原定义原文保留在 Git 历史 `b36e9c0`（`develop`）。
+- 目标：把父 Increment `INC-CROSS-019` 的五个 Gate 变成可复核证据——自动化只证明机制成立（能学、能装、能切、定身能真实改变敌人状态、同遭遇可重复挑战、事件可记录），人工三问只采集玩家原话，回答「问题是否被描述、奖励是否与问题关联、是否主动重构、行为是否改变、能否解释原因」。
 - 验收标准：
-  - Gate A（Combat Vertical Slice 技术证据，自动化）：
-    - gameplay 用例通过真实主场景输入 / 按钮路由完成 2v2 → 3v3 → 4v4 房间链，断言每间的真实玩家 / 敌人数量、阵营与主选中单位状态。
-    - 断言队友阵亡不提前终局、主角阵亡立即失败、敌人全灭才胜利，以及 AI 在目标失效后重选最近有效目标。
-    - 断言多选移动 / 集火命令到达所有存活选中单位，死亡单位自动移出选择集合。
-    - 断言第三间首通 100% 解锁 `player_binding_skill.tres` 并立即可装备，重复通关不重复发放首次解锁。
-    - 断言主角 Build 可从 A（御剑斩 + 护体真气）切到 B（御剑斩 + 定身术），且装配结果只来自运行时统一装配，不出现 UI / SkillBar / PlayerController / Pawn 各自直读 `PawnData` 的技能分叉。
-  - Gate B（玩法假设证据，A / B 对照）：
-    - 提供「在同一个 4v4 Boss 上重新开局 / 再战」入口；Gate B 对照只重打同一个核心 Boss，不要求重播 2v2 / 3v3，以降低学习效应对对照的污染。
-    - 产出 `build_decision_before_after` 对照记录：Round 1（A Build）与 Round 2（B Build）分别记录危险窗口、控制生效、承伤、击杀顺序与战斗时长，至少一项出现可解释差异；不要求第二轮「更轻松通关」，只要求过程不同。
-    - 45 灵石与定身术分开记录：灵石可以正常入账，但不得成为 Gate B 第一轮的主要变量，也不得作为 Build 重配面板的前置条件。
-    - 自动化只证明机制闭环与过程差异存在；「玩家是否愿意因为奖励重构」的结论必须来自人工回答，不得由断言代替。
-  - 人工验收剧本（五问，必须保留玩家原话）：
-    - 步骤：① 用初始 A Build 打完第一轮 4v4 → ② 观察并记录 Boss 危险窗口 → ③ 首通获得定身术 → ④ 玩家自主决定是否切到 B Build → ⑤ 用 B Build 重打同一个 4v4 Boss。
-    - Q1 新奖励有没有让你产生「我想换 Build」的想法？
-    - Q2 你具体想换什么？
-    - Q3 为什么换（战术理由 / 好奇 / 数值 / 通关压力）？
-    - Q4 换完以后，战斗有没有按照你预期发生变化？
-    - Q5 如果没有这个奖励，你还会主动再打一轮吗？
-    - 追加问题：如果不换 Build，你认为第一轮战斗里的哪个问题仍然存在？
-    - 结论按 `ReplayIntent`（yes / no）、`BuildChange`（none / A→B / other）、`Reason`（tactical / numerical / curiosity / completion / other）、`PerceivedImpact`（none / low / medium / high）归档，但必须同时保留玩家原话，不得只留打分。
-  - 失败条件（任一命中即父级不得 `accepted`，并回到战斗核心重设 Increment）：
-    - A：奖励没有产生 Build 动机。
-    - B：玩家只是好奇试一下，说不出战术原因。
-    - C：Build 改了，但战斗没有任何可观察变化。
-    - D：4v4 只是「人更多」，玩家不需要更多操作 / 选目标 / 暂停 / 调整策略。
-  - 三档分辨率 1152x648 / 1152x720 / 800x720 的真实窗口截图与布局量测无重叠 / 无溢出；命令、退出码、关键输出和失败前后差异留档。
-- 范围：`tests/` 下的 4v4 Vertical Slice 场景入口与取证脚本、`test/gameplay/` 下的真实主场景闭环用例、`test/README.md` 与 `tests/README.md` 的索引说明、人工验收记录。
-- 非范围：替代人工验收、正式平衡测试、随机化压力测试、AOE / 仇恨 / 存档 / 联网测试。
-- 依赖：`INC-PAWNS-020`、`INC-PAWNS-021`、`INC-COMBAT-009`、`INC-WORLD-007`、`INC-CORE-012`、`INC-UI-018`、`INC-TESTING-012`；父 Increment `INC-CROSS-019`。
-- 检索证据：2026-09-25T21:14:43+08:00 执行 `git status --short`（`agent-plan/` 5 个主题文件有未提交的计划调整）、`git diff --unified=0 -- agent-plan/`（读取本批增量调整）、`git log --oneline -5 -- agent-plan/`（最新 `3e8e0a3`）与 `git grep -n "INC-TESTING-011"` 检查；编号已占用且归属本批。现有 gameplay 证据覆盖单单位宗门闭环、秘境闭环与 Build 决策对照，但没有真实主场景 4v4 队伍、奖励解锁与同 Boss 再战闭环。
-- 风险：真实主场景测试容易受暂停、自动隐藏与活动单位残留影响，必须在 `after_test()` 清理并优先读取公开 API。第二个风险是 45 灵石与定身术同时到账，玩家可能因经济收益而不是新战术产生重构意图；必须把定身术解锁当成 Gate B 的唯一主要变量，灵石单独记录。已知 `main_scene_sect_test.gd` 324 orphans 与 `sect_panel_test.gd` 目录模式 288 orphans 是既有债务，需与本次新增失败区分。
+  - 机制证据（自动化，不替代人工结论）：
+    - 技能可以学习并进入 known skills，可以进入 equipped skills；Build A 与 Build B 均可加载。
+    - Build B 的技能真实进入 SkillBar；切换装配后 `SkillBar` / 信息卡 / 技能输入当帧跟随。
+    - 定身实际作用于敌人：目标进入 stun 状态，危险技能被取消且该次伤害不结算。
+    - 战斗结束后可以再次进入同一遭遇，事件序列独立不跨局污染。
+    - 自动化不得断言「玩家是否愿意重构」，只能断言机制事实。
+  - 实验记录证据（Round 1 / Round 2 对照）：
+    - 产出 `build_replay_record`：Round 1（Build A）与 Round 2（Build B）分别记录 CombatEvent 序列（`danger_window_opened` → `skill_hit` / `skill_cancelled` 等）、承伤合计与战斗时长。
+    - 明确记录「第二轮不要求更快或更少掉血」，只要求玩家采用了不同的解决方案；不得把时长 / 承伤优劣写成通过条件。
+    - 奖励记录只有定身术；灵石 / 装备 / 强化 / 随机掉落不得出现在第一轮奖励字段中。
+  - 人工验收剧本（三问，开放提问、保留原话、不得诱导）：
+    - 步骤：① 用 Build A 打完 1v1 → ② 首通获得定身术 → ③ 玩家自行决定是否切换 Build → ④ 用当前 Build 重打同一个 1v1。
+    - Q1 第一轮战斗中，你觉得最麻烦的问题是什么？
+    - Q2 拿到定身术后，你为什么选择 / 不选择换 Build？
+    - Q3 第二次战斗和第一次相比，你具体改变了什么？
+    - 记录格式：`ReplayIntent`（yes / no）、`BuildChange`（none / A→B / other）、`Reason`（tactical / numerical / curiosity / completion / other）、`PerceivedImpact`（none / low / medium / high）仅作为归档标签，必须同时保留玩家原话；不得用打分替代原话。
+  - 五个 Gate（父 Increment 验收硬门，缺一不可）：
+    - Gate A 玩家能描述第一轮的具体战斗问题（不是「挺难的」这类泛化描述）。
+    - Gate B 玩家能理解定身术与第一轮问题的关联。
+    - Gate C 玩家在没有强制要求的情况下主动选择 Build B。
+    - Gate D 第二轮玩家主动使用定身术去解决第一轮遇到的问题。
+    - Gate E 玩家能解释为什么这样改 Build。
+  - 失败条件（任一命中即父级不得 `accepted`，且禁止继续扩 Build 系统）：
+    - Failure 1 玩家觉得定身不错但不想换 Build。
+    - Failure 2 玩家换了 Build，但第二轮仍按第一次的方式打。
+    - Failure 3 换 Build 的原因是「因为你让我试试」，而不是第一轮的问题。
+    - Failure 4 Build A / B 的实际战斗体验几乎完全一样。
+    - Failure 5 玩家只关注数值更大，不关心技能交互与战术选择。
+  - 三档分辨率 1152x648 / 1152x720 / 800x720 的真实窗口截图与布局量测无重叠 / 无溢出；命令、退出码、关键输出与失败前后差异留档。
+- 范围：`tests/` 下的 1v1 Build Replay 场景入口与取证脚本、`test/gameplay/` 下的真实主场景机制闭环用例、`test/README.md` 与 `tests/README.md` 的索引说明、人工验收记录归档。
+- 非范围：替代人工验收、1v2 / 1v3 的多目标决策结论（属于 `INC-CROSS-019` Stage 2）、正式平衡测试、随机化压力测试、AOE / 仇恨 / 存档 / 联网测试。
+- 依赖：`INC-COMBAT-009`、`INC-PAWNS-021`、`INC-WORLD-007`、`INC-UI-018`、`INC-TESTING-012`；父 Increment `INC-CROSS-019`。
+- 检索证据：2026-09-25T21:45:00+08:00 执行 `git status --short`（工作区为 `INC-PAWNS-021` 实现与本批 plan 调整）、`git diff --unified=0 -- agent-plan/`（读取本批重定义）、`git log --oneline -5 -- agent-plan/`（最新 `1dbdba5`）与 `git grep -n "INC-TESTING-011"`；现有 gameplay 证据覆盖单单位宗门闭环、秘境闭环与 Build 决策对照，但没有「首通解锁 → 主动重构 → 同遭遇再战 → 行为变化」的实验记录。
+- 风险：真实主场景测试容易受暂停、自动隐藏与活动单位残留影响，必须在 `after_test()` 清理，否则用例之间互相污染。第二个风险是把人工结论自动化替代，必须坚持「自动化只证明机制」。第三个风险是提问诱导，必须保持 Q1~Q3 原文并避免在问题里提示定身术与危险技能的关系。
 - 实现说明：待实现。
 - 变更文件：待实现。
 - 测试证据：待实现。
@@ -435,27 +439,28 @@
 - 用户验收：待验收
 - 验收时间：待验收
 - Git：待提交
-- 备注：父 Increment `INC-CROSS-019` 的退出判定由「Gate A 自动证据 + Gate B 自动对照 + 用户人工五问回答」共同组成；机制通过但用户回答「不会」或命中失败条件 A~D 时，不得继续扩内容。
+- 备注：Gate A~E 的顺序不可颠倒：玩家先发现问题，才可能理解奖励与问题的关联，才可能主动重构，才可能改变行为并解释原因。
 
 ## INC-TESTING-012：场景化测试入口拆分到 `tests/`
 
 - 状态：planned
 - 创建时间：2026-09-25T21:14:43+08:00
-- 最后修改：2026-09-25T21:14:43+08:00
+- 最后修改：2026-09-25T21:45:00+08:00
 - 主题：testing
-- 目标：把「哪个测试跑哪个场景」从 `main.tscn` 的隐式状态中拆出来——每个测试场景一个独立入口，统一放在 `tests/`，`main.tscn` 只保留正式游戏入口职责。
+- 重定义说明：本 Increment 原定义（为 4v4 技术 Slice 提供 2v2 / 3v3 / 4v4 与多选编队场景入口）于 2026-09-25T21:45:00+08:00 按用户 objective「每个不同场景的测试入口拆分出来，不要都放在 main 中」重定义为 1v1 / 1v2 / 1v3 / Build 切换 / 首通解锁场景入口。
+- 目标：把「每个不同测试场景一个独立入口」落成仓库结构，使 `main.tscn` 只保留正式游戏入口职责，所有测试专用场景、参数与资源引用都下沉到新增的 `tests/` 目录，并让每个场景有独立的可复现启动命令。
 - 验收标准：
-  - 新建 `tests/` 目录与 `tests/README.md`，写明目录规范、命名规则与运行方式（场景入口 + 命令行 / MCP 启动命令）。
-  - 每个场景一个入口 `.tscn`（必要时附带 `.gd`），至少覆盖：4v4 Boss 玩法验证（Gate B）、2v2 技术验证、3v3 技术验证、多人编队 / 多选命令验证、Build 重配面板验证、首通奖励解锁验证。
-  - 测试专用节点、测试专用参数与测试专用资源引用下沉到 `tests/` 场景，`main.tscn` 不再为了测试而内嵌测试专用引用。
+  - 新增 `tests/` 目录与 `tests/README.md`，README 写明目录规范、每个入口的场景用途、启动命令（命令行 / MCP）与与 `test/` 的职责边界。
+  - 每个场景一个独立入口 `.tscn`（必要时附 `.gd`），至少覆盖：1v1 战斗问题窗口验证、1v2 遭遇验证、1v3 遭遇验证、Build A/B 切换面板验证、1v1 首通解锁定身术验证。
+  - 测试专用节点、测试专用参数与测试专用资源引用全部下沉到 `tests/` 场景；`main.tscn` 不再为测试内嵌专用引用，也不接受测试专用启动参数。
   - `main.tscn` 继续作为正式游戏入口，加载后进入正常秘境流程；测试入口不得改变正式入口行为。
   - `test/`（GdUnit4 自动化断言）与 `tests/`（场景化可交互入口）职责边界写清楚，并在 `test/README.md` 交叉引用。
-  - 每个场景入口在真实窗口下可加载、可用三档分辨率打开且无脚本错误；重复运行不重复解锁、不残留活动单位。
-- 范围：新增 `tests/`（场景、脚本、README）、`AGENTS.md` §5.1 与 §12.6 的目录规范条目、`test/README.md` 的交叉说明、`agent-plan/testing.md` 与 `_index.md` 的回写。
+  - 每个入口在真实窗口下可加载、可重复打开且无脚本错误；重复运行不重复解锁技能、不残留活动单位。
+- 范围：新增 `tests/`（场景、脚本、README）、`AGENTS.md` §5.1 与 §12.6 的目录规范条目（已随本批生效）、`test/README.md` 的交叉说明、`agent-plan/testing.md` 与 `_index.md` 的回写。
 - 非范围：替换 GdUnit4 自动化断言、引入新测试框架、修改正式游戏玩法规则。
-- 依赖：`INC-WORLD-007`（提供 4v4 Vertical Slice 数据）、`INC-CORE-012`（提供多选与重开入口）。
-- 检索证据：2026-09-25T21:14:43+08:00 执行 `git status --short`、`git diff --unified=0 -- agent-plan/`、`git log --oneline -5 -- agent-plan/`（最新 `3e8e0a3`）与 `git grep -n "INC-TESTING-012"`；编号未占用，且仓库根目录当前没有 `tests/` 目录。
-- 风险：目录名 `tests/` 与既有 `test/` 只差一个字母，容易混用；必须在两份 README 与 Agent 规则里显式写明职责边界，否则后续 Agent 可能把自动化断言写进 `tests/` 或把场景入口写进 `test/`。
+- 依赖：`INC-WORLD-007`（提供 1v1 / 1v2 / 1v3 遭遇数据）、`INC-UI-018`（提供 Build 切换面板）、`INC-COMBAT-009`（提供问题窗口）、`INC-PAWNS-021`（提供技能解锁 API）。
+- 检索证据：2026-09-25T21:45:00+08:00 执行 `git status --short`、`git diff --unified=0 -- agent-plan/`、`git log --oneline -5 -- agent-plan/`（最新 `1dbdba5`）与 `git grep -n "INC-TESTING-012"`；编号已占用且归属本批，仓库根目录当前没有 `tests/` 目录。
+- 风险：目录名 `tests/` 与既有 `test/` 只差一个字母，容易混用；必须在两份 README 与 Agent 规则里显式写明职责边界，否则后续 Agent 可能把自动化断言写进 `tests/` 或把场景入口写进 `test/`。第二个风险是测试入口悄悄改正式入口行为，必须由「`main.tscn` 不含测试专用引用」这一条守住。
 - 实现说明：待实现。
 - 变更文件：待实现。
 - 测试证据：待实现。

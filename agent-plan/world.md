@@ -206,27 +206,27 @@
 - Git：`main` / `dba3f01`
 - 备注：父 Increment 为 `INC-CROSS-018`；本 Increment 保证突破成果在同一代修士的多次遭遇之间不丢失。
 
-## INC-WORLD-007：4v4 Vertical Slice 秘境、奖励与定点数据
+## INC-WORLD-007：固定 1v1 / 1v2 / 1v3 Build 验证遭遇
 
 - 状态：planned
 - 创建时间：2026-09-25T20:47:54+08:00
-- 最后修改：2026-09-25T21:14:43+08:00
+- 最后修改：2026-09-25T21:45:00+08:00
 - 主题：world
-- 目标：用独立资源落地 2v2 → 3v3 → 4v4 的三段 Vertical Slice 秘境、固定四人队伍、三名敌人队伍与首通奖励，让玩家能在不扩系统的情况下获得“定身术”并进入第二次构筑决策。
+- 重定义说明：本 Increment 原定义「4v4 Vertical Slice 秘境、奖励与定点数据」于 2026-09-25T21:45:00+08:00 按用户 objective 重定义为「固定 1v1 / 1v2 / 1v3 Build 验证遭遇」；原定义原文保留在 Git 历史 `b36e9c0`（`develop`）。
+- 目标：用三份独立、可重复挑战的遭遇数据支撑 Build 玩法验证——1v1 用来产生并观察「战斗问题」，1v2 / 1v3 用来观察 Build 是否带来多目标决策差异；首次通关 1v1 只发放定身术，不叠加任何资源奖励。
 - 验收标准：
-  - 新增独立 Vertical Slice 数据，不覆盖 `trial_dungeon.tres`：一个秘境定义、三个房间、三个 `EncounterDefinition`、玩家四人 `SquadDefinition` 与三个敌人 `SquadDefinition` / 固定档案引用。
-  - 三个房间的真实单位规模依次为 2v2、3v3、4v4；每个房间只通过资源引用连接，不在 `main.gd` / `DungeonRun` 硬编码房间数、成员名单或敌人数。
-  - 玩家队伍固定为主角 + 护法 + 控场 + 剑修；主角继续使用既有玩家档案与运行时进度，队友使用本阶段固定档案且不进入长期养成。
-  - 第三间 Boss 首次通关 100% 解锁 `player_binding_skill.tres`（定身术）并立即可装备，直接进入 Build 重构；重复通关不重复发放首次解锁。
-  - 45 灵石可以作为后续宗门经济奖励保留，但必须与 Gate B 的 Build 决策记录解耦；它不得阻止 / 替代定身术解锁，也不得作为第一轮玩法验收的主要变量。
-  - 提供在同一 4v4 Boss 上再次挑战的入口；Gate B 的重构后对照只重打同一 Boss，不需要重播 2v2 / 3v3 房间链，后者只服务 Gate A 技术验证。
-  - 三个房间均可由 `DungeonRun` 推进、撤退、重开，运行时境界 / Build 进度按成员 id 延续；旧秘境资源行为保持不变。
-  - 数据测试断言规模、阵营、成员 id 唯一性、奖励数量与资源引用；不依赖截图或人工数值复述。
-- 范围：`game/world/data/dungeons/vertical_slice_dungeon.tres`、`game/pawns/data/squads/vertical_slice_party.tres`、`vertical_slice_enemy_*.tres`、`game/world/data/encounters/vertical_slice_room_*.tres`、必要的奖励字段与数据测试。
-- 非范围：招募 / 换人 / 队友养成、随机掉落、装备生成、境界属性公式、正式美术、存档、联网。
-- 依赖：`INC-COMBAT-009`；父 Increment `INC-CROSS-019`。
-- 检索证据：2026-09-25T20:47:54+08:00 执行 `git status --short` 与 `git grep` 检查；`INC-WORLD-007` 未占用。现有 `trial_dungeon.tres` 只有单敌人遭遇链，玩家资源没有队伍档案，也没有首通技能解锁的秘境奖励契约。
-- 风险：若把奖励直接写进 `main.gd`，后续无法区分“首通解锁”与“重复收益”；必须由秘境 / 宗门状态持有首通事实。第二个风险是 45 灵石与定身术同时出现，玩家可能因经济收益而不是新战术产生重构意图；因此 Gate B 必须把定身术解锁作为唯一主要变量，灵石单独记录、单独结算。第三个风险是队伍资源 UID 与成员引用不一致，需通过 Godot 加载测试验证资源图。
+  - 新增 `game/world/data/encounters/build_test_1v1.tres`、`build_test_1v2.tres`、`build_test_1v3.tres` 三份独立遭遇资源，不覆盖既有 `trial_dungeon.tres` 与既有遭遇目录。
+  - 1v1 使用核心 Boss（危险技能行为模式与 `INC-COMBAT-009` 一致）；1v2 / 1v3 使用行为角色不同的敌人组合（近战输出 / 远程输出 / 危险技能），不得是同一敌人复制 N 份。
+  - 玩家侧始终只有 1 个 Pawn：三份遭遇的玩家数为 1，敌人数量依次为 1 / 2 / 3。
+  - 三份遭遇均可在同一运行内重复挑战，重开不残留上一局单位、事件记录或技能状态。
+  - 首次通关 1v1 后 100% 解锁 `player_binding_skill.tres`（定身术）并立即可装备；重复通关不重复发放首次解锁。
+  - 首通奖励只有定身术：不得同时发放灵石、装备、强化或随机掉落，避免污染 Build 动机归因。
+  - 数据测试断言三份遭遇的玩家 / 敌人数量、阵营、敌人 id 唯一性与奖励数量；不依赖截图或人工数值复述。
+- 范围：`game/world/data/encounters/build_test_1v1.tres` / `build_test_1v2.tres` / `build_test_1v3.tres`、必要的首通解锁奖励字段、1v2 / 1v3 敌人组合所需的既有敌人档案复用或最小新增、相关数据测试。
+- 非范围：四人队伍与任何多玩家单位、2v2 / 3v3 / 4v4、随机掉落、装备生成、境界属性公式、正式美术、存档、联网。
+- 依赖：`INC-COMBAT-009`（危险窗口与事件）、`INC-PAWNS-021`（技能掌握与装配）；父 Increment `INC-CROSS-019`。
+- 检索证据：2026-09-25T21:45:00+08:00 执行 `git status --short`、`git diff --unified=0 -- agent-plan/`（读取本批重定义）、`git log --oneline -5 -- agent-plan/`（最新 `1dbdba5`）与 `git grep -n "INC-WORLD-007"`；`INC-WORLD-007` 仍为 `planned`、未实现。既有 `game/world/data/dungeons/trial_dungeon.tres` 与 `game/world/data/encounters/` 已提供单人遭遇；`EncounterDefinition` 在 `INC-PAWNS-020` 后已支持可选 `enemy_squad`，多敌人数据无需新契约。
+- 风险：如果首通奖励同时给资源，玩家第二轮再战的动机无法归因到定身术；必须坚持「奖励 = 新能力」单一变量。第二个风险是 1v2 / 1v3 退化成同一敌人复制，导致目标选择没有真实差异，必须使用行为角色不同的敌人组合。第三个风险是重复挑战残留上一局状态，必须由重开路径显式清理。
 - 实现说明：待实现。
 - 变更文件：待实现。
 - 测试证据：待实现。
@@ -236,4 +236,4 @@
 - 用户验收：待验收
 - 验收时间：待验收
 - Git：待提交
-- 备注：本 Increment 只提供内容与奖励数据；定身术是 Gate B1 的主要实验奖励，45 灵石是次要经济变量。多选、Build 面板和真实闭环证据分别由 `INC-CORE-012`、`INC-UI-018`、`INC-TESTING-011` 完成。
+- 备注：定身术是本次实验唯一的主要变量，45 灵石等经济奖励不进入本 Increment。1v2 / 1v3 只有在 1v1 的 Build 闭环成立后才进入人工验收（`INC-CROSS-019` Stage 2）。

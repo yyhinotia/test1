@@ -735,8 +735,9 @@
 
 - 状态：awaiting_acceptance
 - 创建时间：2026-09-25T20:47:54+08:00
-- 最后修改：2026-09-25T21:28:47+08:00
+- 最后修改：2026-09-25T21:45:00+08:00
 - 主题：pawns
+- 范围调整（2026-09-25T21:45:00+08:00）：父 Increment `INC-CROSS-019` 重定义为 1v1 → 1vN Build 玩法验证后，本 Increment 的多玩家队伍部分冻结，不再作为当前实验的验收目标；`EncounterDefinition.enemy_squad` 与 `EncounterSession` 的多单位集合被新父级的 1v2 / 1v3 遭遇直接复用，因此本 Increment 作为「多单位运行时能力」继续有效，验收口径只覆盖多单位创建与按 id 快照。
 - 目标：建立 `SquadDefinition` 队伍静态契约，并让遭遇运行时能够按队伍定义创建、持有和延续多名成员；本 Increment 只提供多单位数据与快照能力，不负责 Vertical Slice 内容、AI 战术或 UI。
 - 验收标准：
   - 新增 `SquadDefinition` 资源，至少包含 `id`、`display_name`、`members: Array[PawnData]`、`default_spawn_offsets: Array[Vector2]` 与 `is_configured()`；当 `members` 非空时，成员 id 必须唯一且不能为空，`default_spawn_offsets` 要么为空（由运行时生成安全默认偏移），要么与 `members` 数量一致。
@@ -761,31 +762,39 @@
 - Git：`develop` / `4513e65`（未验收，暂不并入 `main`）
 - 备注：本 Increment 是 `INC-CROSS-019` Gate A 的第一个数据契约层；不改变现有单人遭遇的对外行为，不参与 Gate B 的奖励 / 经济变量。
 
-## INC-PAWNS-021：运行时主动技能装配与 Build 重配
+## INC-PAWNS-021：最小运行时 Skill Loadout（技能学习与 Build 重配）
 
-- 状态：planned
+- 状态：awaiting_acceptance
 - 创建时间：2026-09-25T20:47:54+08:00
-- 最后修改：2026-09-25T21:14:43+08:00
+- 最后修改：2026-09-25T21:45:00+08:00
 - 主题：pawns
-- 目标：把已掌握主动技能与当前装配主动技能拆成两套运行时事实，使玩家获得新功法后可以显式重配 Build；未配置运行时装配时继续沿用 `PawnData.active_skills` 的旧行为。
+- 编号说明：本 Increment 对应用户 objective §22 中标注为 `INC-PAWNS-020` 的「最小运行时 Skill Loadout」。`INC-PAWNS-020` 编号已被 4v4 队伍契约占用并已提交（`4513e65`，`develop`），按 AGENTS.md §3.2「编号永不复用」顺延到 `INC-PAWNS-021`。
+- 重定义说明：本 Increment 原定义「运行时主动技能装配与 Build 重配」在 4v4 语境下编写；2026-09-25T21:45:00+08:00 按 objective 重定义并落地为 1v1 → 1vN Build 玩法验证所需的「最小运行时 Skill Loadout」，范围从「为 4v4 主角重配」收缩到「一个 Pawn 的已知 / 已装配技能」。原定义原文保留在 Git 历史 `b36e9c0`（`develop`）。
+- 目标：把「已掌握主动技能」与「当前装配主动技能」拆成两份独立的运行时事实，使玩家在获得新技能后可以显式重配 Build；未显式重配时继续沿用 `PawnData.active_skills` 的旧行为，不动任何静态 `.tres`。
 - 验收标准：
-  - Pawn 运行时提供 `get_known_active_skills()`、`get_equipped_active_skills()`、`learn_active_skill()`、`set_active_skill_loadout()`；已掌握与已装配必须可分别断言，同一技能不得在已掌握列表重复。
-  - `set_active_skill_loadout()` 只接受已掌握且满足当前运行时境界主动技能容量的技能；重复、未知或超容量输入失败时保持调用前状态完全不变。
-  - 未调用过重配接口的 Pawn 行为保持原样：玩家控制器、技能栏和施法入口继续按 `PawnData.get_active_skills()` 读取旧配置。
-  - 重配成功后 `build_changed` / 技能可用性读模型更新，`get_enabled_active_skills()` 按当前装配顺序截取容量，不修改任何静态 `.tres`。重配入口只依赖已掌握技能、运行时境界容量与奖励解锁事实，不以 45 灵石是否到账作为前置。
-  - 单元 / 集成测试覆盖：学习解锁、重复学习、未掌握装配、超容量装配、空装配与旧配置兼容、失败零副作用、成功后玩家控制器可解析新技能。
-- 范围：`Pawn` 的运行时技能掌握 / 装配状态与方法、`PlayerController` 的已知技能判定接入、相关 unit / integration 测试；必要时补充只读 Build 汇总字段。
-- 非范围：功法战斗属性加成、被动技能重配、拖拽排序、技能存档、技能树、UI 面板绘制。
-- 依赖：`INC-PAWNS-020`；父 Increment `INC-CROSS-019`。
-- 检索证据：2026-09-25T20:47:54+08:00 执行 `git status --short` 与 `git grep` 检查；`INC-PAWNS-021` 未被 `agent-plan/` 占用。当前 `PlayerController._is_known_skill()` 直读 `pawn.data.get_active_skills()`，`Pawn` 只有 `PawnData` 技能列表与容量截取，没有独立的「已掌握 / 已装配」运行时层。
-- 风险：如果重配直接改写 `PawnData.active_skills`，多个 Pawn 实例与静态资源会互相污染；必须坚持运行时覆盖层。另一个风险是把“从未配置”和“显式空装配”混为一谈，需用明确的已配置标记区分。
-- 实现说明：待实现。
-- 变更文件：待实现。
-- 测试证据：待实现。
-- 验证状态：待验证
-- 验证时间：待验证
-- 已知问题：待实现。
+  - Pawn 运行时提供 `get_known_active_skills()`、`get_equipped_active_skills()`、`is_active_skill_known()`、`learn_active_skill()`、`get_learned_active_skills()`、`has_learned_active_skill()`、`set_active_skill_loadout()`；已掌握与已装配必须可分别断言，同一 id 不得在已掌握列表重复。
+  - `set_active_skill_loadout()` 只接受已掌握、唯一且不超过当前运行时境界主动技能容量的技能；重复、未知或超容量输入失败时必须保持调用前状态完全不变（零副作用）。
+  - 未调用过重配接口的 Pawn 行为保持原样：`get_enabled_active_skills()` 与 Build 校验读模型继续按 `PawnData` 静态预设投影，`get_build_loadout()` 仍能让 `BuildValidator` 报出 `duplicate_entry` / `unconfigured_entry`。
+  - 重配成功后广播 `build_changed`，`SkillBar`、`PawnInfoPanel`、`PlayerController`、主场景技能入口全部跟随新装配，不出现各自直读 `PawnData.active_skills` 的技能分叉。
+  - 「从未重配」与「显式空装配」必须可区分：显式清空后投影为空列表，不回退静态预设。
+  - 学习与装配只依赖运行时事实，不以 45 灵石等经济奖励作为前置。
+- 范围：`Pawn` 的运行时技能掌握 / 装配状态与方法、`PlayerController` 与 `SkillBar` 的已知技能判定接入、`PawnInfoModel` / `PawnInfoPanel` 的运行时技能展示接入、`main.gd` 技能入口改读装配结果、相关 unit / integration 测试。
+- 非范围：功法战斗属性加成、被动技能重配、拖拽排序、技能存档、技能树、Build 预设 UI 绘制（由 `INC-UI-018` 负责）、奖励解锁事实（由 `INC-WORLD-007` 负责）。
+- 依赖：父 Increment `INC-CROSS-019`；设计基线 `docs/build-gameplay-validation.md`。无硬前置子 Increment（本 Increment 在实现顺序上被提前到 `INC-COMBAT-009` 之前完成）。
+- 检索证据：2026-09-25T21:45:00+08:00 执行 `git status --short`（工作区为本 Increment 的 6 个脚本改动与 2 个新测试文件）、`git diff --unified=0 -- agent-plan/`（读取本批重定义）、`git log --oneline -5 -- agent-plan/`（最新 `1dbdba5`）与 `git grep -n "INC-PAWNS-021"`；`INC-PAWNS-021` 未实现。实现前 `PlayerController._is_known_skill()` 与 `SkillBar.refresh()` 直读 `pawn.data.get_active_skills()`，`Pawn` 只有 `PawnData` 技能列表与容量截取，没有独立的「已掌握 / 已装配」运行时层。
+- 风险：如果重配直接改写 `PawnData.active_skills`，多个 Pawn 实例与静态资源会互相污染，必须坚持运行时覆盖层。第二个风险是把「从未配置」和「显式空装配」混为一谈，因此用独立的 `_has_equipped_active_skills` 标记区分。第三个风险是把 Build 校验源也换成去重后的投影，会让 `duplicate_entry` 校验静默失效，因此保留 `_validator_active_skills()` 作为校验专用读模型。
+- 实现说明：`Pawn` 新增 `_learned_active_skills`（运行时解锁，按 id 去重追加）与 `_equipped_active_skills` + `_has_equipped_active_skills`（显式重配标记）；`get_known_active_skills()` 以「静态预设在前、运行时解锁按序追加」合并并按 id 去重；`get_equipped_active_skills()` 在未显式重配时返回 `PawnData.get_active_skills()` 的去重投影（与改动前逐字一致），显式重配后返回装配结果；`get_enabled_active_skills()` 改为对装配结果做容量截取；`get_build_loadout()` 改用新增的 `_validator_active_skills()`，未重配时保留静态预设的原始条目（含重复与未配置项），使 `BuildValidator` 的 `duplicate_entry` / `unconfigured_entry` 判定不回归。`learn_active_skill()` 只解锁不自动装配，`set_active_skill_loadout()` 是唯一装配出口并做全量前置校验后一次性提交。`PlayerController._is_known_skill()`、`SkillBar.refresh()` / `_is_known_skill()` 改为委托 Pawn；`SkillBar` 与 `PawnInfoPanel` 新增监听 Pawn 自己的 `build_changed` 以在重配后立即刷新；`main.gd` 的 Q 键与数字键技能入口改读 `get_equipped_active_skills()`；`PawnInfoModel.build_snapshot()` 支持 `runtime["active_skills"]` 覆盖静态预设的技能名与 build_tag。
+- 变更文件：`game/pawns/pawn.gd`、`game/pawns/controllers/player_controller.gd`、`game/ui/skill_bar.gd`、`game/ui/pawn_info_model.gd`、`game/ui/pawn_info_panel.gd`、`game/main/main.gd`、`test/unit/pawn_active_skill_loadout_test.gd`（与 `.uid`）、`test/integration/runtime_active_skill_loadout_test.gd`（与 `.uid`）、`agent-plan/pawns.md`、`agent-plan/_index.md`。
+- 测试证据：
+  - `res://test/unit/pawn_active_skill_loadout_test.gd` 7 cases 0 failures（解锁不自动装备、重复 / 无效拒绝、未重配保持旧行为、重配切换投影与 BuildLoadout、未知技能零副作用、超容量与重复拒绝、显式空装配 ≠ 从未配置）。
+  - `res://test/integration/runtime_active_skill_loadout_test.gd` 4 cases 0 failures（SkillBar 跟随重配、PlayerController 接受已装配且已掌握的技能、拒绝从未掌握的技能、PawnInfoPanel 跟随运行时装配）。
+  - `res://test/unit/pawn_active_skill_capacity_test.gd` 5 cases 0 failures（回归修复后复跑：`test_duplicates_are_deduplicated_in_projection_but_not_validator_source` 恢复通过，`RESULT: PASSED`，exit 0）。
+  - 统一门禁 `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` → `GdUnit4 : 368 cases, 0 failures`、`headless : 10 suites, 549 assertions, 0 failing suites`、`RESULT: PASS`、exit 0。
+  - Godot MCP `validate` 对 6 个改动脚本全部 `valid: true`；`& <godot> --headless --path . --import` 生成两个新测试的 `.uid` 且 exit 0。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T21:41:45+08:00
+- 已知问题：`INC-PAWNS-021` 只提供机制，尚未接入玩家可见的 Build 切换面板（`INC-UI-018`）与首通解锁事实（`INC-WORLD-007`）；`game/pawns/data/player_binding_skill.tres` 已存在但未接入任何奖励路径。既有测试债务 `test/gameplay/main_scene_sect_test.gd` 324 orphans 与 `test/integration/sect_panel_test.gd` 目录模式 288 orphans 与本 Increment 无关，统一门禁输出中的 `integration/gameplay ... FAIL` 标签为既有噪音（同行为 `0 errors | 0 failures`）。
 - 用户验收：待验收
 - 验收时间：待验收
-- Git：待提交
-- 备注：本 Increment 只提供机制，是 Gate B1 的 Build 重配基础；奖励解锁与 Build 预设界面分别由 `INC-WORLD-007`、`INC-UI-018` 接入，45 灵石不参与本次装配裁决。
+- Git：`develop` / `4e92091`
+- 备注：本 Increment 是 Gate C（主动 Build 重构）的机制基础，只提供 API 与读模型收敛，不替玩家做选择；奖励解锁与 Build 预设界面分别由 `INC-WORLD-007`、`INC-UI-018` 接入。

@@ -1,3 +1,4 @@
+> ⚠️ 已冻结（2026-09-25T21:45:00+08:00）：`INC-CROSS-019` 已按用户 objective 重定义为「1v1 → 1vN Build 玩法验证」，4v4 Vertical Slice 范围（队友、队伍 HUD、多单位选择、编队等）暂停延后；当前有效设计基线为 `docs/build-gameplay-validation.md`。本文档保留原设计以备用，不再作为实施依据。
 # 4v4 Vertical Slice 设计
 
 > 状态：accepted（设计基线）  

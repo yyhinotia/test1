@@ -346,24 +346,27 @@
 - Git：`main` / `156e055`
 - 备注：父 Increment 为 `INC-CROSS-014`；本 Increment 承接 `INC-TESTING-004`「不是正式平衡结论」的已知问题。验收依据：用户 2026-09-25 指令「推送，保持本地远端一致」（承接「验收通过，分increment提交」），按 AGENTS.md §4.1 记录为明确验收。
 
-## INC-COMBAT-009：四方战队遭遇、团队胜负与 AI 目标
+## INC-COMBAT-009：1v1 战斗问题窗口与轻量 CombatEvent
 
 - 状态：planned
 - 创建时间：2026-09-25T20:47:54+08:00
-- 最后修改：2026-09-25T21:14:43+08:00
+- 最后修改：2026-09-25T21:45:00+08:00
 - 主题：combat
-- 目标：让遭遇运行时真正组成玩家队伍与敌人队伍，按团队条件判定胜负，并让敌人 AI 在最近目标死亡后重新选择有效目标；不引入仇恨表、阵型 AI 或寻路重写。
+- 重定义说明：本 Increment 原定义「四方战队遭遇、团队胜负与 AI 目标重选」于 2026-09-25T21:45:00+08:00 按用户 objective 重定义为「1v1 战斗问题窗口与轻量 CombatEvent」；原定义原文保留在 Git 历史 `b36e9c0`（`develop`）。重定义原因：父 Increment `INC-CROSS-019` 从 4v4 Vertical Slice 改为 1v1 → 1vN Build 玩法验证，4v4 专用范围冻结。
+- 目标：让 1v1 遭遇稳定产生一个玩家可识别、可描述、且只能靠 Build 变化才能改变处理方式的「危险技能窗口」，并用轻量 CombatEvent 记录该窗口与玩家应对，使 Build 对照有客观证据可查。
 - 验收标准：
-  - `EncounterSession` 能同时创建多名玩家单位与多名敌人单位，并保持 `get_player_units()` / `get_enemy_units()` 数量、阵营、控制器绑定与可选中性一致。
-  - 终局条件为团队条件：敌方全部死亡则玩家胜利；主角死亡则玩家失败；仅队友死亡不提前结束；所有分支只产生一次结果信号。
-  - `AIController` 以最近的有效敌方单位为当前目标；目标死亡或失效时重新选取，己方目标与已死亡目标不得被锁定；无目标时保持安全等待，不空引用。
-  - 既有单人遭遇保持原行为；新多人遭遇不因某个非主角单位死亡提前结算。
-  - 集成测试覆盖 2v2 / 3v3 / 4v4 单位创建、队友死亡继续、主角死亡失败、敌人全灭胜利、AI 目标死亡重选与无目标安全等待。
-- 范围：`game/world/encounter_session.gd` 多单位起局与团队终局、`game/pawns/controllers/ai_controller.gd` 最近目标与失效重选、相关 unit / integration 测试。
-- 非范围：仇恨值、目标优先级表、阵型 / 路径寻路、AOE、召唤、Boss 分阶段、技能 AI 编排、UI 队伍面板。
-- 依赖：`INC-PAWNS-020`；父 Increment `INC-CROSS-019`。
-- 检索证据：2026-09-25T20:47:54+08:00 执行 `git status --short` 与 `git grep` 检查；`INC-COMBAT-009` 未占用。`EncounterSession._on_unit_died()` 当前对任意单位死亡直接结算，`AIController` 当前单目标且没有完整的失效重选路径。
-- 风险：多方单位死亡信号与清理顺序可能造成重复结算或悬空目标；必须让终局状态幂等，并在 AI 每次行动前重新验证目标有效性。另一个风险是把队伍规模写死在战斗层，必须从 `SquadDefinition` 读取。
+  - 敌人按固定节奏打开危险窗口并释放危险技能（例：每 8 秒蓄力一次）；普通攻击与危险技能形成可区分的行为模式。
+  - 玩家在没有控制手段时必须能感知到该窗口无法干预：危险技能不会被阻止，只能承受（可被护盾 / 护体吸收损失）。
+  - 成功施放控制效果（如 `binding_spell`）覆盖危险技能窗口时，事件流出现 `skill_stunned` → `skill_cancelled`，且该次危险技能的伤害不再结算。
+  - 新增轻量 CombatEvent 记录，字段为 `timestamp` / `actor_id` / `target_id` / `event_type` / `skill_id`；至少覆盖 `danger_window_opened`、`skill_cast`、`skill_hit`、`skill_blocked`、`skill_stunned`、`skill_cancelled`、`unit_died`、`combat_end`。
+  - 事件按时间顺序可导出为可复核列表；同一遭遇重复挑战产生独立事件序列，不跨局污染。
+  - 战斗终局沿用现有规则（玩家死亡失败 / 敌人死亡胜利），不引入团队胜负、仇恨表或多目标协同 AI。
+  - 集成测试覆盖：危险窗口周期、无控制时的承伤、有控制时的打断与零伤害、事件类型与顺序、重复开局的事件隔离。
+- 范围：`game/combat/` 下的危险技能调度与 CombatEvent 记录、敌人危险技能数据、`EncounterSession` 事件接线、相关 unit / integration 测试。
+- 非范围：团队胜负、AI 目标重选、仇恨表、阵型与寻路重写、AOE、召唤、Boss 分阶段、多敌人协同 AI。1vN 的敌人阵容数据由 `INC-WORLD-007` 提供，本 Increment 只保证单个敌人的问题窗口可复现。
+- 依赖：父 Increment `INC-CROSS-019`；设计基线 `docs/build-gameplay-validation.md`。无前置子 Increment。
+- 检索证据：2026-09-25T21:45:00+08:00 执行 `git status --short`（工作区为 `INC-PAWNS-021` 实现与本批 plan 调整）、`git diff --unified=0 -- agent-plan/`（读取本批重定义内容）、`git diff --cached --unified=0 -- agent-plan/`（空）、`git log --oneline -5 -- agent-plan/`（最新 `1dbdba5`）与 `git grep -n "INC-COMBAT-009"`；`INC-COMBAT-009` 仍为 `planned`、未实现，可安全重定义。现有 `Pawn` 已有 `stun` 状态与 `skill_cast` / `skill_blocked` 等信号，但没有危险窗口调度，也没有统一的 CombatEvent 记录层。
+- 风险：危险窗口如果只造成数值压力而不改变可选解法，Gate A（玩家能描述具体问题）会直接失败，必须让「无法干预」在第一次战斗里被玩家亲身体感到。第二个风险是事件记录扩散成通用战斗日志系统，必须保持轻量字段与 `event_type` 白名单。
 - 实现说明：待实现。
 - 变更文件：待实现。
 - 测试证据：待实现。
@@ -373,4 +376,4 @@
 - 用户验收：待验收
 - 验收时间：待验收
 - Git：待提交
-- 备注：本 Increment 只负责 Gate A（Combat Vertical Slice Gate）的战斗语义；2v2 → 3v3 → 4v4 证明系统能成立，不单独证明 Build 重构玩法成立。Vertical Slice 的房间、奖励与第二轮数据由 `INC-WORLD-007` 接入。
+- 备注：本 Increment 是 `INC-CROSS-019` 开发顺序的第 1 步，只负责「制造一个可被 Build 改变的问题」；Build 重构机制由 `INC-PAWNS-021` 提供，实验场景与首通奖励由 `INC-WORLD-007` 提供。
