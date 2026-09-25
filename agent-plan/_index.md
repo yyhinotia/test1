@@ -446,10 +446,10 @@
 | `INC-TESTING-012` | `INC-CROSS-019` | testing | `awaiting_acceptance` | 场景化测试入口拆分到 `tests/` | 2026-09-25T22:33:49+08:00 | 验证通过（入口体检 FAILURES=0 / 5 入口 × 2 次；gameplay 60 cases；统一门禁 395 cases + 549 assertions PASS） | 待验收 | `develop` / `fd3eda8` |
 | `INC-TESTING-013` | `INC-CROSS-019` | testing | `awaiting_acceptance` | Stage 2（1v1 / 1v2 / 1v3）运行时终局收敛与重开清洁证据 | 2026-09-25T23:55:00+08:00 | 验证通过（单套件 gameplay 2 cases / 0 orphans；1v1 / 1v2 / 1v3 均在 10~19s 内跑到终局，1v2 胜利需打掉两名敌人；统一门禁 399 cases + 549 assertions PASS） | 待验收 | `develop` / `6d7b388` |
 | `INC-TESTING-014` | `INC-CROSS-019` | testing | `awaiting_acceptance` | 人工轮 CombatEvent 取证（实机每局应对序列落盘） | 2026-09-25T23:01:35+08:00 | 验证通过（单套件 2 cases / 0 failures / 0 orphans；入口体检 6 入口 × 2 次 FAILURES=0；统一门禁 401 cases + 549 assertions PASS） | 待验收 | `develop` / `3549aa1` |
-| `INC-CROSS-020` | - | cross | `accepted` | 左键统一操作模型：选择 / 移动 / 技能目标选择，选中敌方显示敌方信息 | 2026-09-26T01:48:20+08:00 | 验证通过（402→406 cases 中的 4 个新输入路由用例 + 统一门禁 `RESULT: PASS` + 真实窗口 / OS 级鼠标输入冒烟） | 已验收 | develop |
-| `INC-CORE-013` | `INC-CROSS-020` | core | `accepted` | 左键统一入口：选中任意单位 / 左键移动 / 右键不再移动 | 2026-09-26T01:48:20+08:00 | 验证通过（gameplay 5 个输入路由用例 + 真实窗口 `指令：移动到 (320, 520)` / 右键零命令；统一门禁 `RESULT: PASS`） | 已验收 | develop |
-| `INC-UI-019` | `INC-CROSS-020` | ui | `accepted` | 选中敌方单位时的信息 UI 口径（信息卡绑定 / 玩家面板解绑 / HUD 文案） | 2026-09-26T01:48:20+08:00 | 验证通过（gameplay 断言信息卡绑定敌方且技能栏与 Build 面板解绑；可见控件清单无 `SkillBar`、信息卡显示 `气血/护体` 无灵力行） | 已验收 | develop |
-| `INC-TESTING-018` | `INC-CROSS-020` | testing | `accepted` | 输入模型测试矩阵（左键移动 / 敌方选中 / 右键不移动） | 2026-09-26T01:48:20+08:00 | 验证通过（删除 1 个旧契约用例、新增 5 个；统一门禁 `RESULT: PASS`，GdUnit4 402 → 406 cases / 0 failures，exit 0） | 已验收 | develop |
+| `INC-CROSS-020` | - | cross | `accepted` | 左键统一操作模型：选择 / 移动 / 技能目标选择，选中敌方显示敌方信息 | 2026-09-26T01:48:20+08:00 | 验证通过（402→406 cases 中的 4 个新输入路由用例 + 统一门禁 `RESULT: PASS` + 真实窗口 / OS 级鼠标输入冒烟） | 已验收 | `develop` / `e69a420` |
+| `INC-CORE-013` | `INC-CROSS-020` | core | `accepted` | 左键统一入口：选中任意单位 / 左键移动 / 右键不再移动 | 2026-09-26T01:48:20+08:00 | 验证通过（gameplay 5 个输入路由用例 + 真实窗口 `指令：移动到 (320, 520)` / 右键零命令；统一门禁 `RESULT: PASS`） | 已验收 | `develop` / `d405bbe` |
+| `INC-UI-019` | `INC-CROSS-020` | ui | `accepted` | 选中敌方单位时的信息 UI 口径（信息卡绑定 / 玩家面板解绑 / HUD 文案） | 2026-09-26T01:48:20+08:00 | 验证通过（gameplay 断言信息卡绑定敌方且技能栏与 Build 面板解绑；可见控件清单无 `SkillBar`、信息卡显示 `气血/护体` 无灵力行） | 已验收 | `develop` / `bb1d502` |
+| `INC-TESTING-018` | `INC-CROSS-020` | testing | `accepted` | 输入模型测试矩阵（左键移动 / 敌方选中 / 右键不移动） | 2026-09-26T01:48:20+08:00 | 验证通过（删除 1 个旧契约用例、新增 5 个；统一门禁 `RESULT: PASS`，GdUnit4 402 → 406 cases / 0 failures，exit 0） | 已验收 | `develop` / `3955517` |
 | `INC-SECT-001` | `INC-CROSS-017` | sect | `accepted` | 宗门设施静态定义与六座设施数据 | 2026-09-25T19:38:41+08:00 | 通过 | 已验收 | `main` / `c25ffbc` |
 | `INC-SECT-002` | `INC-CROSS-017` | sect | `accepted` | SectState 运行时：库存 / 设施等级 / 升级 / 修炼 / 收获 | 2026-09-25T19:38:41+08:00 | 通过 | 已验收 | `main` / `8c65ff1` |
 | `INC-SECT-003` | `INC-CROSS-017` | sect | `accepted` | 转化设施：藏经阁参悟 / 炼器房强化 / 丹房炼丹 | 2026-09-25T19:38:41+08:00 | 通过 | 已验收 | `main` / `9c97ef9` |
@@ -832,5 +832,5 @@
   - 既有 orphan 债务（gameplay 324 / integration 288）与门禁 stderr 噪音与本 Increment 无关。
 - 用户验收：已验收
 - 验收时间：2026-09-26T01:48:20+08:00
-- Git：develop
+- Git：develop / `e69a420`
 - 备注：本父 Increment 只改玩家与鼠标之间的输入层契约，不改战斗 / 技能 / 奖励 / 敌人 AI；`docs/4v4-vertical-slice.md` 的第 121~125 行仍是已冻结的 4v4 设计原文，如需让该文档跟随本次变更，另立文档类 Increment。

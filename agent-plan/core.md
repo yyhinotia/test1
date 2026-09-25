@@ -470,5 +470,5 @@
   - 既有 orphan 债务（gameplay 324 / integration 288）与统一门禁输出里的 `[GdUnit4] ... FAIL (N cases, 0 errors, 0 failures)` 标签噪音与本 Increment 无关。
 - 用户验收：已验收
 - 验收时间：2026-09-26T01:48:20+08:00
-- Git：develop
+- Git：develop / `d405bbe`
 - 备注：父 Increment 为 `INC-CROSS-020`；本 Increment 只改输入路由与 HUD 订阅，不改战斗 / 技能 / 奖励规则，也不改 `Pawn` 与 `PawnController` 的 API。

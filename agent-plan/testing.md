@@ -586,5 +586,5 @@
   - 真实窗口点击取证脚本未新增；本次取证用的是 MCP `simulate_input` + `run_script` 的组合，尚未沉淀为可重跑的 `test/tools/**` 脚本。
 - 用户验收：已验收
 - 验收时间：2026-09-26T01:48:20+08:00
-- Git：develop
+- Git：develop / `3955517`
 - 备注：父 Increment 为 `INC-CROSS-020`；本 Increment 只改测试与断言，不改生产代码，也不修改既有 orphan 债务。
