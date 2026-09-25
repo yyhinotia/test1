@@ -1,6 +1,6 @@
 # Testing 主题计划
 
-> 最后修改：2026-09-26T02:01:11+08:00
+> 最后修改：2026-09-26T02:09:20+08:00
 > 主题：testing
 > 规则来源：`../AGENTS.md`
 
@@ -548,6 +548,93 @@
 - 验收时间：
 - Git：develop / 3549aa1
 - 备注：父 Increment 为 `INC-CROSS-019`；本 Increment 只补人工轮的取证装置。
+
+## INC-TESTING-015：人工轮可控开局（支持 --pause-on-start）
+
+- 状态：accepted
+- 创建时间：2026-09-25T23:07:54+08:00
+- 最后修改：2026-09-26T00:19:06+08:00
+- 主题：testing
+- 目标：给 `tests/scenario_build_replay.tscn` 增加「启动即暂停」能力，避免人工轮在玩家未就绪时被实时战斗消耗，确保 Round 1 从满状态开始；玩家按 Space 后才开始实时战斗。
+- 验收标准：
+  - 使用 `-- --pause-on-start` 启动人工入口后，入口完成异步摆放并输出 `SCENARIO_READY`，随后处于暂停状态：HUD 显示「游戏已暂停」且暂停遮罩可见。
+  - 玩家按 Space 可以恢复实时战斗；不传 `--pause-on-start` 时，既有入口行为不变，入口体检与自动化门禁不受影响。
+  - 新增自动化用例验证 `pause_on_start = true` 时入口在 `entry_ready` 后暂停并可恢复；统一门禁 `RESULT: PASS`。
+- 范围：`tests/scenario_entry.gd`（新增 `pause_on_start` 导出参数与 `--pause-on-start` 用户参数识别）、`test/gameplay/human_round_record_test.gd`（新增可控开局用例）、`tests/README.md`（记录人工轮启动命令）、`agent-plan/testing.md`、`agent-plan/_index.md`。
+- 非范围：不改玩法数值、不改 `game/` 下实现；不自动开始或结束战斗；不替代人工 Q1~Q4 与 Gate 结论。
+- 依赖：`INC-TESTING-012`（`tests/` 入口架构）、`INC-TESTING-014`（人工轮记录器）。
+- 检索证据（2026-09-25T23:07:54+08:00）：`git status --short --branch` 工作区干净，`develop = origin/develop`；读取 `tests/scenario_entry.gd`、`game/main/main.gd` 的 `_set_paused()` / `_unhandled_input()` 与 `tests/README.md` 后确认：入口没有暂停开局能力，`scenario_build_replay.tscn` 打开后立即实时运行；MCP 桥接启动期间无人操作时第一局会自动失败并写入无效记录（本轮已实测并清理），因此需要可控开局。
+- 风险：暂停整个 SceneTree 会影响依赖 `await_idle_frame()` 的 GdUnit 用例；自动化用例必须使用 `process_always` 计时器并在断言后立刻恢复 `get_tree().paused = false`，避免挂住测试框架。
+- 实现说明：`tests/scenario_entry.gd` 新增导出参数 `pause_on_start` 与用户参数识别 `OS.get_cmdline_user_args().has("--pause-on-start")`；入口在完成异步摆放、输出 `SCENARIO_READY` 并置 `entry_ready = true` 之后，复用生产暂停入口 `main.call("_set_paused", true)` 进入暂停，并额外打印 `SCENARIO_PAUSED`。恢复仍走生产路径：玩家按 Space 由 `main.gd` 的既有输入处理解除暂停。入口只做「摆放 + 按需暂停」，不复制暂停语义、不改数值。
+- 变更文件：`tests/scenario_entry.gd`、`test/gameplay/human_round_record_test.gd`、`tests/README.md`、`agent-plan/testing.md`、`agent-plan/_index.md`。
+- 测试证据：单套件 `& <godot> --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://test/gameplay/human_round_record_test.gd -rd res://reports/gdunit/single --ignoreHeadlessMode` → `Statistics: 3 test cases | 0 errors | 0 failures | 0 flaky | 0 skipped | 0 orphans | PASSED 573ms`，其中 `test_pause_on_start_pauses_after_entry_is_ready` PASSED（断言 `get_tree().paused` 在 `entry_ready` 后为 true，并在 `_set_paused(false)` 后恢复 false），exit 0；统一门禁 `pwsh -File test/run_tests.ps1 -Layer all` → `RESULT: PASS`（GdUnit4 402 cases / 0 failures；headless 10 suites / 549 assertions / 0 failing），exit 0。
+- 验证状态：验证通过（暂停时机、可恢复性与既有入口行为不变均由自动化覆盖；`--pause-on-start` 命令行路径未单独自动化，仍属人工轮现场项）
+- 验证时间：2026-09-26T00:19:06+08:00
+- 已知问题：① 暂停是 `get_tree().paused = true`，GdUnit 用例必须在断言后立即恢复，否则会挂住测试框架（用例内已处理）；② 暂停遮罩与提示文本沿用生产 HUD，本 Increment 不新增提示；③ 既有 orphan 债务（integration 288 / gameplay 324）与本次无关。
+- 用户验收：已验收（用户 2026-09-26T02:09:20+08:00 原话「本次验收通过」）
+- 验收时间：2026-09-26T02:09:20+08:00
+- Git：develop / b5550ce
+- 备注：父 Increment 为 `INC-CROSS-019`；本 Increment 只补人工轮的可控开局，不改变战斗规则。
+
+## INC-TESTING-016：测试入口聚焦 Build（隐藏非 Build 菜单）
+
+- 状态：accepted
+- 创建时间：2026-09-25T23:49:00+08:00
+- 最后修改：2026-09-25T23:52:10+08:00
+- 主题：testing
+- 目标：`tests/` 下的 6 个入口都只验证 Build，但打开后会带出正式入口的完整 HUD——遭遇选择按钮、秘境面板、宗门面板与本次验收无关，既占用屏幕也增加误操作面。本 Increment 让测试入口默认隐藏这些非 Build 菜单，只保留 Gate 0 与人工轮需要的技能栏 / 信息卡 / Build 面板 / 战斗状态 / 「重新挑战」。
+- 验收标准：
+  - 6 个入口打开后：`HUD/BottomLeftDock/EncounterPanel/Buttons`（遭遇选择按钮）、`HUD/BottomLeftDock/DungeonPanel`（秘境）、`HUD/BottomLeftDock/SectPanel`（宗门）不可见。
+  - 同时保留：`HUD/BuildLoadoutPanel`、`HUD/BottomLeftDock/SkillBar`、`HUD/BottomLeftDock/PawnInfoPanel`、`HUD/BottomLeftDock/EncounterPanel/RestartButton`（人工轮 Round 2 与 Gate 0「同一遭遇可重复挑战」的入口）仍可见。
+  - 只改可见性，不删节点：`game/main/main.gd` 的 `@onready` 引用与既有 `main_scene_*` 集成测试不受影响；`game/` 下代码与数值零改动。
+  - `test/tools/verify_scenario_entries.gd` 新增上述可见性断言，6 入口 × 2 次 `FAILURES=0`；统一门禁 `RESULT: PASS`。
+- 范围：`tests/scenario_entry.gd`（新增 `hide_non_build_panels` 导出参数与隐藏逻辑）、`test/tools/verify_scenario_entries.gd`（可见性断言）、`tests/README.md`（记录呈现口径）、`agent-plan/testing.md`、`agent-plan/_index.md`。
+- 非范围：不改 `game/` 下任何节点 / 脚本 / 数值；不删除节点（`queue_free` 会让 `main.gd` 的 `@onready` 引用失效）；不改变 Build / 战斗 / 奖励规则；不代替人工 Gate A~E 结论。
+- 依赖：`INC-TESTING-012`（`tests/` 入口架构）、`INC-TESTING-015`（人工轮可控开局，与本项同在人工轮开始前收敛呈现）、`INC-CROSS-019`。
+- 检索证据（2026-09-25T23:49:00+08:00）：`git status --short --branch` 显示 `develop...origin/develop`，工作区含 `INC-TESTING-015` 未提交改动与若干非本 Increment 改动；`git grep -n "INC-TESTING-016" -- agent-plan/` 无命中（016 未被占用）；读取 `game/main/main.tscn` 与 `game/ui/encounter_panel.gd` / `game/ui/dungeon_panel.gd` / `game/ui/sect_panel.gd` 确认三处面板的节点路径，并确认「重新挑战」的既有语义是 `main.gd::_on_encounter_restart_requested()` → `encounter_session.restart()`。
+- 风险：① 选择「隐藏」而不是「删除」是刻意的——删除会让 `main.gd` 的 `@onready var encounter_panel / dungeon_panel / sect_panel` 指向已释放节点，并破坏既有集成测试；② 若后续新增需要秘境 / 宗门 / 遭遇选择入口的非 Build 测试场景，把该场景的 `hide_non_build_panels` 设为 `false` 即可恢复完整 HUD。
+- 实现说明：`tests/scenario_entry.gd` 新增 `NON_BUILD_UI_PATHS` 常量与 `hide_non_build_panels` 导出参数（默认 `true`）：入口把 `main.tscn` 实例加入树并等一帧后调用 `_hide_non_build_panels()`，对 `HUD/BottomLeftDock/EncounterPanel/Buttons`（换敌按钮）、`HUD/BottomLeftDock/DungeonPanel`、`HUD/BottomLeftDock/SectPanel` 只做 `visible = false`。刻意不 `queue_free`：`game/main/main.gd` 用 `@onready var encounter_panel / dungeon_panel / sect_panel` 持有这些节点，删除会让引用失效并破坏既有 `main_scene_*` 集成测试；隐藏也不改 `game/` 下任何代码与数值。`EncounterPanel` 只隐藏换敌按钮，保留 `TitleLabel`（当前遭遇）、`StatusLabel`（结算结果）与 `RestartButton`（重新挑战）——后者是 Gate 0「同一遭遇可重复挑战」与人工轮 Round 2 的入口。`test/tools/verify_scenario_entries.gd` 新增 `HIDDEN_IN_BUILD_ENTRY` / `VISIBLE_IN_BUILD_ENTRY` 两组路径与 `_check_build_focus()`，6 个入口每次加载都断言「非 Build 菜单隐藏 + Build 验收 UI 保留」。`tests/README.md` 新增「测试呈现」一节记录该口径与 `hide_non_build_panels = false` 的退出方式。
+- 变更文件：`tests/scenario_entry.gd`、`test/tools/verify_scenario_entries.gd`、`tests/README.md`、`agent-plan/testing.md`、`agent-plan/_index.md`。
+- 测试证据：
+  - 入口体检：`& <godot> --headless --path . --script res://test/tools/verify_scenario_entries.gd` → `SCENARIO_ENTRY_CHECK_DONE FAILURES=0`（6 入口 × 2 次），每个入口打印 `BUILD_FOCUS=<scene> HIDDEN=3 VISIBLE=4`；报告写入 `.mcp/godot-runtime/screenshots/tests_scenario_entries_report.txt`（不入库）。
+  - 真实窗口可见控件核对：MCP `run_project(scene="tests/scenario_build_test_1v1.tscn", background=true)` + `get_ui_elements`，可见 Button 只有「重新挑战」与 Build A/B 的 `UseButton`；可见面板只有 HUD 标签 / `PawnInfoPanel` / `SkillBar` / `EncounterPanel` 的「当前遭遇：试剑·1v1」「进行中：试剑·1v1」/ `BuildLoadoutPanel`；没有换敌按钮、`DungeonPanel`（秘境）、`SectPanel`（宗门）控件。截图 `.mcp/godot-runtime/screenshots/screenshot_1790351508_059.png`（2560×1434，不入库）。
+  - 统一门禁：`pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` → `RESULT: PASS`（GdUnit4 402 cases / 0 failures：unit 161 + integration 174 + gameplay 67；headless 10 suites / 549 assertions / 0 failing suites），exit 0。层内仍打印既有 orphan 债务（integration 288 / gameplay 324），本次 errors / failures 均为 0。
+- 验证状态：验证通过
+- 验证时间：2026-09-25T23:52:10+08:00
+- 已知问题：① 这只是测试入口的呈现收敛，正式入口 `game/main/main.tscn` 的完整 HUD 不变；② 换敌入口在 Build 验收入口里按设计不可见，若后续需要换敌做对照，另立 Increment 或把该场景的 `hide_non_build_panels` 设为 `false`；③ 既有 orphan 债务（integration 288 / gameplay 324）与本次无关；④ 提交前工作区还含 `INC-TESTING-015` 未提交改动与若干非本 Increment 改动（`AGENTS.md`、`project.godot`、`trial_dungeon.tres`、`build_decision_differentiation_test.gd`、部分 `tests/*.tscn` 的 UID 重存），需按验收结果分 Increment 处理。
+- 用户验收：已验收（用户 2026-09-26T02:09:20+08:00 原话「本次验收通过」）
+- 验收时间：2026-09-26T02:09:20+08:00
+- Git：develop / b5550ce
+- 备注：父 Increment 为 `INC-CROSS-019`；本 Increment 只收敛测试入口的呈现，正式入口 `game/main/main.tscn` 的完整 HUD 不变。
+
+## INC-TESTING-017：测试入口自证与敌我标识（横幅 + 名牌）
+
+- 状态：accepted
+- 创建时间：2026-09-26T00:10:56+08:00
+- 最后修改：2026-09-26T00:19:06+08:00
+- 主题：testing
+- 目标：实机验收反馈「1v1 / 1v2 / 1v3 和旧的傀儡测试看起来完全一样，宗门等无关 UI 也没隐藏」。运行时复核确认主因是**运行入口错位**：按 F5 跑的是项目主场景 `main.tscn`，它默认进入 `DungeonRun.default_dungeon = trial_dungeon`（第一间即试炼傀儡）并保留完整 HUD；只有运行 `tests/scenario_*.tscn`（编辑器内按 F6 运行当前场景）才会走测试入口，由 `tests/scenario_entry.gd` 隐藏非 Build 菜单。其次确认一个客观原因：所有 Pawn 共用 `game/pawns/art/pawn_placeholder.svg` 且没有任何名称标识，1v1 / 1v2 / 1v3 在视觉上确实只差单位数量。本 Increment 让测试入口自证身份，并给敌我单位加运行时标识，使「跑错入口」一眼可辨、三档遭遇一眼可分。
+- 验收标准：
+  - 6 个入口运行时出现测试横幅：`[测试入口] tests/<文件>` + 场景标题 + 遭遇 `display_name` + 敌方名单与人数；跑 `main.tscn` 时不会出现该横幅。
+  - 每个敌方 Pawn 头顶显示 `PawnData.display_name` 名牌并按名单配色；玩家 Pawn 头顶显示「玩家」；`EncounterSession.restart()` 后再战，名牌仍然存在。
+  - 1v1 / 1v2 / 1v3 运行时可读出 1 / 2 / 3 个不同敌方名单：`["镇狱影傀"]` / `["赤拳战修", "灵弓修者"]` / `["赤拳战修", "灵弓修者", "镇狱影傀"]`。
+  - `tests/run_scenario.ps1` 可按名字启动指定入口（含 `-PauseOnStart`）。
+  - 非 Build 菜单仍隐藏；入口体检 `FAILURES=0`；统一门禁 `RESULT: PASS`。
+- 范围：`tests/scenario_entry.gd`（横幅 / 名牌 / 配色 / 名单报告）、`test/tools/verify_scenario_entries.gd`（名单与横幅断言）、`tests/README.md`（运行方式与自证口径）、新增 `tests/run_scenario.ps1`（启动封装）、`agent-plan/testing.md`、`agent-plan/_index.md`。
+- 非范围：不改 `game/` 下正式 HUD / Pawn 场景 / 数值；不新增美术资源（继续使用占位图，只在测试入口做运行时配色与名牌）；不改变 Build / 战斗 / 奖励规则；不代替人工 Gate A~E 结论。
+- 依赖：`INC-TESTING-016`（测试入口 Build 聚焦）、`INC-TESTING-012`（`tests/` 入口架构）、`INC-CROSS-019`。
+- 检索证据（2026-09-26T00:10:56+08:00）：`git grep -n "INC-TESTING-017" -- agent-plan/` 无命中（017 未被占用）。运行时复核：MCP `run_project()`（不传 scene，等价 F5）→ `encounter=encounter_trial_puppet`、`enemies=["试炼傀儡"]`、`EncounterPanel/Buttons` / `DungeonPanel` / `SectPanel` 全部 `visible=true`、窗口标题 `test1`；MCP `run_project(scene="tests/scenario_build_test_1v1.tscn")` → `get_ui_elements` 无换敌 / 秘境 / 宗门控件，窗口标题 `test1 · tests/build_test_1v1 · 1v1 战斗问题窗口`；读取 `game/pawns/pawn.tscn` 与 `game/world/data/encounters/build_test_1v*.tres` 确认三档遭遇数据确实不同（1 / 2 / 3 名敌人：镇狱影傀 / 赤拳战修 + 灵弓修者 / 再加镇狱影傀），但所有 Pawn 共用同一张占位图且无名字节点。
+- 风险：① 名牌与横幅是 `tests/` 自建的运行时节点，必须挂在 `encounter_started` 上重建，否则 `restart()` 后新 Pawn 没有名牌；② 运行时配色只改 `Sprite2D.modulate`，不写场景文件，正式游戏视觉不变；③ `tests/run_scenario.ps1` 只做启动封装，不改任何规则。
+- 实现说明：① 测试横幅：`tests/scenario_entry.gd` 新增 `_install_scenario_banner()`，在入口下挂 `CanvasLayer(layer = 20)` → `ScenarioBanner`（`PanelContainer`，`mouse_filter = IGNORE`，锚在右下角 Build 面板正上方，offsets `-312 / -304 / -16 / -208`）→ `BannerLabel`（`AUTOWRAP_WORD_SMART`，字号 13）；文本为 `[测试入口] tests/<场景文件>` + `scenario_title` + `遭遇：<display_name>（<encounter id>） · 敌方 N：<名单>`，结算后追加 `本局结果：<胜负>`；`_update_banner_text()` 在安装时、每次 `encounter_started` 与 `encounter_finished` 各刷新一次，因此重开后「本局结果」会被清掉。② 敌我标识：`_refresh_unit_markers()` 在每次 `encounter_started` 重建（重开会换掉整批 Pawn 实例），`_apply_unit_marker()` 只做两件事——把 `Visual/Sprite2D.modulate` 按名单顺序染色（玩家绿 `(0.55, 1.0, 0.72)`，敌人红 / 黄 / 紫 / 青四色），并在 Pawn 下挂 `Label(ScenarioNameplate)`（`position = (-80, -124)`、宽 160、字号 14、黑色描边 4），文案 `敌 · <display_name>` / `玩家 · <display_name>`。③ 可读名单：`get_scenario_report()` 增加 `enemy_names`。④ 健康检查抓到的真实缺陷：横幅最初只写 `display_name`（`试剑·1v1`），体检按 `encounter id` 断言直接 FAIL，据此把横幅改成 `display_name（encounter id）` 双写，体检才从 `FAILURES=3` 收敛到 0。⑤ 体检脚本按新口径重写并统一 TAB 缩进：`EXPECTED_ENTRIES` 每项增加 `enemy_names`（1v1 `["镇狱影傀"]` / 1v2 `["赤拳战修", "灵弓修者"]` / 1v3 `["赤拳战修", "灵弓修者", "镇狱影傀"]`），新增 `_check_self_identification()`（横幅存在且含场景文件名 / encounter id / 每个敌方名字；名牌数与名单一致，玩家名牌恰好 1 个）与 `_count_nameplates()`（`find_children(..., owned = false)`，运行时节点没有 owner），并在二次加载断言「敌方名单不变 + 名牌已重建」。⑥ `tests/run_scenario.ps1`（新增）：名字路由（`1v1 / 1v2 / 1v3 / switch / loadout / first-clear / replay` 或直接给文件名）+ `-List` + `-PauseOnStart` + `-Godot`（默认 `GODOT_BIN`），用法错误 exit 2，正常运行转交 Godot 退出码；路由只做场景定位，状态仍全部写在 `.tscn` 导出参数里。⑦ `tests/README.md`：新增顶部「先看这条」警示与「运行方式：认准 F6 / 启动脚本，不要用 F5」对照表（列出 F5 / F6 / 脚本 / MCP 四种启动方式实际跑的场景）、「测试自证」章节（横幅、名牌、`enemy_names`、三档名单表）与「新增入口要求」第 5 条（新入口必须补 `EXPECTED_ENTRIES`）。
+- 变更文件：`tests/scenario_entry.gd`（横幅 / 名牌 / 配色 / `enemy_names`）、`test/tools/verify_scenario_entries.gd`（名单 + 横幅 + 名牌断言，缩进规范化）、`tests/README.md`（F5/F6 警示、自证口径、启动脚本用法）、新增 `tests/run_scenario.ps1`、`agent-plan/testing.md`、`agent-plan/_index.md`。不改 `game/` 与任何数值。
+- 测试证据：① 入口体检 `& <godot> --headless --path . --script res://test/tools/verify_scenario_entries.gd` → `SCENARIO_ENTRY_CHECK_DONE FAILURES=0`，exit 0；报告 `.mcp/godot-runtime/screenshots/tests_scenario_entries_report.txt` 逐项给出 `SELF_ID=... BANNER=... ENEMY_PLATES=1/2/3 PLAYER_PLATES=1` 与 `REPEAT_ENTRY=... PLATES=1/2/3`（重开重建名牌）。② 真实窗口（MCP `run_project(scene=...)`，2.214× stretch 缩放）：`tests/scenario_build_test_1v2.tscn` → 横幅 `[测试入口] tests/scenario_build_test_1v2.tscn / 1v2 双目标取舍 / 遭遇：试剑·1v2（build_test_1v2） · 敌方 2：赤拳战修 / 灵弓修者`，名牌 `玩家 · 测试修士` + `敌 · 赤拳战修` + `敌 · 灵弓修者`，可见性 `EncounterPanel/Buttons = hidden`、`DungeonPanel = hidden`、`SectPanel = hidden`、`BuildLoadoutPanel = VISIBLE`、`RestartButton = VISIBLE`，窗口标题 `test1 · tests/build_test_1v2 · 1v2 双目标取舍`；`tests/scenario_build_test_1v3.tscn` → 横幅 `试剑·1v3（build_test_1v3） · 敌方 3：赤拳战修 / 灵弓修者 / 镇狱影傀` + 3 个敌方名牌（三色）+ 1 个玩家名牌。③ 重开路径：真实点击「重新挑战」后 `EncounterSession._state` 由 3（结算）回到 1（进行中），横幅去掉「本局结果」行，名牌数量与文案不变（证明按 `encounter_started` 重建）。④ 反向对照（本次实机反馈的根因）：MCP `run_project()` 不传 scene（等价按 F5）→ 场景 `res://game/main/main.tscn`、遭遇 `encounter_trial_puppet` / `试炼傀儡`、`banner_layers_found = 0`、`nameplates_found = 0`、`SectPanel / DungeonPanel / EncounterPanel/Buttons` 全为 `VISIBLE`、窗口标题 `test1`——与用户描述完全一致，确认「看起来和旧傀儡测试一样且没隐藏宗门 UI」= 跑的是项目主场景而不是测试入口。⑤ 启动脚本：`pwsh -File tests/run_scenario.ps1 -List` exit 0；`-Scenario 1v2` / `-Scenario replay -PauseOnStart` / `-Scenario first_clear_reward.tscn` 经桩程序核对实参分别为 `--path <repo> res://tests/scenario_build_test_1v2.tscn`、`... scenario_build_replay.tscn -- --pause-on-start`、`... scenario_first_clear_reward.tscn`；未知名与缺 `-Godot` 均 exit 2 并打印可用入口。⑥ 统一门禁 `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` → `RESULT: PASS`（GdUnit4 402 cases / 0 failures；headless 10 suites / 549 assertions / 0 failing suites），exit 0；另单跑 `test/gameplay/human_round_record_test.gd` → `3 test cases | 0 errors | 0 failures | 0 orphans`。
+- 验证状态：验证通过（横幅 / 名牌 / 名单三条自证链路均有自动化断言与真实窗口读数；F5 反向对照证明根因；启动脚本路由经桩程序核对；统一门禁 PASS）
+- 验证时间：2026-09-26T00:19:06+08:00
+- 已知问题：① F5 仍然跑 `game/main/main.tscn`（默认试炼傀儡秘境 + 完整 HUD），本轮只做到「跑错时屏幕上没有横幅、跑对时一定有」，没有改正式入口；要彻底消除误跑需要用户决定是否更换项目主场景或加启动提示，属独立 Increment。② 横幅与名牌都是运行时节点，编辑器里三个入口场景本身仍是「空 `Node2D` + 导出参数」，差异只在导出参数与运行时表现，静态看 `.tscn` 看不出区别是设计使然。③ 点「重新挑战」后选中态被清空，信息卡 / 技能栏会隐藏，需要玩家再点一次自己的 Pawn 才恢复读数（沿用正式入口既有行为，不在本 Increment 范围；名牌不受影响，快捷键仍可用）。④ 本次实测发现 MCP `click_element` 在当前 stretch 缩放下按画布坐标点击会落空，需用 `get_screen_position()` 换算成窗口像素（画布 1156×648 → 窗口 2560×1434，缩放 ≈2.214）；这是 MCP 桥接的坐标口径问题，与游戏侧无关，已记入本卡以免下次误判。⑤ 测试报告器对 stderr 的日志轮转提示会打出 `[GdUnit4] <层> ... FAIL (N cases, 0 errors, 0 failures)` 这类噪声行，以最终 `RESULT: PASS` 与 0 failures 为准。⑥ 既有 orphan 债务（integration 288 / gameplay 324）与本次无关。
+- 用户验收：已验收（用户 2026-09-26T02:09:20+08:00 原话「本次验收通过」）
+- 验收时间：2026-09-26T02:09:20+08:00
+- Git：develop / b5550ce
+- 备注：父 Increment 为 `INC-CROSS-019`；本 Increment 解决「看不出跑的是哪个入口」与「三档遭遇在占位图下不可分辨」，属于验收可用性修复；`INC-TESTING-016` 的隐藏机制本身已在运行时复核通过。
 
 ## INC-TESTING-018：输入模型测试矩阵（左键移动 / 敌方选中 / 右键不移动）
 
