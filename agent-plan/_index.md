@@ -1,22 +1,22 @@
 # Agent Plan Index
 
-> 最后修改：2026-09-25T13:41:00+08:00  
+> 最后修改：2026-09-25T13:44:17+08:00  
 > 规则来源：`../AGENTS.md`
 
 ## 主题索引
 
 | 主题 | 计划文件 | 状态 | 当前 Increment | 最后修改 |
 |---|---|---|---|---|
-| UI | `ui.md` | 已验收 | `INC-UI-001` | 2026-09-25T13:42:33+08:00 |
-| 战斗 | `combat.md` | 已验收 | `INC-COMBAT-001` | 2026-09-25T13:42:33+08:00 |
-| Pawns | `pawns.md` | 已验收 | `INC-PAWNS-001` | 2026-09-25T13:42:33+08:00 |
+| UI | `ui.md` | 已验收 | `INC-UI-001` | 2026-09-25T13:44:10+08:00 |
+| 战斗 | `combat.md` | 已验收 | `INC-COMBAT-001` | 2026-09-25T13:44:10+08:00 |
+| Pawns | `pawns.md` | 已验收 | `INC-PAWNS-001` | 2026-09-25T13:44:10+08:00 |
 | 修炼 | `cultivation.md` | 未创建 | - | - |
 | 宗门 | `sect.md` | 未创建 | - | - |
 | 世界 | `world.md` | 未创建 | - | - |
 | 背包 | `inventory.md` | 未创建 | - | - |
 | 存档 | `save.md` | 未创建 | - | - |
 | 音频 | `audio.md` | 未创建 | - | - |
-| 核心 | `core.md` | 已验收 | `INC-CORE-001` | 2026-09-25T13:42:33+08:00 |
+| 核心 | `core.md` | 已验收 | `INC-CORE-001` | 2026-09-25T13:44:10+08:00 |
 | 工具 | `tools.md` | 计划中 | `INC-TOOLS-002` | 2026-09-25T13:41:00+08:00 |
 | 测试 | `testing.md` | 未创建 | - | - |
 
@@ -24,7 +24,7 @@
 
 | ID | 状态 | 子 Increment | 目标 | 验证 | 验收 | 最后修改 |
 |---|---|---|---|---|---|---|
-| `INC-CROSS-001` | `accepted` | `INC-PAWNS-001`、`INC-COMBAT-001`、`INC-UI-001`、`INC-CORE-001` | 完成第一个可操作 Pawn MVP | 通过 | 已验收 | 2026-09-25T13:42:33+08:00 |
+| `INC-CROSS-001` | `accepted` | `INC-PAWNS-001`、`INC-COMBAT-001`、`INC-UI-001`、`INC-CORE-001` | 完成第一个可操作 Pawn MVP | 通过 | 已验收 | 2026-09-25T13:44:10+08:00 |
 
 ### INC-CROSS-001：第一个 Pawn MVP
 
@@ -49,11 +49,11 @@
 
 | ID | 父 Increment | 主题 | 状态 | 摘要 | 最后修改 | 验证 | 验收 | Git |
 |---|---|---|---|---|---|---|---|---|
-| `INC-CROSS-001` | - | cross | `accepted` | 第一个可操作 Pawn MVP | 2026-09-25T13:42:33+08:00 | 通过 | 已验收 | main / 待记录 |
-| `INC-PAWNS-001` | `INC-CROSS-001` | pawns | `accepted` | Pawn 基础数据、运行时和控制器拆分 | 2026-09-25T13:42:33+08:00 | 通过 | 已验收 | main / 待记录 |
-| `INC-COMBAT-001` | `INC-CROSS-001` | combat | `accepted` | 普通攻击、受伤、死亡闭环 | 2026-09-25T13:42:33+08:00 | 通过 | 已验收 | main / 待记录 |
-| `INC-UI-001` | `INC-CROSS-001` | ui | `accepted` | 选中、血条、暂停 HUD | 2026-09-25T13:42:33+08:00 | 通过 | 已验收 | main / 待记录 |
-| `INC-CORE-001` | `INC-CROSS-001` | core | `accepted` | 主场景、InputMap、暂停 | 2026-09-25T13:42:33+08:00 | 通过 | 已验收 | main / 待记录 |
+| `INC-CROSS-001` | - | cross | `accepted` | 第一个可操作 Pawn MVP | 2026-09-25T13:44:10+08:00 | 通过 | 已验收 | `main` / `d7c2e1e` |
+| `INC-PAWNS-001` | `INC-CROSS-001` | pawns | `accepted` | Pawn 基础数据、运行时和控制器拆分 | 2026-09-25T13:44:10+08:00 | 通过 | 已验收 | `main` / `d7c2e1e` |
+| `INC-COMBAT-001` | `INC-CROSS-001` | combat | `accepted` | 普通攻击、受伤、死亡闭环 | 2026-09-25T13:44:10+08:00 | 通过 | 已验收 | `main` / `d7c2e1e` |
+| `INC-UI-001` | `INC-CROSS-001` | ui | `accepted` | 选中、血条、暂停 HUD | 2026-09-25T13:44:10+08:00 | 通过 | 已验收 | `main` / `d7c2e1e` |
+| `INC-CORE-001` | `INC-CROSS-001` | core | `accepted` | 主场景、InputMap、暂停 | 2026-09-25T13:44:10+08:00 | 通过 | 已验收 | `main` / `d7c2e1e` |
 | `INC-TOOLS-001` | - | tools | `awaiting_acceptance` | 初始化 Git 仓库并配置 GitHub origin | 2026-09-25T13:39:23+08:00 | 通过 | 未验收 | `main` / `origin` / 暂无提交 |
 | `INC-TOOLS-002` | - | tools | `planned` | 首次提交基线与素材入库策略 | 2026-09-25T13:41:00+08:00 | 未验证 | 未验收 | 待首次提交 |
 
@@ -61,12 +61,13 @@
 
 | ID | 主题 | 完成时间 | 验收时间 | Git commit |
 |---|---|---|---|---|
-| - | - | - | - | - |
+| `INC-CROSS-001` | cross（含 pawns / combat / ui / core 子 Increment） | 2026-09-25T13:42:33+08:00 | 2026-09-25T13:42:33+08:00 | `d7c2e1e` |
 
 ## 流程版本
 
 | 版本 | 时间 | 变更 |
 |---|---|---|
+| v0.8 | 2026-09-25T13:43:51+08:00 | 完成首次提交 d7c2e1e 并回写验收与 commit 记录 |
 | v0.7 | 2026-09-25T13:43:00+08:00 | 移除 AGENTS.md 中的本地绝对路径（满足 §8 提交约束） |
 | v0.6 | 2026-09-25T13:42:33+08:00 | 记录 INC-CROSS-001 及四个子 Increment 的用户验收结论 |
 | v0.5 | 2026-09-25T13:41:00+08:00 | 复核工程基线（.import 配对完整）、新增 INC-TOOLS-002 首次提交与素材入库策略 |
