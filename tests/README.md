@@ -69,6 +69,11 @@ Build Replay 实验（`INC-TESTING-011`）的机制事实与记录骨架由取�
 产出 `.mcp/godot-runtime/screenshots/build_replay_record.md` / `.json`（不入库，需重跑脚本再生成）。
 脚本只填「机制事实」（Round 1 / Round 2 的事件序列、结算方式、承伤与时长），三问原话与 Gate A~E 必须由玩家填写。
 
+Build Replay 人工轮（`INC-TESTING-014`）在 `tests/scenario_build_replay.tscn` 上开启只读事件记录：
+每局结算（`encounter_finished`）会自动追加一段到 `.mcp/godot-runtime/screenshots/human_replay_events.md`，
+内容包括局号、遭遇 id、结算结果、事件时钟、事件数量、玩家残余生命 / 护盾、已掌握 / 已装配技能与完整事件行。
+记录器只写事实；Q1~Q4 原话、Gate A~E 与 Failure 1~5 结论仍然只能由人工填写。该记录文件同样不入库，需重跑入口重建。
+
 ## 新增入口的要求
 
 1. 新增一个场景就新增一个 `tests/scenario_<场景>.tscn`，导出参数写在场景里（不要新增一份入口脚本）。

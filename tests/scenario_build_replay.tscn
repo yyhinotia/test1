@@ -9,3 +9,4 @@ scenario_id = &"build_replay"
 scenario_title = "Build Replay 实验（首通 → 自主重构 → 再战）"
 scenario_instructions = "实验剧本：① 用 Build A 打完这场 1v1，记住最麻烦的地方；② 首通只有定身术这一个奖励；③ 自己决定要不要换 Build（系统不会替你换）；④ 用当前 Build 重打同一个 1v1。记录见 docs/build-gameplay-validation.md §8。"
 encounter = ExtResource("2_encounter")
+record_combat_events = true
