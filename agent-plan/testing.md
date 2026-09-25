@@ -443,7 +443,7 @@
 - 已知问题：① Gate A~E 与四个归档标签必须由玩家原话填写，本轮只交付机制事实与记录骨架——`build_replay_record` 的人工段仍为「待人工」，不得由自动化代填；② 脚本化 Replay 与真实人工 Replay 可能不一致（脚本走位到定身距离后停手，人工玩家会有普通攻击与走位差异），两者冲突时以人工轮为准并记入已知问题；③ 抓取脚本未纳入 `run_tests.ps1` 门禁（需要真实窗口且耗时约 12s），属于提交前手工步骤；④ `approach_target()` 依赖真实物理帧（约 4s 实时/轮），单套件约 14s，比既有 gameplay 套件慢；⑤ 既有测试债务不变（`main_scene_sect_test.gd` 324 orphans、`sect_panel_test.gd` 288 orphans）。
 - 用户验收：待验收
 - 验收时间：待验收
-- Git：`develop` / 待回写
+- Git：`develop` / `d6bd273`
 - 备注：Gate A~E 的顺序不可颠倒：玩家先发现问题，才可能理解奖励与问题的关联，才可能主动重构，才可能改变行为并解释原因。
 
 ## INC-TESTING-012：场景化测试入口拆分到 `tests/`
