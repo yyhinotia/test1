@@ -180,6 +180,15 @@ func _is_danger_window_open(session: EncounterSession, caster: Pawn) -> bool:
 			return scheduler.is_window_open()
 	return false
 
+## 危险窗口剩余时间：与 `_is_danger_window_open` 同源；未开启时返回 0，供「窗口快结算时再上盾」取景。
+func _danger_window_remaining(session: EncounterSession, caster: Pawn) -> float:
+	if session == null or caster == null:
+		return 0.0
+	for scheduler: DangerWindowScheduler in session._danger_schedulers:
+		if scheduler != null and scheduler.get_caster() == caster:
+			return scheduler.get_window_remaining()
+	return 0.0
+
 
 ## 兜底只考虑进攻技能：回复 / 护盾 / 吸血 / 控制各有自己的触发条件，不在「没别的可用」时被随手交掉。
 func _is_offensive(skill: ActiveSkillDefinition) -> bool:
@@ -366,6 +375,8 @@ func _run_match(encounter_path: String, skills: Array[ActiveSkillDefinition]) ->
 	var max_alive_enemies: int = session.get_enemy_units().size()
 	var control_steps: int = 0
 	var skill_casts: Dictionary = {}
+	var window_distances: Array[String] = []
+	var windows_seen: int = 0
 	var steps: int = 0
 
 	while steps < MAX_STEPS and session.get_state() == EncounterSession.State.RUNNING:
@@ -410,6 +421,16 @@ func _run_match(encounter_path: String, skills: Array[ActiveSkillDefinition]) ->
 				control_steps += 1
 				break
 
+		var opened_now: int = log.count_events_of_type(CombatEvent.DANGER_WINDOW_OPENED)
+		if opened_now > windows_seen:
+			var wielder: Pawn = _first_dangerous_enemy(session)
+			if wielder != null:
+				window_distances.append("%.2fs dist %.0f" % [
+					float(steps + 1) * DELTA,
+					player.global_position.distance_to(wielder.global_position),
+				])
+			windows_seen = opened_now
+
 		max_alive_enemies = maxi(max_alive_enemies, _alive_enemies(session).size())
 		steps += 1
 
@@ -435,6 +456,8 @@ func _run_match(encounter_path: String, skills: Array[ActiveSkillDefinition]) ->
 		"danger_window_hit": log.has_event_type(CombatEvent.SKILL_HIT),
 		"danger_window_blocked": log.has_event_type(CombatEvent.SKILL_BLOCKED),
 		"skill_casts": skill_casts,
+		"timeline": _event_timeline(log),
+		"window_distances": window_distances,
 	}
 
 ## 危险窗口取舍场景：先走近到技能射程内，然后只等窗口、不主动输出。
@@ -443,7 +466,8 @@ func _run_match(encounter_path: String, skills: Array[ActiveSkillDefinition]) ->
 func _run_first_danger_window(
 		encounter_path: String,
 		skills: Array[ActiveSkillDefinition],
-		use_control: bool
+		use_control: bool,
+		use_shield: bool = false
 ) -> Dictionary:
 	var encounter: EncounterDefinition = load(encounter_path) as EncounterDefinition
 	var session: EncounterSession = _spawn_session(skills)
@@ -455,11 +479,15 @@ func _run_first_danger_window(
 	var controller: PlayerController = player.get_controller() as PlayerController
 	var log: CombatEventLog = session.get_combat_event_log()
 	var control_skill: ActiveSkillDefinition = null
+	var shield_skill: ActiveSkillDefinition = null
 	for skill: ActiveSkillDefinition in player.get_enabled_active_skills():
 		if skill.effect_type == ActiveSkillDefinition.SkillEffectType.STUN:
 			control_skill = skill
+		elif skill.effect_type == ActiveSkillDefinition.SkillEffectType.SHIELD:
+			shield_skill = skill
 	var steps: int = 0
 	var cast_done: bool = false
+	var shield_cast: bool = false
 
 	while steps < MAX_STEPS and session.get_state() == EncounterSession.State.RUNNING:
 		var window_enemy: Pawn = _first_dangerous_enemy(session)
@@ -478,6 +506,13 @@ func _run_first_danger_window(
 			cast_done = true
 			if control_skill == null or not player.cast_skill(control_skill, window_enemy):
 				break
+		elif use_shield and not cast_done:
+			# 护盾路线：等到窗口即将结算的那一帧才上盾，让「盾挡住伤害」与「仍然被硬直」落在同一次结算里，
+			# 避免盾在窗口期被普攻磨掉后把这条路线测成「没上盾」。
+			if _danger_window_remaining(session, window_enemy) <= DELTA * 2.0:
+				cast_done = true
+				if shield_skill != null and player.cast_skill(shield_skill, player):
+					shield_cast = true
 		# 窗口开启后只观察：取消 / 命中 / 挡下都由正式事件日志给出。
 		_step_world(session, player, controller)
 		steps += 1
@@ -487,16 +522,38 @@ func _run_first_danger_window(
 			break
 
 	var remaining: Pawn = _first_dangerous_enemy(session)
+	# 追加硬直只认追加效果自己的 id：玩家主动施放定身术同样会记录 skill_stunned（那一条不属于危险技能的代价）。
+	var followup_skill: ActiveSkillDefinition = null
+	if remaining != null and remaining.data != null and remaining.data.dangerous_skill != null:
+		followup_skill = remaining.data.dangerous_skill.get_followup_skill()
+	var followup_id: String = String(followup_skill.id) if followup_skill != null else ""
+	var followup_stunned: int = 0
+	var followup_skill_id: String = ""
+	for event: CombatEvent in log.get_events():
+		if event.event_type != CombatEvent.SKILL_STUNNED:
+			continue
+		if followup_id.is_empty() or String(event.skill_id) != followup_id:
+			continue
+		followup_stunned += 1
+		if followup_skill_id.is_empty():
+			followup_skill_id = String(event.skill_id)
 	return {
 		"encounter": String(encounter.id),
 		"build": _skill_ids(skills),
 		"use_control": use_control,
+		"use_shield": use_shield,
 		"danger_window_opened": log.count_events_of_type(CombatEvent.DANGER_WINDOW_OPENED),
-		"control_cast": cast_done,
+		"control_cast": cast_done and use_control,
+		"shield_cast": shield_cast,
 		"enemy_stunned": remaining != null and remaining.is_stunned(),
 		"cancelled": log.has_event_type(CombatEvent.SKILL_CANCELLED),
 		"hit": log.has_event_type(CombatEvent.SKILL_HIT),
 		"blocked": log.has_event_type(CombatEvent.SKILL_BLOCKED),
+		"player_stunned": player.is_stunned(),
+		"player_stun_seconds": player.get_stun_remaining(),
+		"followup_stunned_events": followup_stunned,
+		"followup_skill_id": followup_skill_id,
+		"stunned_event_count": log.count_events_of_type(CombatEvent.SKILL_STUNNED),
 		"player_effective": _effective_health(player),
 		"steps": steps,
 	}
@@ -580,6 +637,29 @@ func _exceeds_noise(a: Dictionary, b: Dictionary) -> bool:
 	if larger_time <= 0.0:
 		return false
 	return time_gap / larger_time >= MIN_TIME_GAP_RATIO
+
+## 关键事件时间线（INC-TESTING-023）：只保留危险窗口相关事件，供人工复核「窗口是否真的兑现」。
+func _event_timeline(log: CombatEventLog) -> Array[String]:
+	var lines: Array[String] = []
+	for event: CombatEvent in log.get_events():
+		var is_danger_skill: bool = String(event.skill_id) == "charge_bolt"
+		var is_key: bool = (
+			event.event_type == CombatEvent.DANGER_WINDOW_OPENED
+			or event.event_type == CombatEvent.SKILL_CANCELLED
+			or event.event_type == CombatEvent.SKILL_STUNNED
+			or event.event_type == CombatEvent.UNIT_DIED
+			or (is_danger_skill and event.event_type != CombatEvent.SKILL_STUNNED)
+		)
+		if is_key:
+			lines.append("%.2f %s %s->%s %s" % [
+				event.timestamp,
+				String(event.event_type),
+				String(event.actor_id),
+				String(event.target_id),
+				String(event.skill_id),
+			])
+	return lines
+
 
 ## 一行客观量摘要：终局 / 耗时 / 剩余有效生命 / 灵力消耗，供打印与人工复核。
 func _summary(result: Dictionary) -> String:
@@ -716,6 +796,77 @@ func test_danger_window_is_only_cancelled_by_control_skill() -> void:
 	# 无控制：窗口照常结算，没有任何一次取消。
 	assert_bool(bool(without_control["cancelled"])).is_false()
 	assert_bool(bool(without_control["hit"]) or bool(without_control["blocked"])).is_true()
+
+
+## 追加代价用例（INC-TESTING-023）：危险窗口落地后，护盾能吸收伤害，却买不断紧随其后的硬直。
+## 三条路径对比：定身打断（窗口取消）/ 有盾硬吃（盾放出来后再结算）/ 无盾硬吃。全部取自正式事件日志。
+func test_danger_window_followup_penalty_survives_shield() -> void:
+	var builds: Dictionary = _builds()
+	var interrupted: Dictionary = _run_first_danger_window(ROOM_CHARGE_PATH, builds["sword+binding"], true)
+	var shielded: Dictionary = _run_first_danger_window(ROOM_CHARGE_PATH, builds["sword+guard"], false, true)
+	var exposed: Dictionary = _run_first_danger_window(ROOM_CHARGE_PATH, builds["sword+guard"], false)
+	print("[INC-TESTING-023] 追加代价（定身打断）=%s" % str(interrupted))
+	print("[INC-TESTING-023] 追加代价（有盾硬吃）=%s" % str(shielded))
+	print("[INC-TESTING-023] 追加代价（无盾硬吃）=%s" % str(exposed))
+
+	# 三条路径都必须真的等到窗口开启，否则这一格什么都没测到。
+	assert_int(int(interrupted["danger_window_opened"])).is_greater_equal(1)
+	assert_int(int(shielded["danger_window_opened"])).is_greater_equal(1)
+	assert_int(int(exposed["danger_window_opened"])).is_greater_equal(1)
+
+	# 打断：窗口取消、没有命中 / 挡下，玩家一次都不进入硬直，追加硬直一次都没有落地。
+	# （玩家自己施放的定身术会记一条 skill_stunned，因此这里断言的是「追加效果 id」的计数，不是总数。）
+	assert_bool(bool(interrupted["cancelled"])).is_true()
+	assert_bool(bool(interrupted["hit"]) or bool(interrupted["blocked"])).is_false()
+	assert_int(int(interrupted["followup_stunned_events"])).is_zero()
+	assert_str(String(interrupted["followup_skill_id"])).is_equal("")
+	assert_int(int(interrupted["stunned_event_count"])).is_greater_equal(1)
+	assert_bool(bool(interrupted["player_stunned"])).is_false()
+	assert_float(float(interrupted["player_stun_seconds"])).is_equal_approx(0.0, APPROX)
+
+	# 硬吃（有盾 / 无盾）：主效果照常结算，追加硬直一定落地，事件带的是追加效果自己的 id。
+	for eaten: Dictionary in [shielded, exposed]:
+		assert_bool(bool(eaten["hit"]) or bool(eaten["blocked"])).is_true()
+		assert_int(int(eaten["followup_stunned_events"])).is_greater_equal(1)
+		assert_str(String(eaten["followup_skill_id"])).is_equal("charge_hardstop")
+		assert_bool(bool(eaten["player_stunned"])).is_true()
+		assert_float(float(eaten["player_stun_seconds"])).is_greater(0.0)
+
+	# 有盾那一条必须真的把盾放出来并挡下这次伤害，否则它证明的不是「盾挡不住」，而是「没上盾」。
+	assert_bool(bool(shielded["shield_cast"])).is_true()
+	assert_bool(bool(shielded["blocked"])).is_true()
+	assert_bool(bool(shielded["hit"])).is_false()
+
+
+## 重新定价用例（INC-TESTING-023）：room 03 的答案必须从「护体真气硬吃」变回「定身打断」。
+## 前提是危险窗口在这场对局里真的落地；若窗口从未出现，这一格比较的只是两个没有问题的房间。
+func test_charge_room_prices_interrupt_above_shield() -> void:
+	var builds: Dictionary = _builds()
+	var interrupt: Dictionary = _run_match(ROOM_CHARGE_PATH, builds["sword+binding"])
+	var shield: Dictionary = _run_match(ROOM_CHARGE_PATH, builds["sword+guard"])
+	print("[INC-TESTING-023] room 03 重新定价：sword+binding=%s（窗口 %d / 取消 %s） vs sword+guard=%s（窗口 %d / 命中 %s / 挡下 %s）" % [
+		_summary(interrupt),
+		int(interrupt["danger_window_opened"]),
+		str(interrupt["danger_window_cancelled"]),
+		_summary(shield),
+		int(shield["danger_window_opened"]),
+		str(shield["danger_window_hit"]),
+		str(shield["danger_window_blocked"]),
+	])
+	print("[INC-TESTING-023] 时间线（binding）=%s" % str(interrupt["timeline"]))
+	print("[INC-TESTING-023] 时间线（guard）=%s" % str(shield["timeline"]))
+	print("[INC-TESTING-023] 窗口开启距离（binding）=%s" % str(interrupt["window_distances"]))
+	print("[INC-TESTING-023] 窗口开启距离（guard）=%s" % str(shield["window_distances"]))
+
+	# 前提：这一格必须真的出现过危险窗口。
+	assert_int(int(interrupt["danger_window_opened"]) + int(shield["danger_window_opened"])).is_greater_equal(1)
+
+	# 主断言：只差一个技能时，打断型 Build 更优，且差异超出既有噪声带。
+	assert_str(_better_build(interrupt, shield)).is_equal("A")
+	assert_bool(_exceeds_noise(interrupt, shield)).is_true()
+
+	# 负面对照：不带打断也必须能通关——问题变难，但没有变成「不带定身术就过不去」。
+	assert_str(String(shield["outcome"])).is_equal("player_win")
 
 
 ## 严格支配：一方在「剩余有效生命更高 / 耗时更短 / 灵力消耗更少」三项上都不差，且至少一项好出噪声带。

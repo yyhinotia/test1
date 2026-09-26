@@ -802,3 +802,43 @@
 - 验收时间：2026-09-26T13:17:02+08:00
 - Git：`develop` / `1956300`
 - 备注：父 Increment 为 `INC-CROSS-024`；本项只产出「可跑的入口 + 只读记录」，`INC-CROSS-021` 的三问与 Build 玩法是否成立仍必须由人工轮回答。
+
+## INC-TESTING-023：危险窗口追加效果的证据与问题房间重新定价
+
+- 状态：in_progress
+- 创建时间：2026-09-26T13:22:01+08:00
+- 最后修改：2026-09-26T13:45:10+08:00
+- 主题：testing
+- 父 Increment：`INC-CROSS-025`
+- 目标：为「危险窗口的真代价」提供可复核的客观证据，并回答它是否真的把问题房间的答案换掉了：同一房间、同一初始状态、只差一个技能时，打断型 Build 的客观量必须从「更差」变成「更好」，同时保留「不带打断仍然可通关」的负面对照。
+- 验收标准：
+  - 新增用例断言机制层事实：危险窗口落地且未被打断时，日志出现 `skill_stunned`（actor = 危险技能施法者、skill_id = 追加效果 id），且玩家确实进入硬直（`is_stunned()` 为真、剩余时间 > 0）；被定身打断时，玩家全程不进入硬直、`skill_stunned` 计数为 0。
+  - 新增用例断言重新定价：`problem_room_03_charge` 上 `sword+binding` 对 `sword+guard` 的比较结果必须是打断型 Build 更优，且差异超出既有噪声带（`_exceeds_noise`）。
+  - 记录改动前后的同一格实测数字（终局 / 耗时 / 剩余有效生命 / 灵力消耗），作为「问题房间是否真的区分技能」的原始证据。
+  - 不回归：`INC-TESTING-019` 既有 3 个用例（六格矩阵、数值升级非新轴、危险窗口只由控制取消）继续通过；矩阵两条既有断言（至少两格超出噪声、至少两种不同最优 Build）不放宽。
+  - 统一门禁 `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` → `RESULT: PASS`。
+- 范围：`test/integration/skill_enemy_interaction_matrix_test.gd`（新增用例与记录）、必要时 `test/unit/` 下的技能定义用例。
+- 非范围：改玩法数值来「凑」结论、把断言写成跳过、把人工结论（玩家是否自然重构 Build）写进自动化断言、新增技能 / 敌人 / 房间。
+- 依赖：`INC-COMBAT-013`（追加效果）、`INC-TESTING-019`（六格矩阵与噪声口径，已验收）、`INC-PAWNS-023`（8 技能池，已验收）。
+- 风险：① 矩阵的 `_better_build` 先比剩余有效生命、再比耗时、再比灵力，硬直代价必须大到能改变第一项排序，否则这一格仍会落到「打平 / 靠耗时决胜」；② 跨进程胜者漂移是既有已知噪声来源，因此断言只写方向与噪声带，不写绝对秒数；③ 追加效果可能让 `problem_room_03_charge` 过难，必须同时给出「不打断仍能通关」的证据，避免变成不带定身术就过不去。
+- 检索证据：2026-09-26T13:22:01+08:00 `git status --short` 干净；`git grep -n "skill_stunned" -- game/ test/` 显示该事件当前只在玩家主动施法路径记录，追加效果需要自己补记录；`test/integration/skill_enemy_interaction_matrix_test.gd` 当前 3 个用例、`_cases()` 六格、`_builds()` 七个 Build；实测基线（2026-09-26T13:22:01+08:00，`& $env:GODOT_BIN --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://test/integration/skill_enemy_interaction_matrix_test.gd -rd res://reports/gdunit/matrix --ignoreHeadlessMode`）为：room 01 `sword+aoe` 5.98s/余命134 vs `sword+guard` 6.78s/余命147 → B(guard)；room 02 `sword+dash` 3.03s/余命149 vs `sword+guard` 4.38s/余命149 → A(dash)；room 03 `sword+binding` 7.27s/余命117 vs `sword+guard` 8.73s/余命127 → **B(guard)**；room 04 `sword+aoe` 10.78s/余命112 vs `sword+guard` 15.58s/余命103 → A(aoe)；room 05 `sword+lifesteal` 19.58s/余命54 vs `sword+guard` 21.18s/余命50 → 未超噪声（打平）；room 06 `sword+binding` 5.12s/余命50 vs `sword+guard` 5.12s/余命80 → B(guard)。
+- 实现说明：
+  - `test_danger_window_followup_penalty_survives_shield`（新增）：三条路径全部取正式事件日志——定身打断（窗口取消）/ 有盾硬吃 / 无盾硬吃。有盾路径等到窗口只剩 ≤2 帧才上盾，保证「盾挡住主伤害」与「仍然被硬直」落在同一次结算里，不会被窗口期的普攻把盾磨掉后测成「没上盾」。
+  - `test_charge_room_prices_interrupt_above_shield`（新增）：在 `problem_room_03_charge` 上跑完整对局，用既有 `_better_build()` / `_exceeds_noise()` 口径断言「只差一个技能时打断型 Build 更优且超出噪声」，并给出「不带打断仍能通关」（`player_win`）的负面对照。
+  - 取证辅助：`_run_match()` 额外返回 `timeline`（危险窗口事件时间线：开启 / 取消 / 命中 / 挡下 / 硬直 / 单位死亡）与 `window_distances`（窗口开启瞬间玩家与施法者的距离），两者都会打印，供人工复核「这一格的窗口是否真的兑现」。`_run_first_danger_window()` 增加 `use_shield` 路径，并返回追加效果的独立计数（按追加效果自己的 id 过滤，而不是 `skill_stunned` 总数——玩家主动施放定身术同样会记该事件）。
+- 变更文件：`test/integration/skill_enemy_interaction_matrix_test.gd`（+2 用例、`_run_first_danger_window()` 增加护盾路径与追加效果计数、新增 `_danger_window_remaining()` / `_event_timeline()`、`_run_match()` 增加时间线与窗口开启距离取证）。
+- 测试证据：2026-09-26T13:45:10+08:00
+  - 改动前基线（`danger_window_interval = 3.0` / `danger_window_duration = 2.0`，同一命令）：room 03 `sword+binding=8.68s 余命 106 / 灵力 85` vs `sword+guard=8.68s 余命 127 / 灵力 80` → 更优=B；guard 时间线为 `3.02 danger_window_opened` → `4.47 unit_died`，窗口从未落地（无 `skill_hit` / `skill_blocked` / `skill_stunned`）。同一份代码在全 integration 层运行失败、单独运行通过。
+  - 改动后单套件：`& <godot> --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://test/integration/skill_enemy_interaction_matrix_test.gd -rd res://reports/gdunit/probe9 --ignoreHeadlessMode` → `5 test cases | 0 errors | 0 failures`；room 03 `sword+binding=7.90s 余命 127 / 灵力 85（窗口 1 / 取消 true）` vs `sword+guard=9.10s 余命 89 / 灵力 80（窗口 1 / 命中 false / 挡下 true）` → 更优=A、超出噪声=true。
+  - 改动后全 integration 层：`pwsh -File test/run_tests.ps1 -Godot <godot> -Layer integration -ReportDir reports/gdunit/probe_int2` → `GdUnit4 : 207 cases, 0 failures`；room 03 同为 A，guard 时间线为 `2.52 danger_window_opened` → `3.72 skill_blocked … charge_bolt` + `3.72 skill_stunned … charge_hardstop` → `5.32 unit_died`。
+  - 机制事实：打断路径 `followup_stunned_events=0`、`player_stunned=false`、`player_stun_seconds=0`；有盾 / 无盾硬吃路径 `followup_stunned_events=1`、`followup_skill_id="charge_hardstop"`、`player_stunned=true`、`player_stun_seconds=1.5833`。
+  - 窗口开启瞬间玩家距施法者 74（定身术射程 120），确认「窗口开启时玩家确实处在可打断的位置」，不是靠窗口开在够不着的时候制造优势。
+  - 改动后六格（单套件实测，终局均为 `player_win`）：room 01 `sword+aoe 5.20s / 余命 134 / 灵力 90` vs `sword+guard 6.00s / 余命 160 / 灵力 80` → B；room 02 `sword+dash 2.40s / 160 / 45` vs `sword+guard 3.60s / 149 / 25` → A；room 03 见上 → A；room 04 `sword+aoe 10.00s / 124 / 90` vs `sword+guard 14.80s / 115 / 80` → A；room 05 `sword+lifesteal 18.80s / 65 / 80` vs `sword+guard 20.40s / 61 / 80` → 未超噪声（打平）；room 06 `sword+binding 4.40s / 105 / 50` vs `sword+guard 4.40s / 135 / 80` → B。
+  - 统一门禁：`pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` → `GdUnit4 : 464 cases, 0 failures`、`headless : 10 suites, 549 assertions, 0 failing suites`、`RESULT: PASS`（连续两次）。
+- 验证状态：验证通过
+- 验证时间：2026-09-26T13:45:10+08:00
+- 已知问题：① 「打断更优」依赖窗口在这一局里真的落地：改动前它在全 integration 层失败、单独运行通过（同一份代码、两个进程给出相反的胜者），根因是对局推进依赖 `move_and_slide()`，位移由引擎物理步给出（`test/README.md` 已知陷阱），对局时长会跨进程整体滑动；实测差异不是噪声带问题，而是「施法者是否活到窗口落地」。本项通过修订聚煞术士的调度参数让窗口落在施法者存活期内，并把事件时间线与开启距离一并输出，供人工判断这一格是否真的兑现了问题。② 断言仍只写方向与噪声带，绝对秒数仍会跨进程滑动（本次 room 03 实测出现过 7.68s / 7.90s 两种值）。③ room 05 仍打平；`INC-CROSS-021` 的人工三问（最麻烦的问题 / 为什么换或不换 Build / 第二轮具体改变了什么）仍待玩家回答，Build 玩法是否成立不能由本项代替。④ `_run_match()` 现在为每一局保留一份事件时间线，代价是测试内存占用略增（当前 6 格 × 2 Build 规模可忽略）。
+- 用户验收：未验收
+- 验收时间：
+- Git：未提交
+- 备注：父 Increment 为 `INC-CROSS-025`；本项只证明「危险窗口不再被护盾买断」，玩家是否因此自然重构 Build 仍只能由人工轮回答。
