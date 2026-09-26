@@ -1,6 +1,6 @@
 # Pawns 主题计划
 
-> 最后修改：2026-09-26T02:19:07+08:00
+> 最后修改：2026-09-26T02:25:25+08:00
 > 主题：pawns  
 > 规则来源：`../AGENTS.md`
 
@@ -830,9 +830,9 @@
 
 ## INC-PAWNS-023：玩家技能池扩到 8 个（条件爆发 + 主动回复）
 
-- 状态：planned
+- 状态：accepted
 - 创建时间：2026-09-26T02:19:07+08:00
-- 最后修改：2026-09-26T02:19:07+08:00
+- 最后修改：2026-09-26T11:50:07+08:00
 - 主题：pawns
 - 目标：把玩家技能池从 6 个扩到 8 个，补齐两条此前**没有任何技能使用**的轴——「条件爆发」（破军斩：只有目标被控住时才打得过基础输出）与「主动回复」（回春术：事后补血，与护体真气的预防式护盾互补）。目标是让「控制 + 爆发」与「护盾 + 回复」这两个组合在数据上真实存在，而不是继续加同轴的高倍率技能。炼气期保持 `active_skill_slots = 2`，C(8,2) = 28 种组合。
 - 验收标准：
@@ -846,13 +846,13 @@
 - 依赖：`INC-COMBAT-012`（条件伤害语义）、`INC-PAWNS-022`（六技能编目与运行时装配链路）。
 - 检索证据：2026-09-26T02:19:07+08:00 在仓库根目录执行 `Get-ChildItem game/pawns/data/skills/*.tres, game/pawns/data/*skill.tres`（现有 6 个玩家技能：`player_sword_skill` / `player_guard_skill` / `player_binding_skill` / `player_dash_skill` / `player_sword_aoe_skill` / `player_lifesteal_skill`）、`git grep -n "SkillEffectType.HEAL\|effect_type = 1" -- game/`（HEAL 枚举自 `INC-COMBAT-006` 起就是已支持类型，但没有任何玩家技能资源使用它，「主动回复」是真实空轴）、`git grep -h -o -E "INC-PAWNS-[0-9]{3}" -- agent-plan/ | Sort-Object -Unique`（PAWNS 已用至 022，本项取 023）。
 - 风险：① 破军斩的价值完全依赖玩家肯先手控制，如果定身术 10s 冷却跟不上实战节奏，条件爆发会退化成没人用的技能——这属于 `INC-TESTING-019` 要回答的问题，本 Increment 不做数值保底；② 回春术 12s 冷却 + 45 灵力可能让它在长线战斗里不如血引术，同样留给交互矩阵判断；③ 两个新技能与 `INC-PAWNS-022` 的三个技能一样目前没有解锁来源，正常流程中还拿不到，解锁链路由 `INC-WORLD-008` 的房间链承担。
-- 实现说明：
-- 变更文件：
-- 测试证据：
-- 验证状态：未验证
-- 验证时间：
-- 已知问题：
-- 用户验收：未验收
-- 验收时间：
-- Git：待提交
+- 实现说明：① 破军斩 `player_breaking_slash.tres`（DAMAGE / ENEMY / 1.4× / 灵力 35 / 冷却 5.0s / 射程 110 / `controlled_bonus_multiplier = 2.4`）——对未受控目标的 1.4× 低于御剑斩的 1.8×，对受控目标 1.4 × 2.4 = 3.36× 反超御剑斩，且灵力与冷却都更高，因此「单独使用严格劣于御剑斩、先控后打才成立」在数据上可被直接核对。② 回春术 `player_rejuvenation_skill.tres`（HEAL / SELF / 55 点 / 灵力 45 / 冷却 12.0s）——八项技能中灵力与冷却最高，单次回复量高于血引术在炼气期玩家（attack 28）上的单次吸血（约 17 点），补上此前没有任何玩家技能使用的「主动回复」轴。③ 两者都不进 `player_pawn.tres` 初始装配，`qi_refining.tres` 的 `active_skill_slots` 保持 2，技能池组合为 C(8,2) = 28。
+- 变更文件：`game/pawns/data/skills/player_breaking_slash.tres`（新增）、`game/pawns/data/skills/player_rejuvenation_skill.tres`（新增）、`test/unit/tactical_skill_catalog_test.gd`、`test/integration/runtime_active_skill_loadout_test.gd`
+- 测试证据：① `mcp__godot::validate` 全部改动脚本 `valid: true`，两个新资源由 Godot 在测试中实际载入。② 单套件：`tactical_skill_catalog_test.gd` → `12 test cases | 0 failures`（新增 `test_breaking_slash_is_conditional_damage`、`test_rejuvenation_is_self_heal`；`test_eight_tactical_skills_cover_distinct_value_axes` 改用「效果类型 + 是否条件加成」的价值轴键，证明八技能互不重复且含 2 个 DAMAGE）；`runtime_active_skill_loadout_test.gd` → `5 test cases | 0 failures`（新增 `test_pool_skills_can_be_learned_and_equipped_within_two_slots`：新技能可 learn / 装配，炼气期仍 2 槽，超容量装配整体失败且零副作用）。③ 统一门禁 `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` → `GdUnit4 429 cases, 0 failures` / `headless 10 suites, 549 assertions, 0 failing suites` / `RESULT: PASS`，exit 0。
+- 验证状态：验证通过（八技能价值轴互不重复、条件爆发「劣于常规 / 优于常规」两侧边界、主动回复量级、运行时装配与容量约束均有单套件断言；统一门禁 PASS）
+- 验证时间：2026-09-26T02:25:25+08:00
+- 已知问题：① 两个新技能目前没有解锁来源，正常流程与测试入口都拿不到，解锁链路由 `INC-WORLD-008` 的房间编排承担；② 破军斩依赖定身术 10s 冷却的节奏、回春术 45 灵力 + 12s 冷却是否真的划算，都留给 `INC-TESTING-019` 的交互矩阵判定；③ 条件倍率叠在 `effect_value` 之上存在「控制期一刀秒杀」的数值风险，本阶段只定档不做平衡。
+- 用户验收：已验收（用户原话「本次验收通过」）
+- 验收时间：2026-09-26T11:50:07+08:00
+- Git：`develop` / `a963738`
 - 备注：父 Increment 为 `INC-CROSS-021`；本项只提供「可选项变多」，是否形成 Build 由 `INC-WORLD-008` 的编排与 `INC-TESTING-019` 的矩阵回答。

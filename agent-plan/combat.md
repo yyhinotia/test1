@@ -1,6 +1,6 @@
 # Combat 主题计划
 
-> 最后修改：2026-09-26T02:24:14+08:00
+> 最后修改：2026-09-26T02:25:25+08:00
 > 主题：combat  
 > 规则来源：`../AGENTS.md`
 
@@ -452,9 +452,9 @@
 
 ## INC-COMBAT-012：条件伤害（对受控目标的额外倍率）
 
-- 状态：planned
+- 状态：accepted
 - 创建时间：2026-09-26T02:19:07+08:00
-- 最后修改：2026-09-26T02:19:07+08:00
+- 最后修改：2026-09-26T11:50:07+08:00
 - 主题：combat
 - 目标：让「控制」第一次能直接兑换成「输出窗口」——新增 `controlled_bonus_multiplier` 数据字段与 DAMAGE 路径的条件倍率语义：目标处于控制状态（`Pawn.is_stunned()`）时按额外倍率结算，未受控时完全按原倍率。这样「先控后打」是一个由数据表达的连招，而不是靠玩家自己脑补。
 - 验收标准：
@@ -467,13 +467,13 @@
 - 依赖：`INC-COMBAT-010`（效果类型扩展）、`INC-COMBAT-009`（`Pawn.apply_stun()` / `is_stunned()` 已是既有状态事实）。
 - 检索证据：2026-09-26T02:19:07+08:00 在仓库根目录执行 `git grep -n -E "is_stunned|get_stun_remaining|apply_stun" -- game/pawns/pawn.gd`（确认控制状态由 `_stun_remaining` 单一事实提供，`Pawn` 已暴露 `apply_stun()` / `is_stunned()` / `get_stun_remaining()`）、`git grep -h -o -E "INC-COMBAT-[0-9]{3}" -- agent-plan/`（COMBAT 已用至 011，本项取 012）；读取 `game/combat/skill/skill_effect_resolver.gd` 全文确认 `get_damage_amount(caster, skill)` 只接收施法者与技能、无法表达任何依赖目标状态的条件倍率，`apply_effect()` 是唯一分派点。
 - 风险：① `get_damage_amount()` 新增可选目标参数会波及 DASH / AOE_DAMAGE / LIFESTEAL 的调用点，必须保证默认参数下行为逐字节不变；② 「受控」当前只等于 `is_stunned()`，若未来引入减速 / 沉默等其他控制类型，需要重新定义边界（本 Increment 不预设）；③ 条件倍率叠在 `effect_value` 之上容易出现「控制期一刀秒杀」的数值事故，本项只提供能力，倍率由技能资源定档，平衡留给 `INC-TESTING-019`。
-- 实现说明：
-- 变更文件：
-- 测试证据：
-- 验证状态：未验证
-- 验证时间：
-- 已知问题：
-- 用户验收：未验收
-- 验收时间：
-- Git：待提交
+- 实现说明：① 数据字段——`ActiveSkillDefinition` 新增 `controlled_bonus_multiplier`（默认 1.0）与 `get_normalized_controlled_bonus_multiplier()`（`maxf(value, 1.0)`，条件只增不减）、`has_controlled_bonus()`（严格大于 1.0 才为真，供结算与测试区分「无条件技能」）。② 结算——`SkillEffectResolver.get_damage_amount()` 改为 `(caster, skill, target = null)`：目标有效且 `target.is_stunned()` 时倍率取 `effect_value × controlled_bonus_multiplier`，否则只用 `effect_value`；DAMAGE 分支改为传入目标，而 DASH / AOE_DAMAGE / LIFESTEAL 三个既有调用点保持两参不变，因此条件倍率不会进入这三种效果。③ 回归——默认 1.0 使既有六个技能与全部既有伤害用例的公式逐字节不变。
+- 变更文件：`game/shared/resources/active_skill_definition.gd`、`game/combat/skill/skill_effect_resolver.gd`、`test/unit/active_skill_definition_test.gd`、`test/integration/skill_effect_test.gd`
+- 测试证据：① `mcp__godot::validate` 6 个改动脚本全部 `valid: true`。② 单套件：`active_skill_definition_test.gd` → `8 test cases | 0 failures`（默认值 / 归一化 / `has_controlled_bonus()` 三组断言）；`skill_effect_test.gd` → `10 test cases | 0 failures`（新增 `test_controlled_bonus_damage_applies_only_while_target_is_stunned`、`test_controlled_bonus_is_ignored_by_non_damage_effects`）；`tactical_skill_catalog_test.gd` → `12 test cases | 0 failures`；`runtime_active_skill_loadout_test.gd` → `5 test cases | 0 failures`。③ 统一门禁 `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` → `GdUnit4 429 cases, 0 failures` / `headless 10 suites, 549 assertions, 0 failing suites` / `RESULT: PASS`，exit 0。
+- 验证状态：验证通过（默认值零影响 / 受控叠加 / 非 DAMAGE 不参与三条链路均有单套件断言；统一门禁 PASS）
+- 验证时间：2026-09-26T02:25:25+08:00
+- 已知问题：① 「受控」当前只等于 `Pawn.is_stunned()`，若未来引入减速 / 沉默等控制类型需要重新定义边界；② 条件倍率只作用于 DAMAGE，AOE_DAMAGE / LIFESTEAL / DASH 明确不参与，这是本 Increment 的有意边界；③ 2.4× 这类档位的实战平衡由 `INC-PAWNS-023` 与 `INC-TESTING-019` 判定，本项只提供表达能力。
+- 用户验收：已验收（用户原话「本次验收通过」）
+- 验收时间：2026-09-26T11:50:07+08:00
+- Git：`develop` / `f1abebd`
 - 备注：父 Increment 为 `INC-CROSS-021`；本项只提供「条件伤害」的表达能力，实际使用它的技能与数值由 `INC-PAWNS-023` 承担。
