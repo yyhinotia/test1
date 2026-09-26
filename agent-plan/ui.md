@@ -800,3 +800,39 @@
 - 验收时间：2026-09-26T13:00:11+08:00
 - Git：`develop` / `9b64825`
 - 备注：父 Increment 为 `INC-CROSS-023`；本项只解决「玩家能不能自由表达 Build」，是否真的形成 Build 仍由 `INC-TESTING-021` 的客观证据与人工轮三问回答。
+
+## INC-UI-022：首通解锁提示行（只读可见性）
+
+- 状态：in_progress
+- 创建时间：2026-09-26T13:03:24+08:00
+- 最后修改：2026-09-26T13:03:24+08:00
+- 主题：ui
+- 父 Increment：`INC-CROSS-024`
+- 目标：玩家在问题秘境某层首通解锁技能时，秘境面板出现一行只读提示「已解锁：<技能> · 可在 Build 面板装配」。目标里的「获得新 Skill」这一步必须对玩家可见，否则「遇到问题 → 获得技能 → 主动重构 Build」只能靠偶然发现某一行从「未解锁」变成可点。
+- 验收标准：
+  - `DungeonPanel` 新增 `set_unlock_notice(text: String)` / `clear_unlock_notice()` / `get_unlock_notice()`，节点 `UnlockLabel` 静态定义在 `game/ui/dungeon_panel.tscn`（不是运行时临时创建），文本为空时不显示。
+  - 提示行 `mouse_filter = MOUSE_FILTER_IGNORE`，不接受鼠标，不影响既有按钮与左键操作模型。
+  - `main.gd` 订阅 `EncounterSession.first_clear_reward_granted`：`newly_learned == true` 时写入「已解锁：<display_name> · 可在 Build 面板装配」；`newly_learned == false`（重复通关）时不写新文案、不清空既有文案。
+  - 进入下一层（`DungeonRun.run_started`）时清空提示；提示不调用 `Pawn.set_active_skill_loadout()`，不改 Build 面板锁定态，不自动装配。
+  - 统一门禁 `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` → `RESULT: PASS`。
+- 范围：`game/ui/dungeon_panel.gd`、`game/ui/dungeon_panel.tscn`、`game/main/main.gd`、`test/integration/dungeon_panel_test.gd`、`test/gameplay/problem_dungeon_play_path_test.gd`。
+- 非范围：改秘境奖励 / 层数 / 数值、改 `BuildLoadoutPanel` 与 `Pawn` 装配规则、正式美术与布局重构、新增局内弹窗 / 动画 / 音效。
+- 依赖：`INC-WORLD-009`（解锁广播）、`INC-UI-020`（秘境面板既有状态口径，已验收）、`INC-CROSS-022`（问题秘境默认可达，已验收）。
+- 风险：① 面板已有多条文案（标题 / 深度 / 收益 / 本层问题 / 状态），新增一行不得把既有信息挤出可读范围，必须在真实窗口核对；② 提示必须在进入下一层时清空，否则玩家会把上一层的解锁当成当前层的事实；③ 提示行若拦截鼠标会重新破坏 `INC-CROSS-020` 的左键操作模型，因此必须 `MOUSE_FILTER_IGNORE`。
+- 检索证据：2026-09-26T13:03:24+08:00 `git grep -n "first_clear" -- game/ui/ game/main/` 无命中，确认 UI 侧当前没有任何解锁提示；`git grep -n "^\[node" -- game/ui/dungeon_panel.tscn` 显示现有节点为 `TitleLabel` / `DepthLabel` / `RewardLabel` / `ProblemLabel` / `StatusLabel` / `AdvanceButton` / `RetreatButton` / `RestartButton` / `OptionsLabel` / `DungeonOptions`，没有提示行节点；`git grep -n "^func " -- game/ui/dungeon_panel.gd` 显示已有 `set_status` / `set_room_problem_labels` / `set_reward` 等只读 setter，本项按同一口径新增 `set_unlock_notice`。
+- 实现说明：`DungeonPanel` 在 `ProblemLabel` 与 `StatusLabel` 之间静态新增 `UnlockLabel`（`game/ui/dungeon_panel.tscn`：`visible = false`、`mouse_filter = MOUSE_FILTER_IGNORE`、字号 13、绿色字色、`autowrap_mode = 2`），并在 `_ready()` 里调用 `_apply_unlock_text()`，因此入树前写入的文案也能落成控件。新增三个只读接口 `set_unlock_notice(text)` / `clear_unlock_notice()` / `get_unlock_notice()`，与既有 `set_status` / `set_reward` / `set_room_problem_labels` 同口径：面板不判断是否首通、不自动装配、不改任何按钮可点状态；文案为空时整行 `visible = false`（不占位），所以没有解锁事实时布局与新增本行之前一致。`main.gd` 订阅 `EncounterSession.first_clear_reward_granted`：`_on_first_clear_reward_granted()` 在 `newly_learned == false` 或 `skill` 未配置时直接 `return`（重复通关不写新文案，也不清掉既有文案），只有新解锁才写「已解锁：%s · 可在 Build 面板装配」；`_on_dungeon_run_started()`（进入新一层）调用 `clear_unlock_notice()`，避免把上一层的解锁当成当前层的事实。改动量 `dungeon_panel.gd` +29 / `dungeon_panel.tscn` +8 / `main.gd` +15，未触碰 `Pawn` 装配规则与秘境数值。
+- 变更文件：`game/ui/dungeon_panel.gd`、`game/ui/dungeon_panel.tscn`、`game/main/main.gd`、`test/integration/dungeon_panel_test.gd`（+2 例）、`test/gameplay/problem_dungeon_play_path_test.gd`（+提示可见与进层清空断言）。
+- 测试证据：
+  - Godot MCP `validate`：`dungeon_panel.gd` / `dungeon_panel.tscn` / `main.gd` / `main.tscn` / `dungeon_panel_test.gd` / `problem_dungeon_play_path_test.gd` 全部 `valid: true`。
+  - 单层 `-Layer integration` → `RESULT: PASS`（205 cases / 0 failures，本项 +2）；单层 `-Layer gameplay` → `RESULT: PASS`（77 cases / 0 failures）。
+  - 统一门禁 `-Layer all` → `RESULT: PASS`（GdUnit4 460 cases / 0 failures、headless 10 suites / 549 assertions），exit 0。
+  - 面板层断言：`UnlockLabel` 存在且 `mouse_filter == MOUSE_FILTER_IGNORE`；空文案时 `get_unlock_notice()` 为空且 `visible == false`；写入「已解锁：定身术 · 可在 Build 面板装配」后可见、清空后不可见；写入提示前后 `RestartButton` / `AdvanceButton` 的 `disabled` 完全相同。
+  - 游玩层断言（真实 `main.tscn`）：清空首间后 `get_unlock_notice()` 同时包含奖励技能的 `display_name` 与字样 `Build`；`run.advance()` 进入第 2 层后 `get_depth() == 2` 且提示已清空。
+  - 真实窗口（Godot MCP `run_project` 跑 `tests/scenario_problem_dungeon.tscn` + `run_script`）：清空第 1 层后读回 `unlock_notice = 已解锁：踏风突进 · 可在 Build 面板装配`，同一帧 Build 面板技能行 marker 为 `sword_strike=已选` / `guard_true_qi=已选` / `dash_step=可选` / `binding_spell=未解锁`——既证明提示可见，也证明它没有替玩家装配。
+- 验证状态：验证通过
+- 验证时间：2026-09-26T13:15:49+08:00
+- 已知问题：① 面板文案行数再 +1（标题 / 深度 / 收益 / 本层问题 / 解锁提示 / 状态 / 选项），未做正式分组与滚动，小窗口下可能与右下角 HUD 拥挤；② 提示为硬编码中文，未走 `tr()`（与项目既有 HUD 一致）；③ 提示行只显示技能名，不显示「第几层解锁 / 当前容量差多少」，玩家仍需自行去 Build 面板确认能否装配。
+- 用户验收：待验收
+- 验收时间：待验收
+- Git：待提交
+- 备注：父 Increment 为 `INC-CROSS-024`；本项只让既有解锁事实可见，不改变「解锁」与「装配」两步分离的 Gate C 口径，也不替玩家做选择。

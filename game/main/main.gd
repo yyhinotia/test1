@@ -69,6 +69,8 @@ func _connect_encounter_signals() -> void:
 		encounter_session.encounter_started.connect(_on_encounter_started)
 	if not encounter_session.encounter_finished.is_connected(_on_encounter_finished):
 		encounter_session.encounter_finished.connect(_on_encounter_finished)
+	if not encounter_session.first_clear_reward_granted.is_connected(_on_first_clear_reward_granted):
+		encounter_session.first_clear_reward_granted.connect(_on_first_clear_reward_granted)
 
 
 func _on_encounter_selected(encounter: EncounterDefinition) -> void:
@@ -151,9 +153,22 @@ func _on_dungeon_restart_requested() -> void:
 	dungeon_run.start(dungeon)
 
 
+## 首通解锁提示（INC-UI-022）：只把「刚刚解锁了什么」翻译成一行只读文案。
+## 上层不判断是否首通（`newly_learned` 由 EncounterSession 给出），也不自动装配——
+## 玩家仍要在 Build 面板自己点「应用自定义 Build」。
+func _on_first_clear_reward_granted(
+	_encounter: EncounterDefinition, skill: ActiveSkillDefinition, newly_learned: bool
+) -> void:
+	if not newly_learned or skill == null or not skill.is_configured():
+		return
+	dungeon_panel.set_unlock_notice("已解锁：%s · 可在 Build 面板装配" % skill.display_name)
+
+
 ## 进入一间房（含第一间与继续深入）：面板刷新为「本层进行中」，抉择入口先关掉。
 func _on_dungeon_run_started(_dungeon: DungeonDefinition, _room_index: int) -> void:
 	_dungeon_reward_committed = false
+	# 上一层的解锁提示不跨层：进入新一层时清空，避免玩家把旧事实当成当前层的事实。
+	dungeon_panel.clear_unlock_notice()
 	_refresh_dungeon_panel()
 	dungeon_panel.set_awaiting_decision(false)
 	dungeon_panel.set_can_restart(false)

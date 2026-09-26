@@ -71,6 +71,15 @@ func test_default_play_path_clears_first_problem_room_and_unlocks_binding() -> v
 	assert_bool(cleared_player.has_learned_active_skill(reward_id)).is_true()
 	# 只解锁不装配：静态 Build A（御剑斩 + 护体真气）原样保留。
 	assert_bool(cleared_player.has_explicit_active_skill_loadout()).is_false()
+	# INC-UI-022：解锁必须可见——面板出现一行只读提示，且点名 Build 面板，否则玩家无从知道多了什么选项。
+	var notice: String = _panel(main).get_unlock_notice()
+	assert_str(notice).contains(first_encounter.first_clear_skill_reward.display_name)
+	assert_str(notice).contains("Build")
+	# 提示必须在进入下一层时清空，避免把上一层的解锁当成当前层的事实。
+	assert_bool(run.advance()).is_true()
+	await await_idle_frame()
+	assert_int(run.get_depth()).is_equal(2)
+	assert_str(_panel(main).get_unlock_notice()).is_empty()
 
 
 ## Gate 2 + Gate 3：本局进行中选择区锁定；结算后可从面板切到试炼秘境。

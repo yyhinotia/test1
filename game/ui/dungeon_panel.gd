@@ -22,11 +22,14 @@ const EMPTY_DEPTH_TEXT: String = "深度：-"
 const EMPTY_REWARD_TEXT: String = "已获灵石：-"
 const EMPTY_PROBLEM_TEXT: String = "本层问题：-"
 const EMPTY_OPTION_TEXT: String = "(未配置秘境)"
+## 首通解锁提示（INC-UI-022）：空字符串表示没有要展示的解锁事实，此时整行隐藏。
+const EMPTY_UNLOCK_TEXT: String = ""
 
 @onready var _title_label: Label = $TitleLabel
 @onready var _depth_label: Label = $DepthLabel
 @onready var _reward_label: Label = $RewardLabel
 @onready var _problem_label: Label = $ProblemLabel
+@onready var _unlock_label: Label = $UnlockLabel
 @onready var _status_label: Label = $StatusLabel
 @onready var _advance_button: Button = $AdvanceButton
 @onready var _retreat_button: Button = $RetreatButton
@@ -43,6 +46,8 @@ var _can_restart: bool = false
 var _status_text: String = EMPTY_STATUS
 ## 同理：本层问题文案也可能在入树前被写入，先记住再落到 Label。
 var _problem_text: String = EMPTY_PROBLEM_TEXT
+## 同理：解锁提示也可能在入树前被写入，先记住再落到 Label。
+var _unlock_text: String = EMPTY_UNLOCK_TEXT
 ## 秘境选项由主场景注入（INC-UI-020）：面板不硬编码任何资源路径，也不缓存游戏进度。
 var _dungeon_options: Array[DungeonDefinition] = []
 var _option_buttons: Array[Button] = []
@@ -56,6 +61,7 @@ func _ready() -> void:
 	if not _restart_button.pressed.is_connected(_on_restart_pressed):
 		_restart_button.pressed.connect(_on_restart_pressed)
 	_rebuild_option_buttons()
+	_apply_unlock_text()
 	_refresh_all()
 
 
@@ -103,6 +109,21 @@ func set_room_problem_labels(labels: Array[String]) -> void:
 	_problem_text = _compose_problem_text(labels)
 	if _problem_label != null:
 		_problem_label.text = _problem_text
+
+
+## 首通解锁提示（INC-UI-022）：只展示「刚刚解锁了什么」这一只读事实。
+## 面板不判断是否首次、不自动装配、不改变任何按钮可点状态；重复通关由上层决定不写入新文案。
+func set_unlock_notice(text: String) -> void:
+	_unlock_text = text
+	_apply_unlock_text()
+
+
+func clear_unlock_notice() -> void:
+	set_unlock_notice(EMPTY_UNLOCK_TEXT)
+
+
+func get_unlock_notice() -> String:
+	return _unlock_text
 
 
 func set_reward(earned_spirit_stones: int) -> void:
@@ -206,6 +227,14 @@ func _refresh_texts() -> void:
 		_restart_button.text = "开始秘境" if _depth <= 0 else "重新开始秘境"
 	if _status_label != null:
 		_status_label.text = _status_text
+
+
+## 空文案时整行隐藏（不占位），因此没有解锁事实时秘境面板的布局与新增本行之前一致。
+func _apply_unlock_text() -> void:
+	if _unlock_label == null:
+		return
+	_unlock_label.text = _unlock_text
+	_unlock_label.visible = not _unlock_text.is_empty()
 
 
 func _refresh_buttons() -> void:

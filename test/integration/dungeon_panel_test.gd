@@ -267,3 +267,39 @@ func test_dungeon_options_are_locked_while_run_is_active() -> void:
 	assert_bool(panel.get_option_button(1).disabled).is_false()
 	panel.get_option_button(1).pressed.emit()
 	assert_int(selections.size()).is_equal(2)
+
+## INC-UI-022：解锁提示行只陈述事实——入树前写入能落成控件，空文案整行隐藏，
+## 清空后不残留，且提示行不拦截鼠标（否则会破坏左键操作模型）。
+func test_unlock_notice_is_readable_and_does_not_block_the_mouse() -> void:
+	var panel: DungeonPanel = _spawn_panel()
+	var label: Label = panel.get_node("UnlockLabel") as Label
+	assert_bool(label != null).is_true()
+	# 没有解锁事实时整行隐藏，不占用布局。
+	assert_str(panel.get_unlock_notice()).is_empty()
+	assert_bool(label.visible).is_false()
+
+	# 提示行必须让鼠标穿透：秘境面板本身不接收点击，提示行也不得例外。
+	assert_int(label.mouse_filter).is_equal(Control.MOUSE_FILTER_IGNORE)
+
+	panel.set_unlock_notice("已解锁：定身术 · 可在 Build 面板装配")
+	assert_str(panel.get_unlock_notice()).contains("定身术")
+	assert_str(panel.get_unlock_notice()).contains("Build")
+	assert_bool(label.visible).is_true()
+
+	panel.clear_unlock_notice()
+	assert_str(panel.get_unlock_notice()).is_empty()
+	assert_bool(label.visible).is_false()
+
+
+## INC-UI-022：解锁提示不得改变任何既有按钮可点状态——它只是可见性，不是状态机。
+func test_unlock_notice_does_not_change_button_availability() -> void:
+	var panel: DungeonPanel = _spawn_panel()
+	panel.set_dungeon(_load_problem_dungeon())
+	panel.set_depth(1, 12)
+	var before_restart_disabled: bool = (panel.get_node("RestartButton") as Button).disabled
+	var before_advance_disabled: bool = (panel.get_node("AdvanceButton") as Button).disabled
+
+	panel.set_unlock_notice("已解锁：踏风突进 · 可在 Build 面板装配")
+
+	assert_bool((panel.get_node("RestartButton") as Button).disabled).is_equal(before_restart_disabled)
+	assert_bool((panel.get_node("AdvanceButton") as Button).disabled).is_equal(before_advance_disabled)
