@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="PawnData" format=3]
+
+[ext_resource type="Script" uid="uid://ewp2akokimur" path="res://game/shared/resources/pawn_data.gd" id="1_pawn_data"]
+[ext_resource type="Resource" path="res://game/pawns/data/skills/enemy_charge_bolt.tres" id="2_danger"]
+
+[resource]
+script = ExtResource("1_pawn_data")
+id = &"enemy_charge_adept"
+display_name = "聚煞术士"
+faction = &"enemy"
+max_health = 150.0
+max_shield = 0.0
+attack = 15.0
+defense = 4.0
+move_speed = 92.0
+attack_range = 190.0
+attack_interval = 1.8
+problem_tag = 5
+dangerous_skill = ExtResource("2_danger")
+danger_window_interval = 7.0
+danger_window_duration = 2.0
+display_color = Color(0.55, 0.45, 0.9, 1)

@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://ms821o3x51t2" path="res://game/shared/resources/encounter_definition.gd" id="1_encounter"]
+[ext_resource type="Resource" path="res://game/world/data/squads/problem_squad_01_melee.tres" id="2_squad"]
+[ext_resource type="Resource" path="res://game/pawns/data/skills/player_dash_skill.tres" id="3_reward"]
+
+[resource]
+script = ExtResource("1_encounter")
+id = &"problem_room_01_melee"
+display_name = "问题房间·一（赤拳围拢）"
+description = "赤拳战修贴身纠缠，持续压缩玩家走位；想拉开距离，踏风突进会比站桩硬拼更有效。"
+enemy_squad = ExtResource("2_squad")
+player_count = 1
+threat_tag = 1
+first_clear_skill_reward = ExtResource("3_reward")

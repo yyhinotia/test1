@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="SquadDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://bvj3le3rshsav" path="res://game/shared/resources/squad_definition.gd" id="1_squad"]
+[ext_resource type="Resource" path="res://game/pawns/data/enemies/enemy_iron_guard.tres" id="2_iron_guard"]
+
+[resource]
+script = ExtResource("1_squad")
+id = &"problem_squad_05_iron"
+display_name = "铁壁当关"
+members = Array[PawnData]([ExtResource("2_iron_guard")])
+default_spawn_offsets = Array[Vector2]([Vector2(0, 0)])

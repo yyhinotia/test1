@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://ms821o3x51t2" path="res://game/shared/resources/encounter_definition.gd" id="1_encounter"]
+[ext_resource type="Resource" path="res://game/world/data/squads/problem_squad_02_ranged.tres" id="2_squad"]
+[ext_resource type="Resource" path="res://game/pawns/data/skills/player_binding_skill.tres" id="3_reward"]
+
+[resource]
+script = ExtResource("1_encounter")
+id = &"problem_room_02_ranged"
+display_name = "问题房间·二（箭雨封路）"
+description = "灵弓修者在远距离持续压制，逼迫玩家用位移接近或避险；单纯站桩输出会被慢慢磨死。"
+enemy_squad = ExtResource("2_squad")
+player_count = 1
+threat_tag = 0
+first_clear_skill_reward = ExtResource("3_reward")

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="SquadDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://bvj3le3rshsav" path="res://game/shared/resources/squad_definition.gd" id="1_squad"]
+[ext_resource type="Resource" path="res://game/pawns/data/enemies/enemy_melee_raider.tres" id="2_melee_raider"]
+[ext_resource type="Resource" path="res://game/pawns/data/enemies/enemy_spirit_archer.tres" id="3_spirit_archer"]
+[ext_resource type="Resource" path="res://game/pawns/data/enemies/enemy_blood_blade.tres" id="4_blood_blade"]
+
+[resource]
+script = ExtResource("1_squad")
+id = &"problem_squad_10_triple"
+display_name = "三修压境"
+members = Array[PawnData]([ExtResource("2_melee_raider"), ExtResource("3_spirit_archer"), ExtResource("4_blood_blade")])
+default_spawn_offsets = Array[Vector2]([Vector2(0, -72), Vector2(-84, 8), Vector2(84, 8)])

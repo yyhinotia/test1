@@ -178,6 +178,11 @@ func _refresh_dungeon_panel() -> void:
 	dungeon_panel.set_dungeon(dungeon)
 	dungeon_panel.set_depth(dungeon_run.get_depth(), dungeon_run.get_room_count())
 	dungeon_panel.set_reward(dungeon_run.get_earned_spirit_stones())
+	# 本层考查的问题型也来自房间定义（INC-WORLD-008）：主场景只转发标签，不解释问题含义。
+	var current_room: DungeonRoom = dungeon_run.get_current_room()
+	dungeon_panel.set_room_problem_labels(
+		current_room.get_problem_labels() if current_room != null else []
+	)
 
 
 ## 秘境状态文案：状态词来自 DungeonRun，层名来自当前房间定义，主场景只拼接。

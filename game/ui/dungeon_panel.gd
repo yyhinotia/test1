@@ -17,10 +17,12 @@ signal restart_requested()
 const EMPTY_STATUS: String = "秘境未开始"
 const EMPTY_DEPTH_TEXT: String = "深度：-"
 const EMPTY_REWARD_TEXT: String = "已获灵石：-"
+const EMPTY_PROBLEM_TEXT: String = "本层问题：-"
 
 @onready var _title_label: Label = $TitleLabel
 @onready var _depth_label: Label = $DepthLabel
 @onready var _reward_label: Label = $RewardLabel
+@onready var _problem_label: Label = $ProblemLabel
 @onready var _status_label: Label = $StatusLabel
 @onready var _advance_button: Button = $AdvanceButton
 @onready var _retreat_button: Button = $RetreatButton
@@ -34,6 +36,8 @@ var _awaiting_decision: bool = false
 var _can_restart: bool = false
 ## set_status 可能在入树前被调用，先记住文本，_ready 时再落到 Label。
 var _status_text: String = EMPTY_STATUS
+## 同理：本层问题文案也可能在入树前被写入，先记住再落到 Label。
+var _problem_text: String = EMPTY_PROBLEM_TEXT
 
 
 func _ready() -> void:
@@ -55,6 +59,7 @@ func set_dungeon(dungeon: DungeonDefinition) -> void:
 		_earned_spirit_stones = 0
 		_awaiting_decision = false
 		_can_restart = false
+		_problem_text = EMPTY_PROBLEM_TEXT
 	else:
 		_dungeon = dungeon
 	_refresh_all()
@@ -64,6 +69,14 @@ func set_depth(depth: int, room_count: int) -> void:
 	_depth = maxi(depth, 0)
 	_room_count = maxi(room_count, 0)
 	_refresh_all()
+
+
+## 本层考查的战斗问题（INC-WORLD-008）：标签由 DungeonRoom 从问题型映射而来，面板只做展示，
+## 不判断问题的含义，也不据此改变任何可点状态。空数组表示本层没有声明问题型。
+func set_room_problem_labels(labels: Array[String]) -> void:
+	_problem_text = _compose_problem_text(labels)
+	if _problem_label != null:
+		_problem_label.text = _problem_text
 
 
 func set_reward(earned_spirit_stones: int) -> void:
@@ -104,6 +117,12 @@ func get_depth_text() -> String:
 	if _depth_label == null:
 		return _compose_depth_text()
 	return _depth_label.text
+
+
+func get_problem_text() -> String:
+	if _problem_label == null:
+		return _problem_text
+	return _problem_label.text
 
 
 func get_reward_text() -> String:
@@ -154,6 +173,8 @@ func _refresh_texts() -> void:
 		_depth_label.text = _compose_depth_text()
 	if _reward_label != null:
 		_reward_label.text = _compose_reward_text()
+	if _problem_label != null:
+		_problem_label.text = _problem_text
 	if _restart_button != null:
 		# 未产生过进度时是首次入口，产生过进度后才是「重新开始」。
 		_restart_button.text = "开始秘境" if _depth <= 0 else "重新开始秘境"
@@ -181,3 +202,10 @@ func _compose_reward_text() -> String:
 	if _dungeon == null:
 		return EMPTY_REWARD_TEXT
 	return "已获灵石：%d" % _earned_spirit_stones
+
+
+## 多个问题时用「 + 」连接，保持与房间定义中的组合语义一致；空数组回退到占位文案。
+func _compose_problem_text(labels: Array[String]) -> String:
+	if labels.is_empty():
+		return EMPTY_PROBLEM_TEXT
+	return "本层问题：" + " + ".join(labels)

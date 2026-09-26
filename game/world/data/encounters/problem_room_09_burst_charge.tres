@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://ms821o3x51t2" path="res://game/shared/resources/encounter_definition.gd" id="1_encounter"]
+[ext_resource type="Resource" path="res://game/world/data/squads/problem_squad_09_burst_charge.tres" id="2_squad"]
+
+[resource]
+script = ExtResource("1_encounter")
+id = &"problem_room_09_burst_charge"
+display_name = "问题房间·九（杀机蓄势）"
+description = "血刃刺客的高爆发配合聚煞术士的蓄力危险技能；防御技能与控制技能需要同时进入 Build 考量。"
+enemy_squad = ExtResource("2_squad")
+player_count = 1
+threat_tag = 2

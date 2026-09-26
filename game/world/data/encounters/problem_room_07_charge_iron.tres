@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://ms821o3x51t2" path="res://game/shared/resources/encounter_definition.gd" id="1_encounter"]
+[ext_resource type="Resource" path="res://game/world/data/squads/problem_squad_07_charge_iron.tres" id="2_squad"]
+
+[resource]
+script = ExtResource("1_encounter")
+id = &"problem_room_07_charge_iron"
+display_name = "问题房间·七（铁壁蓄锋）"
+description = "铁壁傀儡挡住正面，聚煞术士在后排蓄力；既要处理高防御，又要留控制打断危险技能。"
+enemy_squad = ExtResource("2_squad")
+player_count = 1
+threat_tag = 2

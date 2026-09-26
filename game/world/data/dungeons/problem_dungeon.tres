@@ -1,0 +1,119 @@
+[gd_resource type="Resource" script_class="DungeonDefinition" load_steps=27 format=3]
+
+[ext_resource type="Script" uid="uid://0bmf5nm2g8ft" path="res://game/shared/resources/dungeon_definition.gd" id="1_dungeon"]
+[ext_resource type="Script" uid="uid://bso6xo4qyb7am" path="res://game/shared/resources/dungeon_room.gd" id="2_room"]
+[ext_resource type="Resource" path="res://game/world/data/encounters/problem_room_01_melee.tres" id="3_problem_01"]
+[ext_resource type="Resource" path="res://game/world/data/encounters/problem_room_02_ranged.tres" id="3_problem_02"]
+[ext_resource type="Resource" path="res://game/world/data/encounters/problem_room_03_charge.tres" id="3_problem_03"]
+[ext_resource type="Resource" path="res://game/world/data/encounters/problem_room_04_summon.tres" id="3_problem_04"]
+[ext_resource type="Resource" path="res://game/world/data/encounters/problem_room_05_iron.tres" id="3_problem_05"]
+[ext_resource type="Resource" path="res://game/world/data/encounters/problem_room_06_burst.tres" id="3_problem_06"]
+[ext_resource type="Resource" path="res://game/world/data/encounters/problem_room_07_charge_iron.tres" id="3_problem_07"]
+[ext_resource type="Resource" path="res://game/world/data/encounters/problem_room_08_ranged_summon.tres" id="3_problem_08"]
+[ext_resource type="Resource" path="res://game/world/data/encounters/problem_room_09_burst_charge.tres" id="3_problem_09"]
+[ext_resource type="Resource" path="res://game/world/data/encounters/problem_room_10_triple.tres" id="3_problem_10"]
+[ext_resource type="Resource" path="res://game/world/data/encounters/problem_room_11_iron_burst.tres" id="3_problem_11"]
+[ext_resource type="Resource" path="res://game/world/data/encounters/encounter_dungeon_boss.tres" id="14_boss"]
+
+[sub_resource type="Resource" script_class="DungeonRoom" id="Room_1"]
+script = ExtResource("2_room")
+display_name = "第一层·赤拳围拢"
+encounter = ExtResource("3_problem_01")
+reward_spirit_stones = 10
+is_boss = false
+problem_tags = Array[int]([1])
+
+[sub_resource type="Resource" script_class="DungeonRoom" id="Room_2"]
+script = ExtResource("2_room")
+display_name = "第二层·箭雨封路"
+encounter = ExtResource("3_problem_02")
+reward_spirit_stones = 15
+is_boss = false
+problem_tags = Array[int]([2])
+
+[sub_resource type="Resource" script_class="DungeonRoom" id="Room_3"]
+script = ExtResource("2_room")
+display_name = "第三层·煞气凝锋"
+encounter = ExtResource("3_problem_03")
+reward_spirit_stones = 25
+is_boss = false
+problem_tags = Array[int]([2, 5])
+
+[sub_resource type="Resource" script_class="DungeonRoom" id="Room_4"]
+script = ExtResource("2_room")
+display_name = "第四层·魂潮初现"
+encounter = ExtResource("3_problem_04")
+reward_spirit_stones = 40
+is_boss = false
+problem_tags = Array[int]([6])
+
+[sub_resource type="Resource" script_class="DungeonRoom" id="Room_5"]
+script = ExtResource("2_room")
+display_name = "第五层·铁壁当关"
+encounter = ExtResource("3_problem_05")
+reward_spirit_stones = 60
+is_boss = false
+problem_tags = Array[int]([4])
+
+[sub_resource type="Resource" script_class="DungeonRoom" id="Room_6"]
+script = ExtResource("2_room")
+display_name = "第六层·血刃突袭"
+encounter = ExtResource("3_problem_06")
+reward_spirit_stones = 100
+is_boss = false
+problem_tags = Array[int]([3])
+
+[sub_resource type="Resource" script_class="DungeonRoom" id="Room_7"]
+script = ExtResource("2_room")
+display_name = "第七层·铁壁蓄锋"
+encounter = ExtResource("3_problem_07")
+reward_spirit_stones = 120
+is_boss = false
+problem_tags = Array[int]([4, 5])
+
+[sub_resource type="Resource" script_class="DungeonRoom" id="Room_8"]
+script = ExtResource("2_room")
+display_name = "第八层·远招并起"
+encounter = ExtResource("3_problem_08")
+reward_spirit_stones = 140
+is_boss = false
+problem_tags = Array[int]([2, 6])
+
+[sub_resource type="Resource" script_class="DungeonRoom" id="Room_9"]
+script = ExtResource("2_room")
+display_name = "第九层·杀机蓄势"
+encounter = ExtResource("3_problem_09")
+reward_spirit_stones = 160
+is_boss = false
+problem_tags = Array[int]([3, 5])
+
+[sub_resource type="Resource" script_class="DungeonRoom" id="Room_10"]
+script = ExtResource("2_room")
+display_name = "第十层·三压并至"
+encounter = ExtResource("3_problem_10")
+reward_spirit_stones = 180
+is_boss = false
+problem_tags = Array[int]([1, 2, 3])
+
+[sub_resource type="Resource" script_class="DungeonRoom" id="Room_11"]
+script = ExtResource("2_room")
+display_name = "第十一层·铁血双关"
+encounter = ExtResource("3_problem_11")
+reward_spirit_stones = 200
+is_boss = false
+problem_tags = Array[int]([3, 4])
+
+[sub_resource type="Resource" script_class="DungeonRoom" id="Room_12"]
+script = ExtResource("2_room")
+display_name = "第十二层·镇狱魔君"
+encounter = ExtResource("14_boss")
+reward_spirit_stones = 240
+is_boss = true
+problem_tags = Array[int]([5])
+
+[resource]
+script = ExtResource("1_dungeon")
+id = &"problem_dungeon"
+display_name = "问心秘境"
+description = "十二层问题房间：每层提出一个明确的战斗问题，而不是把同一问题数值放大；首通奖励的玩家技能会在后续层被再次需要。"
+rooms = Array[DungeonRoom]([SubResource("Room_1"), SubResource("Room_2"), SubResource("Room_3"), SubResource("Room_4"), SubResource("Room_5"), SubResource("Room_6"), SubResource("Room_7"), SubResource("Room_8"), SubResource("Room_9"), SubResource("Room_10"), SubResource("Room_11"), SubResource("Room_12")])

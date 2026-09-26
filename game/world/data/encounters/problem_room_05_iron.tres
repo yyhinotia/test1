@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://ms821o3x51t2" path="res://game/shared/resources/encounter_definition.gd" id="1_encounter"]
+[ext_resource type="Resource" path="res://game/world/data/squads/problem_squad_05_iron.tres" id="2_squad"]
+[ext_resource type="Resource" path="res://game/pawns/data/skills/player_rejuvenation_skill.tres" id="3_reward"]
+
+[resource]
+script = ExtResource("1_encounter")
+id = &"problem_room_05_iron"
+display_name = "问题房间·五（铁壁当关）"
+description = "铁壁傀儡的高防御与高有效生命拉长单体输出；血引术的持续回复与吸血成为长期消耗的答案。"
+enemy_squad = ExtResource("2_squad")
+player_count = 1
+threat_tag = 1
+first_clear_skill_reward = ExtResource("3_reward")

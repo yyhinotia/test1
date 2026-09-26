@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://ms821o3x51t2" path="res://game/shared/resources/encounter_definition.gd" id="1_encounter"]
+[ext_resource type="Resource" path="res://game/world/data/squads/problem_squad_11_iron_burst.tres" id="2_squad"]
+
+[resource]
+script = ExtResource("1_encounter")
+id = &"problem_room_11_iron_burst"
+display_name = "问题房间·十一（铁血双关）"
+description = "铁壁傀儡与血刃刺客组成铁血双关；既要穿透高防御，又要承受短时间爆发。"
+enemy_squad = ExtResource("2_squad")
+player_count = 1
+threat_tag = 2

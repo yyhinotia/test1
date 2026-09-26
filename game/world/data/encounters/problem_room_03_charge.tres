@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://ms821o3x51t2" path="res://game/shared/resources/encounter_definition.gd" id="1_encounter"]
+[ext_resource type="Resource" path="res://game/world/data/squads/problem_squad_03_charge_escort.tres" id="2_squad"]
+[ext_resource type="Resource" path="res://game/pawns/data/skills/player_sword_aoe_skill.tres" id="3_reward"]
+
+[resource]
+script = ExtResource("1_encounter")
+id = &"problem_room_03_charge"
+display_name = "问题房间·三（煞气凝锋）"
+description = "聚煞术士周期性蓄力、灵弓修者远程掩护；能否在危险窗口前定身打断，是这一层的主要问题。"
+enemy_squad = ExtResource("2_squad")
+player_count = 1
+threat_tag = 2
+first_clear_skill_reward = ExtResource("3_reward")

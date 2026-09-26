@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://ms821o3x51t2" path="res://game/shared/resources/encounter_definition.gd" id="1_encounter"]
+[ext_resource type="Resource" path="res://game/world/data/squads/problem_squad_10_triple.tres" id="2_squad"]
+
+[resource]
+script = ExtResource("1_encounter")
+id = &"problem_room_10_triple"
+display_name = "问题房间·十（三压并至）"
+description = "赤拳战修、灵弓修者、血刃刺客同时施压；单体输出、位移与防御三条轴都被拉紧。"
+enemy_squad = ExtResource("2_squad")
+player_count = 1
+threat_tag = 1

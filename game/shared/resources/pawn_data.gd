@@ -107,9 +107,10 @@ func can_summon() -> bool:
 	)
 
 
-## 问题标签的中文短标签，供遭遇面板与日志使用；NONE 返回空串。
-func get_problem_tag_label() -> String:
-	match problem_tag:
+## 问题标签的中文短标签（静态版）：供秘境房间 / 遭遇等非 Pawn 数据复用同一份文案表，
+## 避免「敌人侧」与「编排侧」各写一份映射后漂移（INC-WORLD-008）。
+static func get_problem_tag_label_for(tag: int) -> String:
+	match tag:
 		ProblemTag.SUSTAINED_MELEE:
 			return "近战持续压力"
 		ProblemTag.RANGED_PRESSURE:
@@ -126,9 +127,9 @@ func get_problem_tag_label() -> String:
 			return ""
 
 
-## 该问题对应的玩家技能价值轴（与六类技能效果一一对应）；NONE 返回 &"none"。
-func get_skill_value_axis() -> StringName:
-	match problem_tag:
+## 该问题对应的玩家技能价值轴（静态版，与六类技能效果一一对应）；未知 / NONE 返回 &"none"。
+static func get_skill_value_axis_for(tag: int) -> StringName:
+	match tag:
 		ProblemTag.SUSTAINED_MELEE:
 			return &"single_target_damage"
 		ProblemTag.RANGED_PRESSURE:
@@ -143,6 +144,16 @@ func get_skill_value_axis() -> StringName:
 			return &"area_damage"
 		_:
 			return &"none"
+
+
+## 问题标签的中文短标签，供遭遇面板与日志使用；NONE 返回空串。
+func get_problem_tag_label() -> String:
+	return get_problem_tag_label_for(problem_tag)
+
+
+## 该单位提出的问题对应的玩家技能价值轴；NONE 返回 &"none"。
+func get_skill_value_axis() -> StringName:
+	return get_skill_value_axis_for(problem_tag)
 
 
 func get_active_skills() -> Array[ActiveSkillDefinition]:

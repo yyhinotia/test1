@@ -183,3 +183,16 @@ func test_panel_never_spawns_units_and_status_is_pure_text() -> void:
 	panel.set_status("第 1 层已清空：试炼傀儡")
 	assert_str(panel.get_status_text()).is_equal("第 1 层已清空：试炼傀儡")
 	assert_str((panel.get_node("StatusLabel") as Label).text).is_equal("第 1 层已清空：试炼傀儡")
+func test_room_problem_labels_are_display_only() -> void:
+	var panel: DungeonPanel = _spawn_panel()
+	assert_str(panel.get_problem_text()).is_equal(DungeonPanel.EMPTY_PROBLEM_TEXT)
+
+	panel.set_room_problem_labels(["近战持续压力", "远程压制"])
+	assert_str(panel.get_problem_text()).is_equal("本层问题：近战持续压力 + 远程压制")
+	# 展示问题不改变任何可点状态：面板不解释问题，也不据此解锁入口。
+	assert_bool(_advance_button(panel).disabled).is_true()
+	assert_bool(_retreat_button(panel).disabled).is_true()
+	assert_bool(_restart_button(panel).disabled).is_true()
+
+	panel.set_room_problem_labels([])
+	assert_str(panel.get_problem_text()).is_equal(DungeonPanel.EMPTY_PROBLEM_TEXT)

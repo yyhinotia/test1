@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="EncounterDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://ms821o3x51t2" path="res://game/shared/resources/encounter_definition.gd" id="1_encounter"]
+[ext_resource type="Resource" path="res://game/world/data/squads/problem_squad_04_summon.tres" id="2_squad"]
+[ext_resource type="Resource" path="res://game/pawns/data/skills/player_lifesteal_skill.tres" id="3_reward"]
+
+[resource]
+script = ExtResource("1_encounter")
+id = &"problem_room_04_summon"
+display_name = "问题房间·四（魂潮初现）"
+description = "聚魂邪修会不断召唤召魂傀；越拖越多的增援让范围剑气从可选项变成必需品。"
+enemy_squad = ExtResource("2_squad")
+player_count = 1
+threat_tag = 1
+first_clear_skill_reward = ExtResource("3_reward")
