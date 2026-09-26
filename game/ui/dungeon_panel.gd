@@ -13,11 +13,15 @@ signal advance_requested()
 signal retreat_requested()
 ## 点击「开始秘境 / 重新开始秘境」发出；本局进行中时面板会禁用该入口，信号只表示玩家想开一局新的秘境。
 signal restart_requested()
+## 秘境选择区（INC-UI-020）：由主场景注入可选项，玩家点击把「想进哪个秘境」变成信号；
+## 面板不持有 DungeonRun，也不判断本局是否进行中——可点性只由面板自身的既有状态（未开局 / 已结算）决定。
+signal dungeon_selected(dungeon: DungeonDefinition)
 
 const EMPTY_STATUS: String = "秘境未开始"
 const EMPTY_DEPTH_TEXT: String = "深度：-"
 const EMPTY_REWARD_TEXT: String = "已获灵石：-"
 const EMPTY_PROBLEM_TEXT: String = "本层问题：-"
+const EMPTY_OPTION_TEXT: String = "(未配置秘境)"
 
 @onready var _title_label: Label = $TitleLabel
 @onready var _depth_label: Label = $DepthLabel
@@ -27,6 +31,7 @@ const EMPTY_PROBLEM_TEXT: String = "本层问题：-"
 @onready var _advance_button: Button = $AdvanceButton
 @onready var _retreat_button: Button = $RetreatButton
 @onready var _restart_button: Button = $RestartButton
+@onready var _options_container: VBoxContainer = $DungeonOptions
 
 var _dungeon: DungeonDefinition
 var _depth: int = 0
@@ -38,6 +43,9 @@ var _can_restart: bool = false
 var _status_text: String = EMPTY_STATUS
 ## 同理：本层问题文案也可能在入树前被写入，先记住再落到 Label。
 var _problem_text: String = EMPTY_PROBLEM_TEXT
+## 秘境选项由主场景注入（INC-UI-020）：面板不硬编码任何资源路径，也不缓存游戏进度。
+var _dungeon_options: Array[DungeonDefinition] = []
+var _option_buttons: Array[Button] = []
 
 
 func _ready() -> void:
@@ -47,7 +55,25 @@ func _ready() -> void:
 		_retreat_button.pressed.connect(_on_retreat_pressed)
 	if not _restart_button.pressed.is_connected(_on_restart_pressed):
 		_restart_button.pressed.connect(_on_restart_pressed)
+	_rebuild_option_buttons()
 	_refresh_all()
+
+
+## 注入可选择的秘境列表（INC-UI-020）：按传入顺序生成按钮，空列表回退到空态。
+## 允许在入树前调用：此时只记住数据，_ready 再落成控件。
+func set_dungeon_options(options: Array[DungeonDefinition]) -> void:
+	_dungeon_options = options.duplicate()
+	_rebuild_option_buttons()
+
+
+func get_option_button_count() -> int:
+	return _option_buttons.size()
+
+
+func get_option_button(index: int) -> Button:
+	if index < 0 or index >= _option_buttons.size():
+		return null
+	return _option_buttons[index]
 
 
 ## 绑定秘境定义；null / 未配置秘境会清空进度并禁用全部入口。
@@ -190,6 +216,11 @@ func _refresh_buttons() -> void:
 		_retreat_button.disabled = not decision_ready
 	if _restart_button != null:
 		_restart_button.disabled = not (_dungeon != null and _can_restart)
+	var options_editable: bool = _dungeon == null or _can_restart
+	for index in _option_buttons.size():
+		var dungeon: DungeonDefinition = _dungeon_options[index] if index < _dungeon_options.size() else null
+		var selectable: bool = options_editable and dungeon != null and dungeon.is_configured()
+		_option_buttons[index].disabled = not selectable
 
 
 func _compose_depth_text() -> String:
@@ -202,6 +233,37 @@ func _compose_reward_text() -> String:
 	if _dungeon == null:
 		return EMPTY_REWARD_TEXT
 	return "已获灵石：%d" % _earned_spirit_stones
+
+
+## 重建选项按钮：入树前调用只记住数据，_ready 时再落成控件（避免 @onready 空引用）。
+func _rebuild_option_buttons() -> void:
+	if _options_container == null:
+		return
+	for button: Button in _option_buttons:
+		if is_instance_valid(button):
+			_options_container.remove_child(button)
+			button.queue_free()
+	_option_buttons.clear()
+	_options_container.visible = not _dungeon_options.is_empty()
+	for index in _dungeon_options.size():
+		var dungeon: DungeonDefinition = _dungeon_options[index]
+		var button: Button = Button.new()
+		button.name = "DungeonOption%d" % (index + 1)
+		button.text = dungeon.display_name if dungeon != null and dungeon.is_configured() else EMPTY_OPTION_TEXT
+		button.pressed.connect(_on_dungeon_option_pressed.bind(dungeon))
+		_options_container.add_child(button)
+		_option_buttons.append(button)
+	_refresh_buttons()
+
+
+## 选择入口只在「还没开局」或「本局已结算」时可点：进行中与等待抉择都锁定，
+## 与既有「重新开始秘境」入口共用 _can_restart 这一事实，不引入第二套状态机。
+func _on_dungeon_option_pressed(dungeon: DungeonDefinition) -> void:
+	if dungeon == null or not dungeon.is_configured():
+		return
+	if _dungeon != null and not _can_restart:
+		return
+	dungeon_selected.emit(dungeon)
 
 
 ## 多个问题时用「 + 」连接，保持与房间定义中的组合语义一致；空数组回退到占位文案。

@@ -5,7 +5,7 @@
 [node name="DungeonPanel" type="VBoxContainer"]
 custom_minimum_size = Vector2(190, 0)
 offset_right = 190.0
-offset_bottom = 354.0
+offset_bottom = 420.0
 size_flags_vertical = 8
 theme_override_constants/separation = 6
 script = ExtResource("1_dungeon_panel")
@@ -52,3 +52,12 @@ text = "见好就收"
 layout_mode = 2
 disabled = true
 text = "重新开始秘境"
+
+[node name="OptionsLabel" type="Label" parent="."]
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "选择秘境"
+
+[node name="DungeonOptions" type="VBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 4

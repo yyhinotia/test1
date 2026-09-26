@@ -196,3 +196,74 @@ func test_room_problem_labels_are_display_only() -> void:
 
 	panel.set_room_problem_labels([])
 	assert_str(panel.get_problem_text()).is_equal(DungeonPanel.EMPTY_PROBLEM_TEXT)
+
+
+## 秘境选择区（INC-UI-020）：面板只把「玩家想进哪个秘境」变成信号，不做默认值判断。
+const PROBLEM_DUNGEON_PATH: String = "res://game/world/data/dungeons/problem_dungeon.tres"
+
+
+func _load_problem_dungeon() -> DungeonDefinition:
+	return load(PROBLEM_DUNGEON_PATH) as DungeonDefinition
+
+
+func _options_container(panel: DungeonPanel) -> VBoxContainer:
+	return panel.get_node("DungeonOptions") as VBoxContainer
+
+
+func test_dungeon_options_emit_selection_and_handle_empty_state() -> void:
+	var panel: DungeonPanel = _spawn_panel()
+	panel.set_dungeon_options([])
+	assert_int(panel.get_option_button_count()).is_zero()
+	assert_bool(_options_container(panel).visible).is_false()
+
+	var trial: DungeonDefinition = _load_dungeon()
+	var problem: DungeonDefinition = _load_problem_dungeon()
+	var selections: Array = []
+	panel.dungeon_selected.connect(func(dungeon: DungeonDefinition) -> void:
+		selections.append(dungeon)
+	)
+	panel.set_dungeon_options([trial, problem])
+
+	assert_int(panel.get_option_button_count()).is_equal(2)
+	assert_bool(_options_container(panel).visible).is_true()
+	assert_str(panel.get_option_button(0).text).contains(trial.display_name)
+	assert_str(panel.get_option_button(1).text).contains(problem.display_name)
+
+	# 未开局时按钮可点，信号参数就是注入的那份资源。
+	panel.get_option_button(1).pressed.emit()
+	assert_int(selections.size()).is_equal(1)
+	assert_str(String((selections[0] as DungeonDefinition).id)).is_equal("problem_dungeon")
+
+
+func test_dungeon_options_are_locked_while_run_is_active() -> void:
+	var panel: DungeonPanel = _spawn_panel()
+	var trial: DungeonDefinition = _load_dungeon()
+	var problem: DungeonDefinition = _load_problem_dungeon()
+	var selections: Array = []
+	panel.dungeon_selected.connect(func(dungeon: DungeonDefinition) -> void:
+		selections.append(dungeon)
+	)
+	panel.set_dungeon_options([trial, problem])
+
+	panel.get_option_button(1).pressed.emit()
+	assert_int(selections.size()).is_equal(1)
+
+	# 本局进行中：选择区锁定，程序化触发也不转发。
+	panel.set_dungeon(trial)
+	panel.set_can_restart(false)
+	assert_bool(panel.get_option_button(1).disabled).is_true()
+	panel.get_option_button(1).pressed.emit()
+	assert_int(selections.size()).is_equal(1)
+
+	# 等待抉择同样属于进行中：与既有 continue / retreat 的状态口径一致。
+	panel.set_can_restart(true)
+	panel.set_awaiting_decision(true)
+	assert_bool(panel.get_option_button(1).disabled).is_true()
+	panel.get_option_button(1).pressed.emit()
+	assert_int(selections.size()).is_equal(1)
+
+	# 本局结算后才恢复可选。
+	panel.set_can_restart(true)
+	assert_bool(panel.get_option_button(1).disabled).is_false()
+	panel.get_option_button(1).pressed.emit()
+	assert_int(selections.size()).is_equal(2)

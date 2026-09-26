@@ -738,3 +738,34 @@
 - 验收时间：2026-09-26T01:48:20+08:00
 - Git：develop / `bb1d502`
 - 备注：父 Increment 为 `INC-CROSS-020`；信息卡组件本身不改，本次只改主场景的绑定与文案口径，保证「看敌方」与「操作自己」在 UI 上不混线。
+
+
+## INC-UI-020：秘境选择区（只发信号的最小选项列表）
+
+- 状态：awaiting_acceptance
+- 创建时间：2026-09-26T12:35:49+08:00
+- 最后修改：2026-09-26T12:47:24+08:00
+- 主题：ui
+- 目标：让 `DungeonPanel` 提供「秘境选择」这一最小只读选项列表——玩家点哪个秘境只产生一个意图信号，面板不持有 `DungeonRun`、不判断能否切换、不读取房间收益。
+- 验收标准：
+  - `game/ui/dungeon_panel.gd` 新增秘境选择信号（形如 `signal dungeon_selected(dungeon: DungeonDefinition)`）与 `set_dungeon_options(options: Array[DungeonDefinition])`；按钮按传入顺序生成，面板内不得硬编码任何 `res://` 秘境路径。
+  - 选项为空（未注入）时选择区处于空态 / 隐藏，不产生空引用错误。
+  - 秘境进行中或面板处于锁定态时，选择按钮禁用；具体锁定状态沿用面板既有 `set_running` / `set_can_restart` 一路的状态口径，不新增第二套状态机。
+  - 信号只表示玩家意愿：面板不得调用 `DungeonRun.start` / `is_active` / `advance`，能否真正切换由 `INC-CORE-014` 的主场景接线判定。
+  - `test/integration/dungeon_panel_test.gd` 新增用例：注入两个选项后按钮数为 2；点击第二个发出的信号参数就是注入的第二份资源；无选项时按钮数为 0；锁定态按钮 `disabled` 为真。
+  - 统一门禁 `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` → `RESULT: PASS`。
+- 范围：`game/ui/dungeon_panel.gd`、`game/ui/dungeon_panel.tscn`、`test/integration/dungeon_panel_test.gd`。
+- 非范围：新增秘境数据、修改 `DungeonRun`、改动既有继续 / 撤退 / 重开按钮的语义、正式美术。
+- 依赖：无。
+- 风险：① 动态生成按钮需要同时覆盖「`_ready` 之前注入」与「入树后注入」两种时序，避免面板先空态后不刷新；② 选择区若做成可与继续 / 撤退按钮同时可点，会诱导玩家在战斗间隙绕过累积规则，因此锁定条件必须与 `INC-CORE-014` 的运行时判定对齐。
+- 检索证据：2026-09-26T12:40+08:00 `git grep -h -o -E "INC-[A-Z]+-[0-9]{3}" -- agent-plan/` 确认 UI 主题最大编号为 019，`INC-UI-020` 未被占用；读取 `game/ui/dungeon_panel.gd`（现只有 `advance_requested` / `retreat_requested` / `restart_requested` 三个信号与 `set_dungeon` / `set_depth` / `set_room_problem_labels` 绑定方法）确认选择入口是全新职责而不是改名。
+- 实现说明：`DungeonPanel` 新增 `dungeon_selected(dungeon)` 信号与 `set_dungeon_options(options)`：按钮按注入顺序在 `DungeonOptions` 容器内动态生成（`DungeonOption1`…），面板内不出现任何 `res://` 秘境路径；选择区可点性沿用既有状态口径——未开局或本局已结算（`_can_restart`）时可点，进行中与等待抉择锁定，程序化触发 `pressed` 同样不转发。
+- 变更文件：`game/ui/dungeon_panel.gd`、`game/ui/dungeon_panel.tscn`、`test/integration/dungeon_panel_test.gd`。
+- 测试证据：`mcp__godot::validate` → `dungeon_panel.gd` / `dungeon_panel.tscn` / `dungeon_panel_test.gd` 全部 `valid: true`；单套件 `test/integration/dungeon_panel_test.gd` → `9 test cases | 0 errors | 0 failures | 0 orphans`（新增 2 例：注入两项后点击发出对应资源；进行中 / 等待抉择锁定且不转发）。
+- 验证状态：验证通过
+- 验证时间：2026-09-26T12:47:24+08:00
+- 已知问题：① 选择区与既有「继续深入 / 见好就收 / 重新开始秘境」共用同一 VBox，未做正式视觉分组；② 文案为硬编码中文，未走 `tr()`（与项目既有 HUD 一致）。
+- 用户验收：待验收
+- 验收时间：待验收
+- Git：待提交
+- 备注：父 Increment 为 `INC-CROSS-022`；本项只提供「玩家能表达想进哪个秘境」，默认秘境与恢复入口位置由 `INC-CORE-014` 决定。
