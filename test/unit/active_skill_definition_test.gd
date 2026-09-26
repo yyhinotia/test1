@@ -36,6 +36,8 @@ func test_default_definition_is_safe_and_configured() -> void:
 	assert_int(skill.effect_type).is_equal(ActiveSkillDefinition.SkillEffectType.DAMAGE)
 	assert_float(skill.effect_value).is_equal_approx(0.0, APPROX)
 	assert_float(skill.effect_duration).is_equal_approx(0.0, APPROX)
+	assert_float(skill.controlled_bonus_multiplier).is_equal_approx(1.0, APPROX)
+	assert_bool(skill.has_controlled_bonus()).is_false()
 	assert_bool(skill.is_configured()).is_true()
 
 
@@ -66,6 +68,15 @@ func test_runtime_values_are_normalized_before_use() -> void:
 	assert_float(skill.get_normalized_lifesteal_ratio()).is_zero()
 	skill.lifesteal_ratio = 2.0
 	assert_float(skill.get_normalized_lifesteal_ratio()).is_equal_approx(1.0, APPROX)
+	# 条件伤害倍率（INC-COMBAT-012）：小于 1 的值被抬回 1.0，保证「条件」只增不减。
+	skill.controlled_bonus_multiplier = -2.0
+	assert_float(skill.get_normalized_controlled_bonus_multiplier()).is_equal_approx(1.0, APPROX)
+	assert_bool(skill.has_controlled_bonus()).is_false()
+	skill.controlled_bonus_multiplier = 0.5
+	assert_float(skill.get_normalized_controlled_bonus_multiplier()).is_equal_approx(1.0, APPROX)
+	skill.controlled_bonus_multiplier = 2.0
+	assert_float(skill.get_normalized_controlled_bonus_multiplier()).is_equal_approx(2.0, APPROX)
+	assert_bool(skill.has_controlled_bonus()).is_true()
 
 
 func test_empty_or_whitespace_id_is_not_configured() -> void:

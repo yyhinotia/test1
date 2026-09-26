@@ -51,7 +51,7 @@ static func is_supported(skill: ActiveSkillDefinition) -> bool:
 static func apply_effect(caster, skill: ActiveSkillDefinition, target) -> void:
 	match skill.effect_type:
 		ActiveSkillDefinition.SkillEffectType.DAMAGE:
-			target.take_damage(get_damage_amount(caster, skill))
+			target.take_damage(get_damage_amount(caster, skill, target))
 		ActiveSkillDefinition.SkillEffectType.HEAL:
 			target.restore_health(skill.get_normalized_effect_value())
 		ActiveSkillDefinition.SkillEffectType.SHIELD:
@@ -69,11 +69,16 @@ static func apply_effect(caster, skill: ActiveSkillDefinition, target) -> void:
 
 
 ## 伤害沿用旧公式：施法者攻击力 × 效果倍率，至少 1 点；
+## 目标处于控制状态且技能配置了 `controlled_bonus_multiplier` 时按额外倍率结算（INC-COMBAT-012）；
 ## 防御减免、先护盾后生命的顺序仍由 `Pawn.take_damage()` 负责。
-static func get_damage_amount(caster, skill: ActiveSkillDefinition) -> float:
+static func get_damage_amount(caster, skill: ActiveSkillDefinition, target = null) -> float:
 	if caster == null or caster.data == null or skill == null:
 		return 0.0
-	return maxf(1.0, caster.data.attack * skill.get_normalized_effect_value())
+	var multiplier: float = skill.get_normalized_effect_value()
+	# 条件伤害：只有目标确实处于控制状态时才叠加额外倍率，未受控目标走原公式。
+	if target != null and is_instance_valid(target) and target.is_stunned():
+		multiplier *= skill.get_normalized_controlled_bonus_multiplier()
+	return maxf(1.0, caster.data.attack * multiplier)
 
 ## DASH：先求落点再位移，位移失败时不产生任何伤害（避免「没到却打到了」）。
 static func apply_dash(caster, skill: ActiveSkillDefinition, target) -> void:

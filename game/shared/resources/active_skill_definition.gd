@@ -43,6 +43,9 @@ enum SkillEffectType {
 @export_range(0.0, 1000000.0, 1.0, "or_greater") var aoe_radius: float = 0.0
 ## 吸血比例（0~1）：LIFESTEAL 用它把「实际造成的伤害」换算成施法者回复量。
 @export_range(0.0, 1.0, 0.01) var lifesteal_ratio: float = 0.5
+## 条件伤害倍率：DAMAGE 技能在目标处于控制状态（定身 / 眩晕）时叠加的额外倍率（INC-COMBAT-012）。
+## 默认 1.0 表示没有条件加成；归一化不会低于 1.0，避免「条件」反而削弱伤害。
+@export_range(0.0, 100.0, 0.01, "or_greater") var controlled_bonus_multiplier: float = 1.0
 
 func is_configured() -> bool:
 	return not String(id).strip_edges().is_empty()
@@ -79,6 +82,15 @@ func get_normalized_aoe_radius() -> float:
 
 func get_normalized_lifesteal_ratio() -> float:
 	return clampf(lifesteal_ratio, 0.0, 1.0)
+
+func get_normalized_controlled_bonus_multiplier() -> float:
+	return maxf(controlled_bonus_multiplier, 1.0)
+
+
+## 条件加成是否真实存在：只在倍率严格大于 1 时为真，供结算与测试区分「无条件技能」。
+func has_controlled_bonus() -> bool:
+	return get_normalized_controlled_bonus_multiplier() > 1.0
+
 
 func is_self_targeted() -> bool:
 	return target_type == SkillTargetType.SELF

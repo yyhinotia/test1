@@ -360,3 +360,78 @@ func test_lifesteal_effect_heals_caster_by_actual_damage() -> void:
 	assert_bool(dealt > 0.0).is_true()
 	assert_float(player.current_health).is_equal_approx(player_health_before + dealt * 0.5, APPROX)
 	assert_float(player.current_spirit).is_equal_approx(70.0, APPROX)
+
+
+## 条件伤害（INC-COMBAT-012）：只有目标确实处于控制状态时，DAMAGE 才叠加 controlled_bonus_multiplier。
+func test_controlled_bonus_damage_applies_only_while_target_is_stunned() -> void:
+	var skill: ActiveSkillDefinition = _make_skill(
+		&"effect_breaker",
+		ActiveSkillDefinition.SkillTargetType.ENEMY,
+		ActiveSkillDefinition.SkillEffectType.DAMAGE,
+		1.5,
+		0.0,
+		30.0,
+		1.0
+	)
+	skill.controlled_bonus_multiplier = 2.0
+	var player: Pawn = _spawn(PLAYER_SCENE_PATH, _make_data(PLAYER_DATA_PATH, skill))
+	var enemy: Pawn = _spawn(ENEMY_SCENE_PATH)
+	player.global_position = Vector2.ZERO
+	enemy.global_position = Vector2(80.0, 0.0)
+
+	assert_bool(skill.has_controlled_bonus()).is_true()
+
+	# 未受控：条件倍率不参与，按 effect_value 原样结算。
+	var uncontrolled_before: float = _total_effective_health(enemy)
+	assert_bool(player.cast_skill(skill, enemy)).is_true()
+	var uncontrolled_damage: float = uncontrolled_before - _total_effective_health(enemy)
+	assert_float(uncontrolled_damage).is_equal_approx(
+		maxf(1.0, player.data.attack * 1.5 - enemy.data.defense), APPROX
+	)
+
+	# 推进冷却后目标进入眩晕：同一技能按 1.5 × 2.0 结算。
+	player._physics_process(1.1)
+	enemy.apply_stun(2.0)
+	assert_bool(enemy.is_stunned()).is_true()
+	var controlled_before: float = _total_effective_health(enemy)
+	assert_bool(player.cast_skill(skill, enemy)).is_true()
+	var controlled_damage: float = controlled_before - _total_effective_health(enemy)
+	assert_float(controlled_damage).is_equal_approx(
+		maxf(1.0, player.data.attack * 1.5 * 2.0 - enemy.data.defense), APPROX
+	)
+	assert_bool(controlled_damage > uncontrolled_damage).is_true()
+
+
+## 条件伤害只属于 DAMAGE：LIFESTEAL 等走原伤害公式，不受 controlled_bonus_multiplier 影响。
+func test_controlled_bonus_is_ignored_by_non_damage_effects() -> void:
+	var skill: ActiveSkillDefinition = _make_skill(
+		&"effect_drain_conditional",
+		ActiveSkillDefinition.SkillTargetType.ENEMY,
+		ActiveSkillDefinition.SkillEffectType.LIFESTEAL,
+		1.0,
+		0.0,
+		30.0,
+		0.0,
+		120.0
+	)
+	skill.lifesteal_ratio = 0.5
+	skill.controlled_bonus_multiplier = 2.0
+	var player: Pawn = _spawn(PLAYER_SCENE_PATH, _make_data(PLAYER_DATA_PATH, skill))
+	var free_target: Pawn = _spawn(ENEMY_SCENE_PATH)
+	var stunned_target: Pawn = _spawn(ENEMY_SCENE_PATH)
+	player.global_position = Vector2.ZERO
+	free_target.global_position = Vector2(80.0, 0.0)
+	stunned_target.global_position = Vector2(-80.0, 0.0)
+
+	var free_before: float = _total_effective_health(free_target)
+	assert_bool(player.cast_skill(skill, free_target)).is_true()
+	var free_damage: float = free_before - _total_effective_health(free_target)
+
+	stunned_target.apply_stun(2.0)
+	assert_bool(stunned_target.is_stunned()).is_true()
+	var stunned_before: float = _total_effective_health(stunned_target)
+	assert_bool(player.cast_skill(skill, stunned_target)).is_true()
+	var stunned_damage: float = stunned_before - _total_effective_health(stunned_target)
+
+	# 吸血走的是不带 target 的原伤害公式：受控与否伤害完全相同。
+	assert_float(stunned_damage).is_equal_approx(free_damage, APPROX)
