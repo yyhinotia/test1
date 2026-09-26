@@ -14,6 +14,10 @@ extends Node
 ## 起局广播：上层必须在此刷新缓存的单位与控制器引用（旧单位已经退场）。
 ## 多人对局下 player / enemy 是各自队伍的主单位，完整队伍用 get_player_units() / get_enemy_units()。
 signal encounter_started(encounter: EncounterDefinition, player: Pawn, enemy: Pawn)
+## 首通奖励广播（INC-WORLD-009）：只在遭遇声明了首通技能奖励且玩家获胜结算时发出。
+## `newly_learned` 直接来自 `Pawn.learn_active_skill()` 的返回值：首次解锁为 true，重复通关为 false。
+## 本信号只陈述「发放了什么」这一只读事实，不改变发放规则，也绝不自动装配。
+signal first_clear_reward_granted(encounter: EncounterDefinition, skill: ActiveSkillDefinition, newly_learned: bool)
 ## 终局广播：一场对局只会广播一次；重复死亡信号被忽略。
 signal encounter_finished(encounter: EncounterDefinition, outcome: int)
 
@@ -595,7 +599,10 @@ func _grant_first_clear_reward() -> void:
 		return
 	if _player == null or not is_instance_valid(_player):
 		return
-	_player.learn_active_skill(_encounter.first_clear_skill_reward)
+	var skill: ActiveSkillDefinition = _encounter.first_clear_skill_reward
+	# 只解锁不装配：返回值只用于告诉上层「这次是不是新解锁」，不参与任何规则判定。
+	var newly_learned: bool = _player.learn_active_skill(skill)
+	first_clear_reward_granted.emit(_encounter, skill, newly_learned)
 
 
 func _all_units_dead(units: Array[Pawn]) -> bool:

@@ -292,3 +292,36 @@
 - 验收时间：2026-09-26T11:58:09+08:00
 - Git：`develop` / `a7da57c`
 - 备注：父 Increment 为 `INC-CROSS-021`；本项把 `INC-COMBAT-011` 的问题型敌人编排成玩家可感的顺序。本 Increment 只做数据与只读展示，不引入随机掉落、装备或属性膨胀。
+## INC-WORLD-009：首通奖励发放广播（只读信号）
+
+- 状态：in_progress
+- 创建时间：2026-09-26T13:03:24+08:00
+- 最后修改：2026-09-26T13:03:24+08:00
+- 主题：world
+- 父 Increment：`INC-CROSS-024`
+- 目标：让「首通奖励解锁了哪个技能」成为 UI 与取证层可以订阅的只读事实，而不是只能由玩家事后自己发现 Build 面板某一行从「未解锁」变成「可点」；发放规则、去重规则与「只解锁不装配」口径全部不变。
+- 验收标准：
+  - `EncounterSession` 新增信号 `first_clear_reward_granted(encounter, skill, newly_learned)`；只在遭遇声明了 `first_clear_skill_reward` 且玩家获胜结算时发出。
+  - `newly_learned` 直接取 `Pawn.learn_active_skill()` 的返回值：首次解锁为 `true`，重复通关为 `false`；不新增第二套「是否已发放」账本。
+  - 不自动装配：信号发出前后 `Pawn.get_equipped_active_skills()` 与 `has_explicit_active_skill_loadout()` 均不变；未声明奖励的遭遇不发信号。
+  - 统一门禁 `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` → `RESULT: PASS`。
+- 范围：`game/world/encounter_session.gd`、`test/integration/first_clear_reward_test.gd`。
+- 非范围：改奖励技能 / 数值 / 解锁条件、改 `Pawn.learn_active_skill()` 语义与返回类型、改容量与装配校验、新增技能。
+- 依赖：`INC-WORLD-007`（首通只解锁不装配，已验收）、`INC-PAWNS-023`（8 技能池，已验收）。
+- 风险：① 这是既有验收链路（`INC-WORLD-007` / `INC-TESTING-020`）上的新增信号，必须证明「不发信号」等于「没有奖励声明」，而不是漏发；② 重复通关必须如实发 `newly_learned=false`，否则 UI 会把重复通关误报成新解锁；③ 信号不得改变结算时序，也不得让 UI 有机会反向改状态。
+- 检索证据：2026-09-26T13:03:24+08:00 执行 `git status --short`（干净）、`git diff --unified=0 -- agent-plan/` 与 `git diff --cached --unified=0 -- agent-plan/`（均无输出）、`git log --oneline -5 -- agent-plan/`（HEAD `01dba96`）；`git grep -h -o -E "INC-[A-Z]+-[0-9]{3}" -- agent-plan/` 确认主题最大编号（WORLD 008 / UI 021 / TESTING 021 / CROSS 023），`INC-WORLD-009` 未被占用；`git grep -n "first_clear" -- game/ui/` 与 `-- game/main/` 均无命中，确认 UI 侧拿不到「刚刚解锁了什么」；读 `game/world/encounter_session.gd:598` 确认首通奖励当前是静默 `learn_active_skill()`、没有任何广播；`test/integration/first_clear_reward_test.gd` 已覆盖「首次解锁 / 无奖励遭遇 / 重复通关 / 跨局延续」四条事实，本项在其上补信号断言。
+- 实现说明：`EncounterSession` 在信号区新增 `first_clear_reward_granted(encounter, skill, newly_learned)`，与既有 `encounter_started` / `encounter_finished` 并列，注释写明它只陈述发放事实、不改变发放规则、绝不自动装配。`_grant_first_clear_reward()` 由「静默 `learn_active_skill(_encounter.first_clear_skill_reward)`」改成三步：取本地变量 `skill` → 用 `Pawn.learn_active_skill()` 的返回值作 `newly_learned` → `first_clear_reward_granted.emit(_encounter, skill, newly_learned)`。没有新增第二套「是否已发放」账本：前置判定一行未改（`_encounter` 为空 / `not has_first_clear_reward()` / `_player` 无效都提前 `return`），因此「不发信号」严格等于「没有奖励声明」；重复通关沿用 `learn_active_skill()` 的按 id 去重语义，如实发 `newly_learned = false`。信号在结算时序里的位置不变：仍在 `_on_unit_died()` 的玩家获胜分支内、`encounter_finished.emit()` 之前（`game/world/encounter_session.gd:582-590`），上层拿不到反向改状态的机会。
+- 变更文件：`game/world/encounter_session.gd`（新增信号 + `_grant_first_clear_reward()` 广播）、`test/integration/first_clear_reward_test.gd`（+3 例：解锁广播且不装配 / 重复通关报 `newly_learned=false` / 无奖励遭遇零广播）。
+- 测试证据：
+  - Godot MCP `validate`：`game/world/encounter_session.gd` 与 `test/integration/first_clear_reward_test.gd` 均 `valid: true`。
+  - 单层 `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer integration` → `RESULT: PASS`（205 cases / 0 failures）。
+  - 统一门禁 `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` → `RESULT: PASS`（GdUnit4 460 cases / 0 failures = unit 178 + integration 205 + gameplay 77；headless 10 suites / 549 assertions），exit 0。
+  - 三个新用例断言的是事实本身：首次通关只广播一次 `{id: binding_spell, newly_learned: true}`，同时 `has_explicit_active_skill_loadout()` 仍为 `false`、装配仍是静态 Build A `[sword_strike, guard_true_qi]`；同一会话连续两次通关的 `newly_learned` 依次为 `true` / `false`；`ENCOUNTER_1V2_PATH`（未声明首通奖励）零广播。
+  - 真实窗口（Godot MCP `run_project` 跑 `tests/scenario_problem_dungeon.tscn` + `run_script`）：清空第 1 层后读回 `known=["sword_strike","guard_true_qi","dash_step"]`，与 `INC-UI-022` 的提示行「已解锁：踏风突进 · 可在 Build 面板装配」同帧一致，证明广播在真实游玩路径上确实产生。
+- 验证状态：验证通过
+- 验证时间：2026-09-26T13:15:49+08:00
+- 已知问题：信号只陈述「本次是否新解锁」，不携带秘境 id 与层号，因此 UI 侧只能显示技能名；跨局延续仍由 `SquadProgressSnapshot` 负责，本信号自身不做持久化（`.mcp/` 下的进度记录由 `INC-TESTING-022` 的人工入口写）。
+- 用户验收：待验收
+- 验收时间：待验收
+- Git：待提交
+- 备注：父 Increment 为 `INC-CROSS-024`；本项只把既有发放事实变成可订阅信号，不改变「解锁」与「装配」必须分两步的 Gate C 口径。

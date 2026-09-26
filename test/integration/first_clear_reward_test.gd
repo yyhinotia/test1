@@ -128,3 +128,63 @@ func test_player_build_choice_survives_restart_and_next_encounter() -> void:
 	assert_bool(carried.has_explicit_active_skill_loadout()).is_true()
 	assert_array(_equipped_ids(carried)).contains_exactly(["sword_strike", "binding_spell"])
 	await await_idle_frame()
+
+
+## INC-WORLD-009：首次解锁必须发出只读广播（技能 id + newly_learned=true），
+## 且广播本身不得把技能装进 Build——「解锁」与「装配」仍是玩家可见的两步。
+func test_first_clear_broadcasts_the_unlocked_skill_without_equipping() -> void:
+	var session: EncounterSession = _spawn_session()
+	var granted: Array = []
+	session.first_clear_reward_granted.connect(func(
+		_encounter: EncounterDefinition, skill: ActiveSkillDefinition, newly_learned: bool
+	) -> void:
+		granted.append({"id": String(skill.id), "newly_learned": newly_learned})
+	)
+
+	_begin_and_win(session, ENCOUNTER_1V1_PATH)
+
+	var player: Pawn = session.get_player_pawn()
+	assert_int(granted.size()).is_equal(1)
+	assert_str(String(granted[0]["id"])).is_equal("binding_spell")
+	assert_bool(bool(granted[0]["newly_learned"])).is_true()
+	# 广播只陈述事实：装配集合保持静态预设 Build A。
+	assert_bool(player.has_explicit_active_skill_loadout()).is_false()
+	assert_array(_equipped_ids(player)).contains_exactly(["sword_strike", "guard_true_qi"])
+	await await_idle_frame()
+
+
+## INC-WORLD-009：重复通关不得把已有技能报成「新解锁」，否则 UI 会把重复通关误报成奖励。
+func test_repeated_clear_broadcasts_as_not_newly_learned() -> void:
+	var session: EncounterSession = _spawn_session()
+	var flags: Array = []
+	session.first_clear_reward_granted.connect(func(
+		_encounter: EncounterDefinition, _skill: ActiveSkillDefinition, newly_learned: bool
+	) -> void:
+		flags.append(newly_learned)
+	)
+
+	_begin_and_win(session, ENCOUNTER_1V1_PATH)
+	assert_bool(session.restart()).is_true()
+	_isolate(session)
+	_wipe_enemies(session)
+
+	assert_int(flags.size()).is_equal(2)
+	assert_bool(flags[0]).is_true()
+	assert_bool(flags[1]).is_false()
+	await await_idle_frame()
+
+
+## INC-WORLD-009：没有声明首通奖励的遭遇不得顺手广播——「不发信号」必须等于「没有奖励声明」。
+func test_encounters_without_a_reward_do_not_broadcast_a_grant() -> void:
+	var session: EncounterSession = _spawn_session()
+	var granted_count: Array = [0]
+	session.first_clear_reward_granted.connect(func(
+		_encounter: EncounterDefinition, _skill: ActiveSkillDefinition, _newly_learned: bool
+	) -> void:
+		granted_count[0] = int(granted_count[0]) + 1
+	)
+
+	_begin_and_win(session, ENCOUNTER_1V2_PATH)
+
+	assert_int(int(granted_count[0])).is_zero()
+	await await_idle_frame()
