@@ -1,6 +1,6 @@
 # Agent Plan Index
 
-> 最后修改：2026-09-26T12:30:44+08:00
+> 最后修改：2026-09-26T12:34:31+08:00
 > 规则来源：`../AGENTS.md`
 
 ## 主题索引
@@ -44,7 +44,7 @@
 | `INC-CROSS-018` | `in_progress` | `INC-CULT-005`、`INC-PAWNS-019`、`INC-WORLD-006`、`INC-UI-017`、`INC-CORE-011`、`INC-TESTING-010` | 突破 → Build 重构：突破执行、运行时境界覆盖、跨遭遇延续、玩家入口与再战证据 | 进行中（4/6 子项已验收） | 待验收 | 2026-09-25T20:39:32+08:00 |
 | `INC-CROSS-019` | `accepted` | `INC-COMBAT-009`、`INC-PAWNS-021`、`INC-WORLD-007`、`INC-UI-018`、`INC-TESTING-011`、`INC-TESTING-012`、`INC-TESTING-013`、`INC-TESTING-014`、`INC-TESTING-015`、`INC-TESTING-016`、`INC-TESTING-017`（已实现前置：`INC-PAWNS-020` 多单位运行时；已退役：`INC-CORE-012`） | 1v1 → 1vN Build 玩法验证（Build Gameplay Validation） | 验证通过（Gate 0 机制层 + 1v1 首通奖励、Build 切换面板与跨遭遇延续、`tests/` 场景化人工入口、Build Replay 自动化证据与 Round 1/2 客观对照、Stage 2 `1v1 / 1v2 / 1v3` 运行时终局收敛与重开清洁、测试入口自证（横幅 / 名牌 / `enemy_names` / `run_scenario.ps1`）） | 已验收 | 2026-09-26T02:09:20+08:00 |
 | `INC-CROSS-020` | `accepted` | `INC-CORE-013`、`INC-UI-019`、`INC-TESTING-018` | 左键统一操作模型：选择 / 移动 / 技能目标选择，选中敌方显示敌方信息 | 验证通过（gameplay 输入路由用例 + 统一门禁 `RESULT: PASS` + 真实窗口与 OS 级鼠标输入冒烟） | 已验收 | 2026-09-26T01:48:20+08:00 |
-| `INC-CROSS-021` | `awaiting_acceptance` | `INC-COMBAT-010`、`INC-COMBAT-011`、`INC-COMBAT-012`、`INC-PAWNS-022`、`INC-PAWNS-023`、`INC-WORLD-008`、`INC-TESTING-019` | Skill × Enemy Interaction 验证：技能池 / 问题型敌人 / 问题房间 | 通过（7/7 子项全部验证并验收：`INC-COMBAT-010` / `INC-PAWNS-022` / `INC-COMBAT-011` / `INC-COMBAT-012` / `INC-PAWNS-023` / `INC-WORLD-008` / `INC-TESTING-019`） | 待验收（父级） | 2026-09-26T12:30:44+08:00 |
+| `INC-CROSS-021` | `accepted` | `INC-COMBAT-010`、`INC-COMBAT-011`、`INC-COMBAT-012`、`INC-PAWNS-022`、`INC-PAWNS-023`、`INC-WORLD-008`、`INC-TESTING-019` | Skill × Enemy Interaction 验证：技能池 / 问题型敌人 / 问题房间 | 通过（7/7 子项全部验证并验收：`INC-COMBAT-010` / `INC-PAWNS-022` / `INC-COMBAT-011` / `INC-COMBAT-012` / `INC-PAWNS-023` / `INC-WORLD-008` / `INC-TESTING-019`） | 已验收 | 2026-09-26T12:34:31+08:00 |
 
 ### INC-CROSS-001：第一个 Pawn MVP
 
@@ -454,7 +454,7 @@
 | `INC-CORE-013` | `INC-CROSS-020` | core | `accepted` | 左键统一入口：选中任意单位 / 左键移动 / 右键不再移动 | 2026-09-26T01:48:20+08:00 | 验证通过（gameplay 5 个输入路由用例 + 真实窗口 `指令：移动到 (320, 520)` / 右键零命令；统一门禁 `RESULT: PASS`） | 已验收 | `develop` / `d405bbe` |
 | `INC-UI-019` | `INC-CROSS-020` | ui | `accepted` | 选中敌方单位时的信息 UI 口径（信息卡绑定 / 玩家面板解绑 / HUD 文案） | 2026-09-26T01:48:20+08:00 | 验证通过（gameplay 断言信息卡绑定敌方且技能栏与 Build 面板解绑；可见控件清单无 `SkillBar`、信息卡显示 `气血/护体` 无灵力行） | 已验收 | `develop` / `bb1d502` |
 | `INC-TESTING-018` | `INC-CROSS-020` | testing | `accepted` | 输入模型测试矩阵（左键移动 / 敌方选中 / 右键不移动） | 2026-09-26T01:48:20+08:00 | 验证通过（删除 1 个旧契约用例、新增 5 个；统一门禁 `RESULT: PASS`，GdUnit4 402 → 406 cases / 0 failures，exit 0） | 已验收 | `develop` / `3955517` |
-| `INC-CROSS-021` | - | cross | `in_progress` | Skill × Enemy Interaction 验证：技能池 / 问题型敌人 / 问题房间 | 2026-09-26T12:01:09+08:00 | 部分通过（6/7 子项已验证并验收：`INC-COMBAT-010` / `INC-PAWNS-022` / `INC-COMBAT-011` / `INC-COMBAT-012` / `INC-PAWNS-023` / `INC-WORLD-008`；`INC-TESTING-019` 开发中） | 进行中 | `develop` / `4c0061d`、`0f20ed2`、`f3537e2`、`1f222b6`、`5f5ffeb`、`f1abebd`、`a963738`、`a7da57c` |
+| `INC-CROSS-021` | - | cross | `accepted` | Skill × Enemy Interaction 验证：技能池 / 问题型敌人 / 问题房间 | 2026-09-26T12:34:31+08:00 | 通过（7/7 子项全部验证并验收：`INC-COMBAT-010` / `INC-COMBAT-011` / `INC-COMBAT-012` / `INC-PAWNS-022` / `INC-PAWNS-023` / `INC-WORLD-008` / `INC-TESTING-019`；已知限制：`problem_dungeon.tres` 尚未接入游玩入口） | 已验收 | `develop` / `4c0061d`、`0f20ed2`、`f3537e2`、`1f222b6`、`5f5ffeb`、`f1abebd`、`a963738`、`a7da57c`、`ec10b0f` |
 | `INC-COMBAT-010` | `INC-CROSS-021` | combat | `accepted` | 技能效果类型扩展（位移 / 范围伤害 / 吸血） | 2026-09-26T02:01:11+08:00 | 验证通过（unit 8 cases / integration 8 cases / 0 failures；统一门禁 GdUnit4 415 cases / 0 failures + headless 549 assertions，`RESULT: PASS`，exit 0） | 已验收 | `develop` / `4c0061d` |
 | `INC-COMBAT-011` | `INC-CROSS-021` | combat | `accepted` | 敌人技能特征差异化（问题型敌人） | 2026-09-26T02:24:14+08:00 | 验证通过（unit 6 cases + integration 4 + 1 cases / 0 failures；六档案问题标签与价值轴各自唯一、召唤增援按 1.0s / 3.0s 节奏生成且计入终局、召唤者死后调度停止、危险窗口契约不变；统一门禁 GdUnit4 424 cases + headless 549 assertions PASS） | 已验收 | `develop` / `5f5ffeb` |
 | `INC-COMBAT-012` | `INC-CROSS-021` | combat | `accepted` | 条件伤害（对受控目标额外倍率） | 2026-09-26T11:50:07+08:00 | 验证通过（validate 6 脚本全通过；unit 8 cases + integration 10 cases + catalog 12 cases + runtime 5 cases / 0 failures；默认 1.0 零影响、受控叠加、非 DAMAGE 不参与；统一门禁 GdUnit4 429 cases / 0 failures + headless 549 assertions，`RESULT: PASS`，exit 0） | 已验收 | `develop` / `f1abebd` |
@@ -632,6 +632,7 @@
 | v5.41 | 2026-09-26T11:58:09+08:00 | 用户验收通过 `INC-WORLD-008`（秘境问题房间），用户原话「本次验收通过」；代码提交 `a7da57c`，父 Increment `INC-CROSS-021` 子项进度推进到 6/7 已验收，仅剩 `INC-TESTING-019`。 |
 | v5.42 | 2026-09-26T12:01:09+08:00 | 启动 `INC-TESTING-019`（Skill × Enemy 交互矩阵）：用确定性驱动对 6 类问题型敌人记录适用 / 不适用技能的通关耗时、剩余生命、灵力消耗，并要求至少 2 组换技能差异；同时显式区分纯数值升级与价值轴变化。 |
 | v5.39 | 2026-09-26T02:25:25+08:00 | 完成 `INC-COMBAT-012`（条件伤害：`controlled_bonus_multiplier` 默认 1.0、只作用于 DAMAGE、受控时按 `effect_value × 倍率` 结算）与 `INC-PAWNS-023`（玩家技能池扩到 8 个：破军斩走条件爆发轴、回春术补首个主动回复轴，炼气期仍 2 槽 / C(8,2)=28）：`mcp__godot::validate` 全通过，单套件 unit 8 + integration 10 + catalog 12 + runtime 5 cases 均 0 failures，统一门禁 `RESULT: PASS`（GdUnit4 429 cases / 0 failures、headless 10 suites / 549 assertions），exit 0；计划已回填为 `awaiting_acceptance`，等待用户验收。 |
+| v5.45 | 2026-09-26T12:34:31+08:00 | 用户以「本次验收通过」接受父 Increment `INC-CROSS-021`（Skill × Enemy Interaction 验证），7/7 子项（`INC-COMBAT-010` / `INC-COMBAT-011` / `INC-COMBAT-012` / `INC-PAWNS-022` / `INC-PAWNS-023` / `INC-WORLD-008` / `INC-TESTING-019`）全部验证并验收；本轮只补验收记录，不改 `game/` 实现与数值。同时记录本轮复核发现的真实缺口：`game/world/data/dungeons/problem_dungeon.tres`（11 个问题房间 + Boss、含首通技能奖励链）在 `game/` 与 `tests/` 中除测试引用外没有任何游玩入口，`main.tscn` 的 `DungeonRun.default_dungeon` 仍指向 `trial_dungeon.tres`（6 房间、无问题房间），因此 Gate 3 的「遇到问题 → 获得技能 → 再遇到需要该技能的问题」目前只在机制层与数据层成立，尚不能由正常游玩路径自然观察到，已登记为下一阶段最高优先级修补项 |
 | v5.44 | 2026-09-26T12:30:44+08:00 | 用户验收通过 `INC-TESTING-019`（Skill × Enemy 交互矩阵），用户原话「本次验收通过」；代码提交 `ec10b0f`，父 Increment `INC-CROSS-021` 7/7 子项全部验收完毕并进入 `awaiting_acceptance`（父级自身仍待用户验收）。 |
 | v5.43 | 2026-09-26T12:30:04+08:00 | 完成 `INC-TESTING-019`（Skill × Enemy 交互矩阵）：新增集成层套件用固定 1/60 手工步进跑六类问题房间 × 两个「只差一个技能」的 Build，同配置重复运行逐位相同；6 格中 5 格换技能后差异超出噪声、6 格全部互有胜负、胜出 Build 至少涉及两个不同 id；反向对照验证「纯倍率升级」不是新价值轴（接上定身后排序反转）；危险窗口只有控制技能能取消。`mcp__godot::validate` 通过，单套件连续 5 次 3 cases / 0 failures，统一门禁 `RESULT: PASS`（GdUnit4 441 cases / 0 failures、headless 10 suites / 549 assertions），exit 0；计划已回填为 `awaiting_acceptance`，等待用户验收。 |
 | v5.38 | 2026-09-26T02:24:14+08:00 | 用户验收通过 `INC-COMBAT-011`（敌人技能特征差异化 / 问题型敌人），用户原话「本次验收通过」；本批只补验收记录，不改玩法数值与 `game/` 实现；父 Increment `INC-CROSS-021` 子项进度推进到 3/7 已验收，剩余 `INC-COMBAT-012` / `INC-PAWNS-023`（已立项待开发）、`INC-WORLD-008` / `INC-TESTING-019`。 |
@@ -744,9 +745,9 @@
 - 验证状态：待验证
 - 验证时间：待验证
 - 已知问题：`test/integration/sect_panel_test.gd` 在目录模式下仍有 288 orphans 的既有测试债务，本批不顺手清理。
-- 用户验收：待验收
-- 验收时间：待验收
-- Git：待提交
+- 用户验收：已验收（用户原话「本次验收通过」，2026-09-26）
+- 验收时间：2026-09-26T12:34:31+08:00
+- Git：`develop` / 子项代码提交 `1f222b6`、`5f5ffeb`、`f1abebd`、`a963738`、`a7da57c`、`ec10b0f`（含 `95df451` 验收记录）
 - 备注：4v4 战斗是下一候选父 Increment，仍属于 MVP 缺口；本批完成不等于整个 MVP 完成。
 
 ### INC-CROSS-019：1v1 → 1vN Build 玩法验证（Build Gameplay Validation）
@@ -861,7 +862,7 @@
   - 既有 orphan 债务（gameplay 324 / integration 288）与门禁 stderr 噪音与本 Increment 无关。
 - 用户验收：已验收
 - 验收时间：2026-09-26T01:48:20+08:00
-- Git：develop / `e69a420`
+- Git：`develop` / 子项代码提交 `1f222b6`、`5f5ffeb`、`f1abebd`、`a963738`、`a7da57c`、`ec10b0f`（含 `95df451` 验收记录）
 - 备注：本父 Increment 只改玩家与鼠标之间的输入层契约，不改战斗 / 技能 / 奖励 / 敌人 AI；`docs/4v4-vertical-slice.md` 的第 121~125 行仍是已冻结的 4v4 设计原文，如需让该文档跟随本次变更，另立文档类 Increment。
 
 ## INC-CROSS-021：Skill × Enemy Interaction 验证
@@ -881,13 +882,13 @@
   - Gate 5 反向对照：两个只差数值的同型技能，其差异被显式排除在「Build 变化」之外，防止把数值升级当成 Build。
   - Gate 6 门禁：统一 `test/run_tests.ps1 -Layer all` → `RESULT: PASS`。
 - Failure 条件：做完 6 个技能与 6 类敌人后，玩家仍然只会按面板伤害选技能，或不同敌人对 Build 选择没有可测影响——此时结论应为「当前仍是技能数值系统，不是 Build 系统」，而不是继续堆技能。
-- 子 Increment：`INC-COMBAT-010`（技能效果扩展：位移 / 范围 / 吸血，已验收）、`INC-PAWNS-022`（玩家技能池扩到六类价值轴，已验收）、`INC-COMBAT-011`（问题型敌人，含召唤，已验收）、`INC-COMBAT-012`（条件伤害，已验收）、`INC-PAWNS-023`（玩家技能池扩到 8 个，已验收）、`INC-WORLD-008`（秘境问题房间，已验收）、`INC-TESTING-019`（Skill × Enemy 交互矩阵，待开发）。
+- 子 Increment：`INC-COMBAT-010`（技能效果扩展：位移 / 范围 / 吸血，已验收）、`INC-PAWNS-022`（玩家技能池扩到六类价值轴，已验收）、`INC-COMBAT-011`（问题型敌人，含召唤，已验收）、`INC-COMBAT-012`（条件伤害，已验收）、`INC-PAWNS-023`（玩家技能池扩到 8 个，已验收）、`INC-WORLD-008`（秘境问题房间，已验收）、`INC-TESTING-019`（Skill × Enemy 交互矩阵，已验收）。
 - 判定顺序：先 `INC-COMBAT-010`（效果能不能表达）→ 再 `INC-PAWNS-022` / `INC-PAWNS-023`（玩家有没有可选项）→ 再 `INC-COMBAT-011` / `INC-COMBAT-012`（敌人是否提出问题 / 控制能否兑现输出）→ 再 `INC-WORLD-008`（问题是否被编排成链）→ 最后 `INC-TESTING-019`（对照是否客观成立）；父级只有在七个子项全部通过验证后才进入 `awaiting_acceptance`。
-- 进度：2026-09-26T11:58:09+08:00 用户验收通过 `INC-WORLD-008`（秘境问题房间），子项进度 6/7——`INC-COMBAT-010` / `INC-PAWNS-022` / `INC-COMBAT-011` / `INC-COMBAT-012` / `INC-PAWNS-023` / `INC-WORLD-008` 均已验收；后续仅剩 `INC-TESTING-019`（Skill × Enemy 交互矩阵）。
+- 进度：2026-09-26T12:34:08+08:00 用户以「本次验收通过」接受父级 INC-CROSS-021，7/7 子项全部验收；此前 2026-09-26T11:58:09+08:00 用户验收通过 INC-WORLD-008（秘境问题房间），子项进度 6/7——`INC-COMBAT-010` / `INC-PAWNS-022` / `INC-COMBAT-011` / `INC-COMBAT-012` / `INC-PAWNS-023` / `INC-WORLD-008` 均已验收；后续仅剩 `INC-TESTING-019`（Skill × Enemy 交互矩阵）。
 - 非范围（保留 CROSS-019 冻结思路，只解冻必要部分）：技能树、技能升级与等级、装备词条与属性膨胀、随机掉落、存档迁移、联网同步、4v4 与队友系统、正式美术与动画、平衡数值定稿。
 - 检索证据：2026-09-26T01:56+08:00 在仓库根目录执行 `git status --short --branch`（`develop...origin/develop` 一致，工作区含尚未验收的 `INC-TESTING-015/016/017` 与若干非本次改动）、`git grep -h -o -E "INC-...-[0-9]{3}" -- agent-plan/`（各主题最大编号：COMBAT 009 / PAWNS 021 / WORLD 007 / UI 019 / TESTING 018 / CROSS 020，本批编号均未被占用）；读取 `game/shared/resources/active_skill_definition.gd`（`SkillEffectType` 只有 DAMAGE / HEAL / SHIELD / STUN）、`game/combat/skill/skill_effect_resolver.gd`（单效果分派与「先扣灵力后生效」顺序）、`game/pawns/data/` 下的技能与敌人资源（玩家技能 3 个、敌人档案 6 份）、`game/cultivation/data/realms/qi_refining.tres`（`active_skill_slots = 2`）确认「技能池只有 3 个、效果类型无法表达位移 / 范围 / 吸血、玩家只有 2 个槽位」是当前的真实瓶颈。
 - 风险：① 效果扩展会同时改枚举、分派与 Pawn 接口，边界若失控会滑向通用 Buff 系统——必须严格限制为「单效果 + 三类新类型」；② 六技能只有两槽，若出现「任何情况下都不值得装」的技能，说明问题设计重叠，必须靠问题差异化解决而不是加槽位；③ 敌人问题型与房间链两件事同时上会互相掩盖因果，必须按判定顺序串行落地；④ 客观对照容易受 AI 时序影响，必须先解决确定性与噪声阈值。
-- 用户验收：待验收
-- 验收时间：待验收
-- Git：待提交
+- 用户验收：已验收（用户原话「本次验收通过」，2026-09-26）
+- 验收时间：2026-09-26T12:34:31+08:00
+- Git：`develop` / 子项代码提交 `1f222b6`、`5f5ffeb`、`f1abebd`、`a963738`、`a7da57c`、`ec10b0f`（含 `95df451` 验收记录）
 - 备注：本父 Increment 取代 `INC-CROSS-019` objective §28 中「冻结 AOE / 大量新技能」的约束（仅就该批解冻），CROSS-019 自身的 1v1 → 1vN 结论不受影响；本项仍遵守「不同时扩张一切」的原则，装备、属性、掉落与存档均保持冻结。
