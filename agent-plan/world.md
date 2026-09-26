@@ -1,6 +1,6 @@
 # World 主题计划（地图 / 秘境 / 遭遇 / 事件 / 探索）
 
-> 最后修改：2026-09-26T01:56:11+08:00
+> 最后修改：2026-09-26T11:58:09+08:00
 > 主题：world
 > 规则来源：`../AGENTS.md`
 > 设计源：`../docs/project_summary.md` §十（秘境系统）、§十八 MVP ④（一个秘境 + 房间 + Boss）
@@ -266,9 +266,9 @@
 
 ## INC-WORLD-008：秘境问题房间（按战斗问题组合，而非数值递增）
 
-- 状态：planned
+- 状态：accepted
 - 创建时间：2026-09-26T01:56:11+08:00
-- 最后修改：2026-09-26T01:56:11+08:00
+- 最后修改：2026-09-26T11:58:09+08:00
 - 主题：world
 - 目标：把秘境房间从「随机 / 递增的敌人组合」改成「明确的战斗问题组合」——每个房间由 1~2 个压力型（近战压力 / 远程压力 / 控制压力 / 高爆发压力 / 群体压力 / 高防御压力）构成，玩家在不同房间遇到的问题不同，而不是同一个问题数值变大。
 - 验收标准：
@@ -282,13 +282,13 @@
 - 依赖：`INC-COMBAT-011`（问题型敌人）、`INC-PAWNS-022`（玩家技能池）。
 - 检索证据：2026-09-26T01:56+08:00 `git grep` 确认 `INC-WORLD` 已用至 007；读取 `game/world/data/encounters/*.tres` 与 `game/world/data/dungeons/trial_dungeon.tres`，现有遭遇共 7 份且以单敌人档案为主，秘境只有一份试炼秘境，没有「问题型房间」这一层表达。
 - 风险：① 房间数量上升会放大既有 orphan 债务与运行时用例时长；② 问题型如果只写在 description 里而数据不可查询，就无法被自动化验证；③ 若在同一轮同时引入敌人机制与房间链，出问题时无法定位是敌人还是编排导致。
-- 实现说明：
-- 变更文件：
-- 测试证据：
-- 验证状态：未验证
-- 验证时间：
-- 已知问题：
-- 用户验收：未验收
-- 验收时间：
-- Git：待提交
-- 备注：父 Increment 为 `INC-CROSS-021`；本项把 `INC-COMBAT-011` 的问题型敌人编排成玩家可感的顺序。
+- 实现说明：① 问题型映射抽成 `PawnData.get_problem_tag_label_for()` / `get_skill_value_axis_for()` 静态方法，敌人侧与房间编排侧共用一份事实表；② `DungeonRoom` 新增 `problem_tags`、问题型归一化 / 去重 / 排序、遭遇并集校验与 `is_problem_configured()`，让「房间声明 = 敌人事实」可自动验证，同时不破坏旧秘境的 `is_configured()` 语义；③ 新增 11 个问题 squad 与 11 个 problem encounter，前 6 间挂首通技能奖励形成「遇到问题 → 获得技能 → 后续房间需要该价值轴」的解锁链，后 5 间复用已解锁能力；④ 新增 `problem_dungeon.tres`（12 间，覆盖六类问题型，奖励 10 → 240 单调递增，Boss 收尾）；⑤ `DungeonPanel` 新增只读 `ProblemLabel` 展示当前房间问题，`main.gd` 只负责转发标签。
+- 变更文件：`game/shared/resources/pawn_data.gd`、`game/shared/resources/dungeon_room.gd`、`game/ui/dungeon_panel.gd`、`game/ui/dungeon_panel.tscn`、`game/main/main.gd`、`game/pawns/data/enemies/enemy_charge_adept.tres`（新增）、`game/pawns/data/skills/enemy_charge_bolt.tres`（新增）、`game/world/data/squads/problem_squad_01~11_*.tres`（新增 11 份）、`game/world/data/encounters/problem_room_01~11_*.tres`（新增 11 份）、`game/world/data/dungeons/problem_dungeon.tres`（新增）、`test/unit/dungeon_definition_test.gd`、`test/integration/dungeon_panel_test.gd`、`test/integration/problem_dungeon_run_test.gd`（新增）。
+- 测试证据：① `mcp__godot::validate`：`pawn_data.gd`、`dungeon_room.gd`、`dungeon_panel.gd`、`main.gd`、`dungeon_definition_test.gd`、`dungeon_panel_test.gd`、`problem_dungeon_run_test.gd` 全部 `valid: true`。② 单套件：`dungeon_definition_test.gd` → 11 cases / 0 failures；`problem_dungeon_run_test.gd` → 3 cases / 0 failures；`dungeon_panel_test.gd` → 7 cases / 0 failures；`dungeon_run_test.gd` → 9 cases / 0 failures；`problem_enemy_differentiation_test.gd` → 1 case / 0 failures；`encounter_definition_test.gd` → 10 cases / 0 failures；`squad_definition_test.gd` → 12 cases / 0 failures；`enemy_threat_profile_test.gd` → 6 cases / 0 failures；`build_test_encounter_catalog_test.gd` → 5 cases / 0 failures；`first_clear_reward_test.gd` → 4 cases / 0 failures。③ 统一门禁 `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` → `GdUnit4 : 438 cases, 0 failures` / `headless : 10 suites, 549 assertions, 0 failing suites` / `RESULT: PASS`，exit 0。
+- 验证状态：验证通过（12 间问题房间的声明与敌人集合一致、六类问题型全覆盖、首通技能链有自动化断言、同一 Build 高防与高爆发房间差异可复现、奖励单调且无额外奖励来源、面板只读展示；统一门禁 PASS）
+- 验证时间：2026-09-26T11:57:16+08:00
+- 已知问题：① 本轮未做人工实机体验评估；② `problem_dungeon.tres` 目前不是 `main.tscn` 的默认秘境（默认仍为 `trial_dungeon`），需要换秘境入口或后续 Increment 才能进入；若要求「开机即可玩问题秘境」，应另立 Increment 并同步调整按 trial 房间数断言的用例；③ 12 间一次通关的节奏与时长尚未人工体感评估。
+- 用户验收：已验收（用户原话「本次验收通过」）
+- 验收时间：2026-09-26T11:58:09+08:00
+- Git：`develop` / `a7da57c`
+- 备注：父 Increment 为 `INC-CROSS-021`；本项把 `INC-COMBAT-011` 的问题型敌人编排成玩家可感的顺序。本 Increment 只做数据与只读展示，不引入随机掉落、装备或属性膨胀。
