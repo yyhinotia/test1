@@ -676,11 +676,9 @@
 - Git：develop / `3955517`
 - 备注：父 Increment 为 `INC-CROSS-020`；本 Increment 只改测试与断言，不改生产代码，也不修改既有 orphan 债务。
 
-## INC-TESTING-019：Skill × Enemy 交互矩阵（同一 Build 面对不同问题）
-
-- 状态：planned
+- 状态：awaiting_acceptance
 - 创建时间：2026-09-26T01:56:11+08:00
-- 最后修改：2026-09-26T01:56:11+08:00
+- 最后修改：2026-09-26T12:30:04+08:00
 - 主题：testing
 - 目标：把「技能池变大之后 Build 玩法是否真的成立」变成可复核的客观证据——用同一 Build 跑不同问题型敌人，比较通关耗时 / 灵力消耗 / 剩余生命，证明「不同敌人让不同技能的价值发生变化」，而不是「面板伤害高的技能永远更优」。
 - 验收标准：
@@ -694,13 +692,19 @@
 - 依赖：`INC-COMBAT-010`（新效果类型）、`INC-PAWNS-022`（技能池与槽位）、`INC-COMBAT-011`（问题型敌人）、`INC-WORLD-008`（问题房间），以及既有的 `INC-TESTING-011`（Build Replay 记录）与 `INC-CROSS-019` 的客观对照判据。
 - 检索证据：2026-09-26T01:56+08:00 `git grep` 确认 `INC-TESTING` 已用至 018；现有 `test/unit/tactical_skill_catalog_test.gd` 与 `test/gameplay/build_decision_differentiation_test.gd` 已经做过「技能价值轴」的标称对照，但对照对象是数据字段而不是运行时不同敌人，且只有 3 个技能；`test/tools/build_replay_driver.gd` 提供了可复用的确定性驱动先例。
 - 风险：① 运行时对照容易受 AI 时序与帧率影响，必须冻结控制器或使用确定性驱动，否则结论不可比；② 「客观量差异」需要先定噪声阈值，否则会把随机波动当成 Build 差异；③ 本项跨越 4 个前置 Increment，任一前项未落地时不能提前给出结论。
-- 实现说明：
-- 变更文件：
+- 实现说明：新增集成层套件 `test/integration/skill_enemy_interaction_matrix_test.gd`，用真实 `EncounterSession` + 真实控制器 + 固定 1/60 手工步进 + 固定策略做三类对照：① 六类问题房间各跑两个「只差一个技能」的 Build（`御剑斩 + 该格问题对口技能` vs `御剑斩 + 护体真气`），同一配置在同进程内重复一遍并要求逐位相同，再按「剩余有效生命 → 通关耗时 → 灵力消耗」排序，并用严格支配判定区分「取舍」与「被支配」；② 反向对照：`御剑斩 1.8×（无附加条件）` 与 `破军斩 1.4× + 受控 2.4×` 互换，验证纯倍率差异不构成新的价值轴；③ 危险窗口：只有控制技能能取消窗口，不带控制时窗口照常结算。为让「受控加成」这条条件轴在固定策略下能被兑现，`_pick_skill` 增加一条起手分支（Build 同时带控制技能与受控加成技能时，用控制技能起手连招）；该分支只对同时含这两类技能的 Build 生效，六格矩阵与既有用例的组合都不含这种搭配，因此不影响既有结论。
+- 变更文件：`test/integration/skill_enemy_interaction_matrix_test.gd`（新增）、`test/integration/skill_enemy_interaction_matrix_test.gd.uid`（新增）、`agent-plan/testing.md`、`agent-plan/_index.md`
 - 测试证据：
-- 验证状态：未验证
-- 验证时间：
-- 已知问题：
-- 用户验收：未验收
+  - `mcp__godot::validate`（单套件）→ `valid: true`；单套件 `GdUnitCmdTool` 连续 5 次跨进程重跑均为 `3 test cases | 0 failures | 0 orphans`。
+  - 六格矩阵（一次运行实测，格式 `Build=终局 耗时/剩余有效生命/灵力消耗`）：`problem_room_01_melee` sword+aoe=win 6.53s/121/90 vs sword+guard=win 7.33s/147/80；`problem_room_02_ranged` sword+dash=win 3.67s/149/45 vs sword+guard=win 5.18s/160/55；`problem_room_03_charge` sword+binding=win 8.00s/107/75 vs sword+guard=win 9.60s/117/80；`problem_room_04_summon` sword+aoe=win 13.97s/100/90 vs sword+guard=win 16.37s/97/80；`problem_room_05_iron` sword+lifesteal=win 20.20s/54/80 vs sword+guard=win 21.80s/50/80；`problem_room_06_burst` sword+binding=win 5.70s/50/50 vs sword+guard=win 5.70s/80/80。
+  - 矩阵结论：6 格里 5 格「只换一个技能」后的客观量差异超出噪声带（耗时相对差 ≥10% 或剩余有效生命差 ≥5）；6 格全部属于「互有胜负」（没有任何一方在耗时 / 余命 / 灵力三项上被严格支配）；单次运行中胜出的 Build 至少涉及两个不同 id（`sword+guard` / `sword+dash` / `sword+aoe`）。
+  - 反向对照结论：不接控制时倍率更高的一方更优（余命 121 vs 108；余命持平时耗时 6.27s vs 7.13s）；接上定身后同一对技能排序反转（破军斩余命 116~127 vs 御剑斩 107~117）→ 差异来自「受控加成」这条条件轴，而不是倍率数字本身。
+  - 危险窗口结论：定身路径 `danger_window_opened=1 / control_cast=true / cancelled=true / hit=false / blocked=false`；不带控制路径 `cancelled=false / hit=true`。
+  - 统一门禁 `test/run_tests.ps1 -Layer all` → `RESULT: PASS`（exit 0；GdUnit4 441 cases / 0 failures、headless 10 suites / 549 assertions / 0 failing suites）。
+- 验证状态：验证通过
+- 验证时间：2026-09-26T12:30:04+08:00
+- 已知问题：① 手工步进下 `move_and_slide()` 的位移由引擎物理步给出（`test/README.md` 已记录），跨进程重跑会整体滑动，单格胜者因此会小幅漂移（`problem_room_02_ranged` 在 5 次重跑里 guard 与 dash 各胜过一次）；用例因此只断言方向与相对阈值，不断言逐格胜者，单格绝对值也不作为契约。② 在固定策略下 `护体真气` 在 6 格中的多数格子仍是余命最稳的选择，说明问题房间目前还没有把「永远带盾」惩罚到代价明显；这属于平衡与问题设计空间，本 Increment 只产出证据，不改数值。③ 统一门禁里 `integration` / `gameplay` 两层会打印 `FAIL` 行，原因是 GdUnit4 对既有的 288 个 orphan 节点返回退出码 101（0 failures / 0 errors），与本套件无关（把本套件移出后 orphan 数不变）；聚合结果仍是 `RESULT: PASS`、exit 0。
+- 用户验收：待验收
 - 验收时间：
 - Git：待提交
 - 备注：父 Increment 为 `INC-CROSS-021`；本项只产出客观对照证据，玩家是否「自然形成 Build」仍由人工轮与实际试玩回答。
