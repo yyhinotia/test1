@@ -769,3 +769,34 @@
 - 验收时间：2026-09-26T12:49:30+08:00
 - Git：`develop` / `5138a41`
 - 备注：父 Increment 为 `INC-CROSS-022`；本项只提供「玩家能表达想进哪个秘境」，默认秘境与恢复入口位置由 `INC-CORE-014` 决定。
+## INC-UI-021：自定义 Build 编辑器（8 技能池 → 容量内自由组合）
+
+- 状态：awaiting_acceptance
+- 创建时间：2026-09-26T12:52:10+08:00
+- 最后修改：2026-09-26T12:58:44+08:00
+- 主题：ui
+- 父 Increment：`INC-CROSS-023`
+- 目标：把 `BuildLoadoutPanel` 从「只有 Build A / Build B 两套硬编码预设」扩展为「玩家从已解锁技能池中自选容量内组合」的编辑器，让目标里的生存 / 控制 / AOE / 机动等组合第一次成为玩家可表达的 Build，而不是只能二选一。
+- 验收标准：
+  - 面板新增 `available_skills` 注入与 `set_available_skills()`，技能池由主场景接线（面板内不得硬编码任何 `res://` 技能路径）；每个技能一行，未解锁行禁用并显示「未解锁」，已解锁行可点选。
+  - 待选条数上限直接来自 `Pawn.get_active_skill_capacity()`；达到容量后再点未选技能必须被拒绝（原因 `capacity_full`），不得静默替换、不得自动应用。
+  - 新增信号 `custom_loadout_applied(pawn, skills, success, reason)`；成功时唯一状态变更出口仍是 `Pawn.set_active_skill_loadout()`，面板不复制容量 / 互斥 / 掌握规则。
+  - 保留 `build_switch_attempted` 与 Build A / Build B 快速预设行，既有查询 API 与预设语义全部不变。
+  - 首次解锁新技能只让对应行变可点，不自动进入待选、不自动装配（沿用 `INC-WORLD-007` 口径）。
+  - `set_switch_locked(true)` 时选择与应用全部禁用，解除后恢复。
+  - 统一门禁 `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` → `RESULT: PASS`。
+- 范围：`game/ui/build/build_loadout_panel.gd`、`game/ui/build/build_loadout_panel.tscn`、`test/integration/build_loadout_panel_test.gd`。
+- 非范围：新增技能 / 敌人 / 数值、改 `Pawn` 容量与校验规则、改 A/B 预设语义、正式美术与布局重构。
+- 依赖：`INC-PAWNS-023`（8 技能池，已验收）、`INC-WORLD-007`（只解锁不装配，已验收）。
+- 风险：① 面板已有 CROSS-018 / CROSS-019 的预设契约，新增自由组合必须保持 `_row_nodes` 与既有查询 API 兼容；② 8 个技能行加 A/B 预设会明显增高，若与右下角 HUD 重叠必须在验证中如实记录；③ 点选不能自动应用，必须由显式「应用」动作触发一次 `set_active_skill_loadout()`。
+- 检索证据：2026-09-26T12:52:10+08:00 执行 `git status --short`（干净）、`git diff --unified=0 -- agent-plan/` 与 `git diff --cached --unified=0 -- agent-plan/`（均无输出）、`git log --oneline -- agent-plan/`（HEAD `81aacee`）；`git grep -h -o -E "INC-[A-Z]+-[0-9]{3}" -- agent-plan/` 确认 UI 最大 020，`INC-UI-021` 未占用；读取 `game/ui/build/build_loadout_panel.gd` 确认当前只有 `preset_a` / `preset_b` 两套固定预设、唯一状态出口 `Pawn.set_active_skill_loadout()`；读取 `game/main/main.tscn` 第 180~181 行确认生产入口只接线御剑斩 / 护体真气 / 定身术 3 个技能资源。
+- 实现说明：`BuildLoadoutPanel` 在既有 A/B 预设之外新增自定义区：`available_skills` 属性 + `set_available_skills()` 按注入顺序逐技能生成 `SkillRow_<id>`（标题 / 状态标记 / 选择按钮），未解锁行按钮禁用并显示「未解锁」，已解锁行可点选。`_pending_skills` 只作 UI 待选暂存区，达到 `Pawn.get_active_skill_capacity()` 后再点未选技能被拒绝（原因 `capacity_full`）且待选集合不变；点选 / 取消只改待选。新增信号 `custom_loadout_applied(pawn, skills, success, reason)`，只有点击「应用自定义 Build」才调用一次 `Pawn.set_active_skill_loadout()`（唯一状态出口，面板不复制容量 / 互斥 / 掌握规则）。绑定 Pawn 时以待选集合呈现当前装配（只读），解锁新技能只让对应行变可点、不自动选入；`set_switch_locked(true)` 时选择与应用全部禁用。不可操作的按钮（未解锁 / 当前 Build / 战斗中）设为 `MOUSE_FILTER_IGNORE`，不再拦截自定义区覆盖区域的左键移动。
+- 变更文件：`game/ui/build/build_loadout_panel.gd`（603 → 约 610 行）；`test/integration/build_loadout_panel_test.gd` 的用例扩展记在 `INC-TESTING-021`，本文只登记契约（`build_loadout_panel.tscn` 未改动：自定义区全部为脚本动态生成）。
+- 测试证据：`mcp__godot::validate` → `build_loadout_panel.gd` / `build_loadout_panel_test.gd` / `main.tscn` 全部 `valid: true`；单套件 `test/integration/build_loadout_panel_test.gd` → `15 test cases | 0 errors | 0 failures`（新增 6 例记在 `INC-TESTING-021`）；统一门禁 `test/run_tests.ps1 -Layer all` → `RESULT: PASS`（GdUnit4 451 cases / 0 failures、headless 10 suites / 549 assertions / 0 failing suites，exit 0）；真实窗口 MCP 冒烟确认 8 技能行 + A/B 预设 + 应用按钮全部渲染，开局战斗中 `is_switch_locked() == true`、提示为「自定义 Build：已选 2 / 2」，待选为御剑斩 + 护体真气，其余 6 行「未解锁」且禁用。
+- 验证状态：验证通过
+- 验证时间：2026-09-26T12:58:44+08:00
+- 已知问题：① 8 技能行加 A/B 预设后面板明显增高，未做正式视觉分组与滚动，可能与右下角 HUD 重叠；② 文案为硬编码中文，未走 `tr()`（与项目既有 HUD 一致）；③ 本项只证明「玩家能自由表达 Build」，是否真的形成 Build 仍取决于人工轮与 `INC-CROSS-021` 三问回答。
+- 用户验收：待验收
+- 验收时间：待验收
+- Git：待提交
+- 备注：父 Increment 为 `INC-CROSS-023`；本项只解决「玩家能不能自由表达 Build」，是否真的形成 Build 仍由 `INC-TESTING-021` 的客观证据与人工轮三问回答。
