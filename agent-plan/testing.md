@@ -708,3 +708,33 @@
 - 验收时间：2026-09-26T12:30:44+08:00
 - Git：`develop` / `ec10b0f`
 - 备注：父 Increment 为 `INC-CROSS-021`；本项只产出客观对照证据，玩家是否「自然形成 Build」仍由人工轮与实际试玩回答。
+
+
+## INC-TESTING-020：问题秘境游玩层可达性与首通奖励链证据
+
+- 状态：awaiting_acceptance
+- 创建时间：2026-09-26T12:35:49+08:00
+- 最后修改：2026-09-26T12:47:24+08:00
+- 主题：testing
+- 目标：在正式 `main.tscn` 路径上回答「玩家是否能从正常游玩进入问题秘境、清空首间房后拿到定身术、并在不丢损耗的前提下切换秘境」，把 `INC-CROSS-021` 只在数据 / 机制层成立的因果接到游玩层。
+- 验收标准：
+  - gameplay 用例：实例化真实 `main.tscn` → `DungeonRun` 运行中的秘境是 `problem_dungeon.tres`，深度 1，当前敌人在该秘境第 1 间房的事实之内。
+  - 走正式结算路径清空第 1 间房（沿用 `main_scene_dungeon_test.gd` 的「致命伤害 + 真实 Death 事件」方式，不直接改 `DungeonRun` 状态）后，断言该房间 `first_clear_skill_reward` 声明的技能进入玩家「已解锁技能」集合，且没有被自动装配（与 `INC-WORLD-007` 的「只解锁不装配」口径一致）。
+  - 切换证据：通过面板的秘境选择（等价于玩家点击）切到试炼秘境后，`DungeonRun` 与面板读数都变成试炼秘境的事实；切换发生在未进行中的窗口，不依赖直接调用 `start()`。
+  - 锁定期证据：秘境进行中时选择入口不可用（若 `INC-UI-020` 用 `disabled` 表达，则断言按钮 disabled；否则断言 `DungeonRun` 事实不变）。
+  - 统一门禁 `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` → `RESULT: PASS`；新增套件单跑 `0 failures`。
+- 范围：`test/gameplay/`（新增或扩展问题秘境游玩层用例）、必要的公共驱动代码。
+- 非范围：不改玩法数值、不重跑 `INC-TESTING-019` 的六格矩阵结论、不做人工体验评估。
+- 依赖：`INC-CORE-014`（默认秘境与选择转发落地）。
+- 风险：① 12 间问题秘境的运行时用例若整链跑完会显著拉长门禁时长，本项只跑「首间 + 切换」两段，全链节奏留人工轮；② 通关首间会真实修改玩家进度快照，用例必须使用独立实例并在结束后清理，避免跨用例污染；③ 真实死亡路径与手工步进的时序差异沿用 `test/README.md` 既有说明。
+- 检索证据：2026-09-26T12:40+08:00 `git grep -n "problem_dungeon" -- test/`：现有覆盖只有 `test/unit/dungeon_definition_test.gd`（数据断言）与 `test/integration/problem_dungeon_run_test.gd`（`DungeonRun` + 进度快照），两者都不实例化 `main.tscn`，因此「正常游玩能否进入」尚无自动化证据；`INC-TESTING-019` 只覆盖单房间 × Build 的机制对照。
+- 实现说明：新增 `test/gameplay/problem_dungeon_play_path_test.gd`，只走真实 `main.tscn` 路径——① 启动即问题秘境第 1 间，奖励 id 从该房间正式资源读取，清空后断言「已解锁但未自动装配」；② 进行中与等待抉择时面板选择区锁定，见好就收结算后点击试炼秘境选项，断言 `DungeonRun` 事实与面板深度读数同步切换。
+- 变更文件：`test/gameplay/problem_dungeon_play_path_test.gd`（新增）。
+- 测试证据：`mcp__godot::validate` → `valid: true`；单套件 `problem_dungeon_play_path_test.gd` → `2 test cases | 0 errors | 0 failures | 0 orphans`；统一门禁 `test/run_tests.ps1 -Layer all` → `RESULT: PASS`（GdUnit4 445 cases / 0 failures、headless 10 suites / 549 assertions / 0 failing suites，exit 0）。
+- 验证状态：验证通过
+- 验证时间：2026-09-26T12:47:24+08:00
+- 已知问题：① 用例只覆盖「首间 + 切换」两段，12 间问题秘境的完整节奏仍属人工轮；② `problem_dungeon_play_path_test` 与既有 gameplay 用例一样会留下 orphan 节点（本次 0 orphans；整层 324 为既有债务）。
+- 用户验收：待验收
+- 验收时间：待验收
+- Git：待提交
+- 备注：父 Increment 为 `INC-CROSS-022`；本项只产出游玩层可达性证据，玩家是否因此自然重构 Build 仍需人工轮与 `INC-CROSS-021` 的三问回答。
