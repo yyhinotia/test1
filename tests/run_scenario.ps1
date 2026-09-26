@@ -13,7 +13,7 @@
     仓库内不记录本机 Godot 绝对路径。
 
 .PARAMETER Scenario
-    入口名。可用简写：1v1 / 1v2 / 1v3 / switch / loadout / first-clear / replay，
+    入口名。可用简写：1v1 / 1v2 / 1v3 / switch / loadout / first-clear / replay / problem，
     也可以直接给文件名（可省略 .tscn、tests/ 前缀与 scenario_ 前缀）。
 
 .PARAMETER Godot
@@ -61,6 +61,8 @@ $shortcuts = [ordered]@{
     'first-clear' = 'scenario_first_clear_reward.tscn'
     'first_clear' = 'scenario_first_clear_reward.tscn'
     'replay'      = 'scenario_build_replay.tscn'
+    'problem'     = 'scenario_problem_dungeon.tscn'
+    'dungeon'     = 'scenario_problem_dungeon.tscn'
 }
 
 function Show-Scenarios {

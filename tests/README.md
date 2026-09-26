@@ -36,12 +36,13 @@ test/       自动化断言：unit / integration / gameplay + headless 回归
 | `tests/scenario_build_loadout_switch.tscn` | 1v1 与 Build 切换面板 | 定身术已解锁（未装配） | 右下角面板：Build A「当前 Build」、Build B「可切换」；必须玩家主动点击才切换 |
 | `tests/scenario_first_clear_reward.tscn` | 1v1 首通奖励 | 未解锁定身术 | 打完这一场后奖励只有定身术，面板从「未解锁：定身术」变成「可切换」（不自动装配） |
 | `tests/scenario_build_replay.tscn` | Build Replay 实验（1v1 全流程） | 未解锁定身术 | `INC-TESTING-011` 的人工剧本：① Build A 打完 → ② 首通只拿定身术 → ③ 自己决定是否换 Build → ④ 再战同一遭遇；三问原话与 Gate 结论填进 `build_replay_record` |
+| `tests/scenario_problem_dungeon.tscn` | 问题秘境（12 层，第 1 层为 `problem_room_01_melee`） | 未解锁定身术（静态 Build A） | `INC-CROSS-021` 的人工轮入口（`INC-TESTING-022` 建立）：① 第 1 层最麻烦的是什么 → ② 清层后秘境面板出现「已解锁：… · 可在 Build 面板装配」 → ③ 自己决定要不要重构 Build → ④ 带新 Build 继续深入；每层进度与每次 Build 变更自动落盘 |
 
 每个入口都会把窗口标题写成 `test1 · tests/<场景 id> · <场景名>`，人工记录时可以直接对照标题确认自己跑的是哪个入口。
 
 ## 测试呈现：只保留 Build 验收相关 UI
 
-6 个入口都只验证 Build，因此 `tests/scenario_entry.gd` 默认把与 Build 无关的正式 HUD 菜单隐藏起来：
+既有 6 个 Build 入口都由 `tests/scenario_entry.gd` 把与 Build 无关的正式 HUD 菜单隐藏起来（`INC-TESTING-022` 新增的问题秘境入口同样隐藏换敌与宗门，但把秘境面板本身作为观察对象保留可见）：
 
 - 隐藏：遭遇选择按钮（`EncounterPanel/Buttons`）、秘境面板（`DungeonPanel`）、宗门面板（`SectPanel`）。
 - 保留：Build 切换面板、技能栏、单位信息卡、当前遭遇与结算状态、**「重新挑战」**（人工轮 Round 2 与 Gate 0「同一遭遇可重复挑战」的入口）、暂停遮罩。
@@ -84,7 +85,7 @@ test/       自动化断言：unit / integration / gameplay + headless 回归
 
 ```powershell
 pwsh -File tests/run_scenario.ps1 -List                                              # 看有哪些入口
-pwsh -File tests/run_scenario.ps1 -Scenario 1v2 -Godot $env:GODOT_BIN                # 简写：1v1 / 1v2 / 1v3 / switch / first-clear / replay
+pwsh -File tests/run_scenario.ps1 -Scenario 1v2 -Godot $env:GODOT_BIN                # 简写：1v1 / 1v2 / 1v3 / switch / first-clear / replay / problem
 pwsh -File tests/run_scenario.ps1 -Scenario replay -PauseOnStart -Godot $env:GODOT_BIN
 ```
 
@@ -134,6 +135,21 @@ Build Replay 人工轮（`INC-TESTING-014`）在 `tests/scenario_build_replay.ts
 
 入口完成 `SCENARIO_READY` 后进入暂停，HUD 显示「游戏已暂停」；按 Space 后才开始实时战斗。
 
+问题秘境人工轮（`INC-TESTING-022`）在 `tests/scenario_problem_dungeon.tscn` 上开启只读进度记录：
+进入 / 清空每一层、本局结束与每次 Build 变更（预设或自定义、成功或被拒）都会追加到
+`.mcp/godot-runtime/screenshots/human_problem_dungeon_events.md`，每行含 ISO 时间戳、层号、本层首通奖励 id、
+已掌握 / 已装配技能与拒绝原因。记录内容全部直接读 `DungeonRun` / `Pawn` 的现有事实，不复制数值、不判定 Gate；
+Q1~Q3 原话与「Build 玩法是否成立」的结论仍然只能由人工填写，该文件同样不入库、需重跑入口重建。
+
+```powershell
+pwsh -File tests/run_scenario.ps1 -Scenario problem -Godot $env:GODOT_BIN
+```
+
+该入口的自动化断言在 `test/gameplay/problem_dungeon_human_round_test.gd`（4 例：入口开局即问题秘境第 1 间且面板可见、
+清层落盘、自定义 Build 变更落盘、未开启记录时不写文件），因此它**不**进 `verify_scenario_entries.gd` 的
+`EXPECTED_ENTRIES`：那份体检表校验的是「固定单场遭遇的敌方名单与前置解锁」，而本入口开局即一层秘境、遭遇随层变化，
+名单断言没有意义（入口横幅与秘境面板可见性由上述 gameplay 用例覆盖）。
+
 ## 新增入口的要求
 
 1. 新增一个场景就新增一个 `tests/scenario_<场景>.tscn`，导出参数写在场景里（不要新增一份入口脚本）。
@@ -142,3 +158,5 @@ Build Replay 人工轮（`INC-TESTING-014`）在 `tests/scenario_build_replay.ts
 4. 同步更新本 README 的入口清单，并在 `test/README.md` 保持交叉引用。
 5. 同步在 `test/tools/verify_scenario_entries.gd` 的 `EXPECTED_ENTRIES` 里补一条（含 `enemy_names`），
    否则新入口不在体检范围内，横幅 / 名牌也不会被断言保护。
+6. 例外：像 `scenario_problem_dungeon.tscn` 这样「开局即一层秘境、遭遇随层变化」的入口无法用固定敌方名单描述，
+   可以不进 `EXPECTED_ENTRIES`，但必须在 `test/gameplay/` 下有等价断言，并在本 README 写明理由（见上节）。

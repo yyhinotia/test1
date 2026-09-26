@@ -1,0 +1,12 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://tests/scenario_entry.gd" id="1_scenario_entry"]
+
+[node name="ScenarioProblemDungeon" type="Node2D"]
+script = ExtResource("1_scenario_entry")
+scenario_id = &"problem_dungeon"
+scenario_title = "问题秘境 Build 观察轮（8 技能池 · 逐层取证）"
+scenario_instructions = "观察剧本：① 用当前 Build 打第 1 层，记住这一层最麻烦的地方；② 清层后看秘境面板的「已解锁：… · 可在 Build 面板装配」，再看 Build 面板多出哪个可选技能；③ 自己决定要不要重构 Build（系统不会替你换）；④ 带着新 Build 继续深入或重开秘境，观察打法是否改变。本入口只把每层进度与每次 Build 变更落盘到 .mcp/，Q1~Q3 结论必须由玩家填写。"
+run_problem_dungeon = true
+record_dungeon_progress = true
+keep_dungeon_panel_visible = true

@@ -767,3 +767,38 @@
 - 验收时间：2026-09-26T13:00:11+08:00
 - Git：`develop` / `988aaad`
 - 备注：父 Increment 为 `INC-CROSS-023`；本项只证明编辑器行为真实成立，不能代替「玩家是否自然重构 Build」的人工结论。
+
+## INC-TESTING-022：问题秘境人工轮入口与只读进度取证
+
+- 状态：in_progress
+- 创建时间：2026-09-26T13:03:24+08:00
+- 最后修改：2026-09-26T13:03:24+08:00
+- 主题：testing
+- 父 Increment：`INC-CROSS-024`
+- 目标：让玩家能从 `tests/` 专用入口直接跑问题秘境（正式 F5 行为不变），并把「进层 / 清层（含首通解锁技能）/ 本局结束 / Build 变更」四类只读事实逐行带 ISO 时间戳追加落盘，供 `INC-CROSS-021` 的 Q1~Q3 人工结论引用；记录器不得产出任何玩法结论，也不得代玩家装配。
+- 验收标准：
+  - `tests/scenario_entry.gd` 新增 `run_problem_dungeon`（默认 `false`；为 `true` 时不把 `DungeonRun.default_dungeon` 置空，入口开局即问题秘境第 1 间）与 `record_dungeon_progress`（默认 `false`）。
+  - 新增 `tests/scenario_problem_dungeon.tscn`；`tests/run_scenario.ps1` 增加简写 `problem`；跑错入口仍由既有测试横幅自证（复用 `INC-TESTING-017` 装置）。
+  - 记录器订阅 `DungeonRun.run_started` / `room_cleared` / `run_finished` 与 `BuildLoadoutPanel.build_switch_attempted` / `custom_loadout_applied`：每行含 ISO 时间戳、层号（第 N 间）、当前装配技能 id、事件结果与拒绝原因；未开启记录或未产生事件时不写文件；默认落点 `res://.mcp/godot-runtime/screenshots/`（不入库）。
+  - 不回归：`run_problem_dungeon = false` 时，既有 6 个入口的默认行为（关默认秘境、只跑单场遭遇）与既有断言全部不变。
+  - 统一门禁 `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` → `RESULT: PASS`。
+- 范围：`tests/scenario_entry.gd`、`tests/scenario_problem_dungeon.tscn`、`tests/run_scenario.ps1`、`tests/README.md`、`test/gameplay/problem_dungeon_human_round_test.gd`（新增）。
+- 非范围：改 `game/` 下任何玩法规则与数值、把记录器输出写成 Gate / Failure 结论、代玩家装配技能、改既有 6 个入口语义、新增技能 / 敌人 / 房间。
+- 依赖：`INC-TESTING-014`（每局结算落盘的记录口径）、`INC-TESTING-015`（可控开局）、`INC-TESTING-016` / `INC-TESTING-017`（聚焦 Build 与入口自证）、`INC-CROSS-022`（问题秘境默认可达）、`INC-CROSS-023`（8 技能池自由组合）。
+- 风险：① `tests/scenario_entry.gd` 被 6 个既有入口共用，新增开关必须默认关闭，并用既有入口用例证明不回归；② 问题秘境自带跨层损耗，记录器只能读事实，不得为了「记录好看」重置玩家状态；③ 记录文件默认落在不入库的 `.mcp/`，自动化用例必须用独立路径，避免污染人工记录；④ 入口只负责把游戏摆到可观察状态，任何结论仍必须由玩家给出。
+- 检索证据：2026-09-26T13:03:24+08:00 `git grep -n "run_problem_dungeon\|record_dungeon_progress" -- tests/ test/` 无命中，确认两个开关都是新增职责；`git grep -n "default_dungeon = null" -- tests/` 命中 `tests/scenario_entry.gd:83`，确认现有入口无条件关掉默认秘境、因此跑不到问题秘境；`tests/run_scenario.ps1` 的简写表只有 `1v1` / `1v2` / `1v3` / `switch` / `loadout` / `first-clear` / `replay`；`test/gameplay/problem_dungeon_play_path_test.gd` 已用真实 `main.tscn` 证明「首间首通只解锁不装配 + 结算后可切秘境」，本项在其上补「人工入口 + 逐层落盘」。
+- 实现说明：`tests/scenario_entry.gd` 新增三个默认 `false` 的导出开关，既有 6 个入口语义不变：`run_problem_dungeon`（为 `true` 时跳过 `dungeon_run.default_dungeon = null`，入口开局即问题秘境第 1 间）、`record_dungeon_progress`、`dungeon_record_path`（默认 `res://.mcp/godot-runtime/screenshots/human_problem_dungeon_events.md`，与单局 CombatEvent 记录分文件，避免两种口径混写）；另有 `keep_dungeon_panel_visible`——把原先直接写在隐藏清单里的 `"HUD/BottomLeftDock/DungeonPanel"` 提成 `DUNGEON_PANEL_PATH` 常量，允许在隐藏其它菜单的同时单独保留秘境面板（它就是本轮的观察对象）。记录器 `_start_dungeon_recording()` 只在开关打开时连接 `DungeonRun.run_started` / `room_cleared` / `run_finished` 与 `BuildLoadoutPanel.build_switch_attempted` / `custom_loadout_applied` 五个信号，逐行追加 `- <ISO 时间戳> · <事件> · <事实>`：进层（层号 / 秘境配置 / 本层首通奖励）、清层（首通奖励 id / 已掌握技能 / 进入时装配）、本局结束（结局 / 最终灵石 / 结束时装配）、Build 变更（预设或自定义、成功或被拒的原因、变更后装配）。记录内容全部直接读 `Pawn` / `DungeonRun` / `DungeonRoom` 的既有事实，不复制数值、不判定 Gate、不产出结论、不代玩家装配；通用化的 `_append_lines_to()` / `_ensure_dir()` 负责补出 `.mcp/...` 目录。新增 `tests/scenario_problem_dungeon.tscn`（`scenario_id = &"problem_dungeon"`，三个开关全开）与 `tests/run_scenario.ps1` 的 `problem` / `dungeon` 简写，并新增 `test/gameplay/problem_dungeon_human_round_test.gd` 4 例。
+- 变更文件：`tests/scenario_entry.gd`、`tests/scenario_problem_dungeon.tscn`（新增）、`tests/run_scenario.ps1`、`tests/README.md`（入口清单 / 测试呈现 / 运行方式 / 新增入口要求四节同步）、`test/gameplay/problem_dungeon_human_round_test.gd`（新增，含 `.uid`）。
+- 测试证据：
+  - Godot MCP `validate`：`tests/scenario_entry.gd`、`tests/scenario_problem_dungeon.tscn`、`test/gameplay/problem_dungeon_human_round_test.gd` 全部 `valid: true`。
+  - 单层 `-Layer gameplay` → `RESULT: PASS`（77 cases / 0 failures，本项 +4）；统一门禁 `-Layer all` → `RESULT: PASS`（GdUnit4 460 cases / 0 failures、headless 10 suites / 549 assertions），exit 0。
+  - 4 个用例分别验证：① 入口开局 `run.get_active_dungeon().resource_path == res://game/world/data/dungeons/problem_dungeon.tres`、`depth == 1`、秘境面板可见而换敌菜单仍隐藏；② 走真实死亡路径清空第 1 间后，记录文件出现 `# 问题秘境人工轮进度记录` / `第 1 层开始` / `第 1 层清空` / `首通奖励：<从房间资源读出的奖励 id>` / `已掌握：` / `进入时装配：`；③ 玩家真实操作序列（取消一个槽 → 选新解锁技能 → 点「应用」）后 Pawn 装配真的改变，且记录行含 `自定义 Build 应用` / `成功` / `提交组合：<新技能 id>` / `变更后装配：<与 Pawn 一致>`；④ `record_dungeon_progress = false` 时不产生记录文件。用例把 `dungeon_record_path` 指向 `..._selftest.md` 独立路径，不污染人工记录。
+  - 不回归：三个新开关默认 `false`，既有 6 个入口的断言未改动，integration 205 + gameplay 77 cases 全绿。
+  - 真实窗口（Godot MCP `run_project` 跑 `tests/scenario_problem_dungeon.tscn`）：`run_script` 读回 `dungeon=res://game/world/data/dungeons/problem_dungeon.tres`、`depth=1` / `深度：1 / 12`、`encounter=problem_room_01_melee`、`dungeon_panel_visible=true`、`problem_text="本层问题：近战持续压力"`、`switch_locked=true`、`custom_hint="自定义 Build：已选 2 / 2"`；清空第 1 层后 `state=2 (PLAYER_WIN)`、`awaiting_decision=true`、`switch_locked=false`，`get_ui_elements` 确认 `AdvanceButton` / `RetreatButton` 可点、`DungeonOption1/2` 与 `RestartButton` 按口径锁定、Build 面板 8 行技能 + A/B 预设 + 应用按钮全部渲染。
+- 验证状态：验证通过
+- 验证时间：2026-09-26T13:15:49+08:00
+- 已知问题：① 记录落在 `.mcp/`（不入库），人工轮前必须重跑入口才能重建，清目录或换机器后历史证据不会自动保留；② 记录只是机制事实，不能替代 `INC-CROSS-021` 的人工三问；③ 窗口级自动点击受 OS 坐标缩放影响（实测 `DisplayServer.window_get_size()` 1174×704，而 UI rect 为 1152×690，约 1.02 倍），`simulate_input` 的 `click_element` 会打到场景而不是按钮，故窗口级证据目前由 `run_script` 读回节点状态给出（按缩放换算坐标后的 `mouse_button` 已验证可命中按钮，但尚未固化成用例）；④ 入口只把游戏摆到可观察状态，不代玩家装配。
+- 用户验收：待验收
+- 验收时间：待验收
+- Git：待提交
+- 备注：父 Increment 为 `INC-CROSS-024`；本项只产出「可跑的入口 + 只读记录」，`INC-CROSS-021` 的三问与 Build 玩法是否成立仍必须由人工轮回答。

@@ -13,9 +13,10 @@ const BUILD_PANEL_PATH: String = "HUD/BuildLoadoutPanel"
 ## 测试呈现（INC-TESTING-016）：与 Build 验收无关的正式 HUD 菜单，只隐藏、不删除节点。
 ## `EncounterPanel/Buttons` 是换敌入口；秘境 / 宗门面板在 Build 验收入口里没有作用。
 ## 刻意保留 `EncounterPanel/RestartButton`：Gate 0「同一遭遇可重复挑战」与人工轮 Round 2 都靠它。
+const DUNGEON_PANEL_PATH: String = "HUD/BottomLeftDock/DungeonPanel"
 const NON_BUILD_UI_PATHS: Array[String] = [
 	"HUD/BottomLeftDock/EncounterPanel/Buttons",
-	"HUD/BottomLeftDock/DungeonPanel",
+	DUNGEON_PANEL_PATH,
 	"HUD/BottomLeftDock/SectPanel",
 ]
 ## 测试自证（INC-TESTING-017）：跑错入口（如按 F5 跑 main.tscn）时，屏幕上必须有测试横幅。
@@ -33,6 +34,9 @@ const ENEMY_TINTS: Array[Color] = [
 ]
 ## 人工轮事件记录的默认落点（`.mcp/` 不入库，需要重跑入口才能重建）。
 const DEFAULT_RECORD_PATH: String = "res://.mcp/godot-runtime/screenshots/human_replay_events.md"
+## 问题秘境进度记录的默认落点（INC-TESTING-022）：与单局 CombatEvent 记录分开，避免两种口径混写。
+const DEFAULT_DUNGEON_RECORD_PATH: String = "res://.mcp/godot-runtime/screenshots/human_problem_dungeon_events.md"
+const DUNGEON_RUN_PATH: String = "DungeonRun"
 
 ## 入口标识（同时出现在窗口标题与场景报告里，便于人工验收时确认自己跑的是哪个入口）。
 @export var scenario_id: StringName = &""
@@ -49,6 +53,9 @@ const DEFAULT_RECORD_PATH: String = "res://.mcp/godot-runtime/screenshots/human_
 ## 测试呈现（INC-TESTING-016）：当前 6 个入口都只验证 Build，默认隐藏与 Build 无关的菜单面板。
 ## 只改可见性，不改玩法规则；需要完整 HUD 的非 Build 测试场景可在自己的 .tscn 里设为 false。
 @export var hide_non_build_panels: bool = true
+## 测试呈现（INC-TESTING-022）：问题秘境人工轮要能看到「深度 / 本层问题 / 首通解锁提示 / 继续与撤退」，
+## 因此允许在隐藏其它菜单的同时单独保留秘境面板可见；默认 false，既有 6 个入口行为不变。
+@export var keep_dungeon_panel_visible: bool = false
 ## 人工轮可控开局（INC-TESTING-015）：入口完成摆放后立即暂停，玩家按 Space 才开始实时战斗。
 ## 也可通过用户参数 `-- --pause-on-start` 开启，供人工轮命令行启动使用。
 @export var pause_on_start: bool = false
@@ -57,6 +64,14 @@ const DEFAULT_RECORD_PATH: String = "res://.mcp/godot-runtime/screenshots/human_
 @export var record_combat_events: bool = false
 ## 记录文件路径：默认落在不入库的 `.mcp/`；自动化自检必须改成独立路径，避免污染人工记录。
 @export var record_path: String = DEFAULT_RECORD_PATH
+## 问题秘境人工轮（INC-TESTING-022）：为 true 时不关闭默认秘境，入口开局即问题秘境第 1 间；
+## 默认 false，保持既有 6 个入口「只跑一个确定遭遇」的语义不变。
+@export var run_problem_dungeon: bool = false
+## 问题秘境进度取证（INC-TESTING-022）：开启后把进层 / 清层 / 本局结束 / Build 变更逐行追加落盘。
+## 记录器只写事实，不判定 Gate、不代玩家装配、不产出任何玩法结论。
+@export var record_dungeon_progress: bool = false
+## 秘境进度记录落点：与 `record_path` 分开，避免「每局事件」与「每层进度」两份事实互相污染。
+@export var dungeon_record_path: String = DEFAULT_DUNGEON_RECORD_PATH
 
 ## 正式入口场景实例：测试入口只创建它，不修改它的资源。
 var main: Node2D
@@ -73,14 +88,20 @@ var entry_ready: bool = false
 ## 测试横幅文本（INC-TESTING-017）：入口 id / 场景标题 / 遭遇 / 敌方名单 / 本局结果。
 var _banner_label: Label
 var _last_outcome_text: String = ""
+## 问题秘境进度取证状态（INC-TESTING-022）：只挂信号并逐行落盘，不缓存任何玩法判定。
+var _dungeon_recording: bool = false
+var _dungeon_record_started: bool = false
 
 
 func _ready() -> void:
 	main = (load(MAIN_SCENE_PATH) as PackedScene).instantiate() as Node2D
 	# 关掉默认秘境：测试入口只跑一个确定的遭遇，避免秘境房间链改变对照条件。
 	# 这属于「测试专用参数」，因此只能出现在 tests/ 的入口脚本里，正式入口保持默认行为。
-	var dungeon_run: DungeonRun = main.get_node("DungeonRun") as DungeonRun
-	dungeon_run.default_dungeon = null
+	var dungeon_run: DungeonRun = main.get_node(DUNGEON_RUN_PATH) as DungeonRun
+	# 默认关闭默认秘境（既有 6 个入口的对照条件）；人工轮入口（INC-TESTING-022）保留它，
+	# 因此入口开局就跑问题秘境第 1 间，而不是单场遭遇。
+	if not run_problem_dungeon:
+		dungeon_run.default_dungeon = null
 	add_child(main)
 	await get_tree().process_frame
 	if hide_non_build_panels:
@@ -103,6 +124,8 @@ func _ready() -> void:
 	_refresh_unit_markers()
 	if record_combat_events:
 		_start_round_recording()
+	if record_dungeon_progress:
+		_start_dungeon_recording()
 	entry_ready = true
 	print("SCENARIO_READY ", get_scenario_report())
 	if pause_on_start or OS.get_cmdline_user_args().has("--pause-on-start"):
@@ -114,6 +137,9 @@ func _ready() -> void:
 ## 刻意不删除节点——`main.gd` 的 @onready 引用与既有集成测试仍按正式节点树工作。
 func _hide_non_build_panels() -> void:
 	for path: String in NON_BUILD_UI_PATHS:
+		# 问题秘境人工轮的唯一例外：秘境面板本身是被观察对象，隐藏它等于取消本次取证。
+		if keep_dungeon_panel_visible and path == DUNGEON_PANEL_PATH:
+			continue
 		var node: CanvasItem = main.get_node_or_null(path) as CanvasItem
 		if node == null:
 			push_warning("测试入口未找到要隐藏的非 Build UI：%s" % path)
@@ -352,21 +378,216 @@ func _join_skill_ids(skills: Array[ActiveSkillDefinition]) -> String:
 
 
 func _ensure_record_dir() -> void:
-	var directory: String = ProjectSettings.globalize_path(record_path.get_base_dir())
-	if not DirAccess.dir_exists_absolute(directory):
-		DirAccess.make_dir_recursive_absolute(directory)
+	_ensure_dir(record_path.get_base_dir())
 
 
 ## 追加写：文件不存在时新建，存在时续写，人工轮的多局记录不会互相覆盖。
 func _append_record_lines(lines: Array[String]) -> void:
-	_ensure_record_dir()
-	var file: FileAccess = FileAccess.open(record_path, FileAccess.READ_WRITE)
+	_append_lines_to(record_path, lines)
+
+
+## 通用追加写（INC-TESTING-022）：两份记录（每局 CombatEvent / 每层秘境进度）共用同一写入口径。
+func _append_lines_to(path: String, lines: Array[String]) -> void:
+	_ensure_dir(path.get_base_dir())
+	var file: FileAccess = FileAccess.open(path, FileAccess.READ_WRITE)
 	if file == null:
-		file = FileAccess.open(record_path, FileAccess.WRITE)
+		file = FileAccess.open(path, FileAccess.WRITE)
 	if file == null:
-		push_warning("人工轮记录文件打开失败：%s" % record_path)
+		push_warning("人工轮记录文件打开失败：%s" % path)
 		return
 	file.seek_end()
 	for line: String in lines:
 		file.store_line(line)
 	file.close()
+
+
+## 问题秘境进度取证（INC-TESTING-022）：订阅秘境与 Build 面板的只读事实。
+## 记录器不判断「该不该换 Build」，也不判断 Gate——那些只能由玩家原话与人工结论给出。
+func _start_dungeon_recording() -> void:
+	var run: DungeonRun = main.get_node_or_null(DUNGEON_RUN_PATH) as DungeonRun
+	if run == null:
+		push_warning("问题秘境入口未找到 DungeonRun，无法开始进度取证")
+		return
+	_dungeon_recording = true
+	if not run.run_started.is_connected(_on_dungeon_room_started_record):
+		run.run_started.connect(_on_dungeon_room_started_record)
+	if not run.room_cleared.is_connected(_on_dungeon_room_cleared_record):
+		run.room_cleared.connect(_on_dungeon_room_cleared_record)
+	if not run.run_finished.is_connected(_on_dungeon_run_finished_record):
+		run.run_finished.connect(_on_dungeon_run_finished_record)
+	var panel: BuildLoadoutPanel = main.get_node_or_null(BUILD_PANEL_PATH) as BuildLoadoutPanel
+	if panel == null:
+		push_warning("问题秘境入口未找到 BuildLoadoutPanel，Build 变更不会进入进度记录")
+		return
+	if not panel.build_switch_attempted.is_connected(_on_build_switch_attempted_record):
+		panel.build_switch_attempted.connect(_on_build_switch_attempted_record)
+	if not panel.custom_loadout_applied.is_connected(_on_custom_loadout_applied_record):
+		panel.custom_loadout_applied.connect(_on_custom_loadout_applied_record)
+	# 主场景在 `_ready` 里就启动默认秘境，记录器挂载时第 1 层通常已经开始：
+	# 补写一行「挂载时的当前层」，让每层都有「进入时装配」基线，而不是丢掉第一层。
+	if run.is_active():
+		_on_dungeon_room_started_record(run.get_active_dungeon(), run.get_room_index())
+
+
+## 本地时间 + 时区偏移的 ISO 8601 时间戳（到秒），与 `agent-plan` 的时间口径一致。
+func _iso_timestamp() -> String:
+	var bias_minutes: int = int(Time.get_time_zone_from_system().get("bias", 0))
+	var sign_text: String = "+" if bias_minutes >= 0 else "-"
+	var absolute_bias: int = absi(bias_minutes)
+	return "%s%s%02d:%02d" % [
+		Time.get_datetime_string_from_system(false),
+		sign_text,
+		absolute_bias / 60,
+		absolute_bias % 60,
+	]
+
+
+## 进入一层：记下层级、层名与「进入时」的装配，作为该层 Build 的基线。
+func _on_dungeon_room_started_record(dungeon: DungeonDefinition, room_index: int) -> void:
+	if not _dungeon_recording:
+		return
+	_ensure_dungeon_record_header(dungeon)
+	var room: DungeonRoom = _current_dungeon_room(dungeon, room_index)
+	_append_lines_to(dungeon_record_path, [
+		"- %s · 第 %d 层开始 · %s · 进入时装配：%s" % [
+			_iso_timestamp(),
+			room_index + 1,
+			room.display_name if room != null else "<未知层>",
+			_current_equipped_ids(),
+		]
+	])
+
+
+## 清空一层：记下该层结果与灵石，并显式记录首通奖励解锁了什么（未解锁则为「无」）。
+func _on_dungeon_room_cleared_record(
+	dungeon: DungeonDefinition, room_index: int, reward: int, total: int
+) -> void:
+	if not _dungeon_recording:
+		return
+	_ensure_dungeon_record_header(dungeon)
+	var room: DungeonRoom = _current_dungeon_room(dungeon, room_index)
+	_append_lines_to(dungeon_record_path, [
+		"- %s · 第 %d 层清空 · %s · 灵石 +%d（累计 %d）· 首通奖励：%s · 已掌握：%s" % [
+			_iso_timestamp(),
+			room_index + 1,
+			room.display_name if room != null else "<未知层>",
+			reward,
+			total,
+			_first_clear_reward_id(room),
+			_known_skill_ids(),
+		]
+	])
+
+
+## 本局结束：记下结局与最终收益（收益是否入账由正式入口负责，记录器只抄事实）。
+func _on_dungeon_run_finished_record(
+	_dungeon: DungeonDefinition, outcome: int, earned_spirit_stones: int
+) -> void:
+	if not _dungeon_recording:
+		return
+	_append_lines_to(dungeon_record_path, [
+		"- %s · 本局结束 · %s · 最终灵石 %d · 结束时装配：%s" % [
+			_iso_timestamp(),
+			DungeonRun.get_outcome_label(outcome),
+			earned_spirit_stones,
+			_current_equipped_ids(),
+		]
+	])
+
+
+## Build 变更（预设）：记录玩家点的是哪套、成没成、被拒原因，以及变更后的装配。
+func _on_build_switch_attempted_record(
+	pawn: Pawn, preset_id: StringName, success: bool, reason: String
+) -> void:
+	if not _dungeon_recording:
+		return
+	_append_lines_to(dungeon_record_path, [
+		"- %s · Build 切换（%s）· %s · 原因：%s · 变更后装配：%s" % [
+			_iso_timestamp(),
+			String(preset_id),
+			"成功" if success else "被拒",
+			reason if not reason.is_empty() else "无",
+			_skill_ids_of(pawn),
+		]
+	])
+
+
+## Build 变更（自定义组合）：记录玩家自选的技能集合与裁决结果，这是「主动重构 Build」的原始证据。
+func _on_custom_loadout_applied_record(
+	pawn: Pawn, skills: Array[ActiveSkillDefinition], success: bool, reason: String
+) -> void:
+	if not _dungeon_recording:
+		return
+	var chosen: String = ""
+	for skill: ActiveSkillDefinition in skills:
+		if not chosen.is_empty():
+			chosen += ", "
+		chosen += String(skill.id) if skill != null else "<null>"
+	_append_lines_to(dungeon_record_path, [
+		"- %s · 自定义 Build 应用 · %s · 原因：%s · 提交组合：[%s] · 变更后装配：%s" % [
+			_iso_timestamp(),
+			"成功" if success else "被拒",
+			reason if not reason.is_empty() else "无",
+			chosen if not chosen.is_empty() else "<空>",
+			_skill_ids_of(pawn),
+		]
+	])
+
+
+func _ensure_dungeon_record_header(dungeon: DungeonDefinition) -> void:
+	if _dungeon_record_started:
+		return
+	_dungeon_record_started = true
+	_append_lines_to(dungeon_record_path, [
+		"",
+		"# 问题秘境人工轮进度记录 · %s" % _iso_timestamp(),
+		"",
+		"> 本文件由 `tests/%s` 在进层 / 清层 / 结算 / Build 变更时追加，只记录机制事实；" % get_scene_file_path().get_file(),
+		"> Q1~Q3 原话与 Build 玩法是否成立的结论必须由玩家填写。",
+		"",
+		"- 秘境：%s（%s，%d 层）" % [
+			dungeon.display_name if dungeon != null else "<未知>",
+			String(dungeon.id) if dungeon != null else "<none>",
+			dungeon.get_room_count() if dungeon != null else 0,
+		],
+		"",
+	])
+
+
+func _current_dungeon_room(dungeon: DungeonDefinition, room_index: int) -> DungeonRoom:
+	if dungeon == null:
+		return null
+	# 越界由 DungeonDefinition.get_room() 返回 null，记录器不自己 clamp。
+	return dungeon.get_room(room_index)
+
+
+func _first_clear_reward_id(room: DungeonRoom) -> String:
+	if room == null or room.encounter == null or not room.encounter.has_first_clear_reward():
+		return "无"
+	return String(room.encounter.first_clear_skill_reward.id)
+
+
+func _known_skill_ids() -> String:
+	var player: Pawn = session.get_player_pawn() if session != null else null
+	if player == null:
+		return "<无>"
+	return _join_skill_ids(player.get_known_active_skills())
+
+
+func _current_equipped_ids() -> String:
+	var player: Pawn = session.get_player_pawn() if session != null else null
+	if player == null:
+		return "<无>"
+	return _join_skill_ids(player.get_equipped_active_skills())
+
+
+func _skill_ids_of(pawn: Pawn) -> String:
+	if pawn == null or not is_instance_valid(pawn):
+		return "<无>"
+	return _join_skill_ids(pawn.get_equipped_active_skills())
+
+
+func _ensure_dir(relative_dir: String) -> void:
+	var directory: String = ProjectSettings.globalize_path(relative_dir)
+	if not DirAccess.dir_exists_absolute(directory):
+		DirAccess.make_dir_recursive_absolute(directory)
