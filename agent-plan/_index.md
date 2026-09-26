@@ -1,13 +1,13 @@
 # Agent Plan Index
 
-> 最后修改：2026-09-26T12:50:34+08:00
+> 最后修改：2026-09-26T13:00:11+08:00
 > 规则来源：`../AGENTS.md`
 
 ## 主题索引
 
 | 主题 | 计划文件 | 状态 | 当前 Increment | 最后修改 |
 |---|---|---|---|---|
-| UI | `ui.md` | 已验收 | `INC-UI-020` | 2026-09-26T12:50:34+08:00 |
+| UI | `ui.md` | 已验收 | `INC-UI-021` | 2026-09-26T13:00:11+08:00 |
 | 战斗 | `combat.md` | 已验收 | `INC-COMBAT-012` | 2026-09-26T11:50:07+08:00 |
 | Pawns | `pawns.md` | 已验收 | `INC-PAWNS-023` | 2026-09-26T11:50:07+08:00 |
 | 修炼 | `cultivation.md` | 已验收 | `INC-CULT-005` | 2026-09-25T20:16:30+08:00 |
@@ -16,9 +16,9 @@
 | 背包 | `inventory.md` | 已验收 | `INC-INVENTORY-001` | 2026-09-25T16:51:32+08:00 |
 | 存档 | `save.md` | 未创建 | - | - |
 | 音频 | `audio.md` | 未创建 | - | - |
-| 核心 | `core.md` | 已验收 | `INC-CORE-014` | 2026-09-26T12:50:34+08:00 |
+| 核心 | `core.md` | 已验收 | `INC-CORE-015` | 2026-09-26T13:00:11+08:00 |
 | 工具 | `tools.md` | 已验收 | `INC-TOOLS-002` | 2026-09-25T13:54:46+08:00 |
-| 测试 | `testing.md` | 已验收 | `INC-TESTING-020` | 2026-09-26T12:50:34+08:00 |
+| 测试 | `testing.md` | 已验收 | `INC-TESTING-021` | 2026-09-26T13:00:11+08:00 |
 
 ## 跨主题父 Increment
 
@@ -46,6 +46,7 @@
 | `INC-CROSS-020` | `accepted` | `INC-CORE-013`、`INC-UI-019`、`INC-TESTING-018` | 左键统一操作模型：选择 / 移动 / 技能目标选择，选中敌方显示敌方信息 | 验证通过（gameplay 输入路由用例 + 统一门禁 `RESULT: PASS` + 真实窗口与 OS 级鼠标输入冒烟） | 已验收 | 2026-09-26T01:48:20+08:00 |
 | `INC-CROSS-021` | `accepted` | `INC-COMBAT-010`、`INC-COMBAT-011`、`INC-COMBAT-012`、`INC-PAWNS-022`、`INC-PAWNS-023`、`INC-WORLD-008`、`INC-TESTING-019` | Skill × Enemy Interaction 验证：技能池 / 问题型敌人 / 问题房间 | 通过（7/7 子项全部验证并验收：`INC-COMBAT-010` / `INC-PAWNS-022` / `INC-COMBAT-011` / `INC-COMBAT-012` / `INC-PAWNS-023` / `INC-WORLD-008` / `INC-TESTING-019`） | 已验收 | 2026-09-26T12:34:31+08:00 |
 | `INC-CROSS-022` | `accepted` | `INC-UI-020`、`INC-CORE-014`、`INC-TESTING-020` | 问题秘境接入游玩主路径（Build 观察闭环前置）：默认进入问题秘境、可切换回试炼秘境、首次清房奖励在游玩路径上可达 | 通过（3/3 子项验证通过：面板选择区 / 默认入口与切换转发 / 游玩层可达性与奖励链；统一门禁 `RESULT: PASS`，GdUnit4 445 cases / 0 failures + headless 549 assertions） | 已验收 | 2026-09-26T12:50:34+08:00 |
+| `INC-CROSS-023` | `accepted` | `INC-UI-021`、`INC-CORE-015`、`INC-TESTING-021` | 玩家可自由重构 Build（8 技能池 → 容量内自选组合） | 通过（3/3 子项验证并验收：自由 Build 编辑器 / 主场景注入 8 技能池 / 编辑器行为与非预设组合证据；统一门禁 `RESULT: PASS`，GdUnit4 451 cases / 0 failures + headless 549 assertions） | 已验收 | 2026-09-26T13:00:11+08:00 |
 
 ### INC-CROSS-001：第一个 Pawn MVP
 
@@ -636,6 +637,8 @@
 | v5.41 | 2026-09-26T11:58:09+08:00 | 用户验收通过 `INC-WORLD-008`（秘境问题房间），用户原话「本次验收通过」；代码提交 `a7da57c`，父 Increment `INC-CROSS-021` 子项进度推进到 6/7 已验收，仅剩 `INC-TESTING-019`。 |
 | v5.42 | 2026-09-26T12:01:09+08:00 | 启动 `INC-TESTING-019`（Skill × Enemy 交互矩阵）：用确定性驱动对 6 类问题型敌人记录适用 / 不适用技能的通关耗时、剩余生命、灵力消耗，并要求至少 2 组换技能差异；同时显式区分纯数值升级与价值轴变化。 |
 | v5.39 | 2026-09-26T02:25:25+08:00 | 完成 `INC-COMBAT-012`（条件伤害：`controlled_bonus_multiplier` 默认 1.0、只作用于 DAMAGE、受控时按 `effect_value × 倍率` 结算）与 `INC-PAWNS-023`（玩家技能池扩到 8 个：破军斩走条件爆发轴、回春术补首个主动回复轴，炼气期仍 2 槽 / C(8,2)=28）：`mcp__godot::validate` 全通过，单套件 unit 8 + integration 10 + catalog 12 + runtime 5 cases 均 0 failures，统一门禁 `RESULT: PASS`（GdUnit4 429 cases / 0 failures、headless 10 suites / 549 assertions），exit 0；计划已回填为 `awaiting_acceptance`，等待用户验收。 |
+| v5.49 | 2026-09-26T12:52:10+08:00 | 复核发现玩家侧 Build 表达能力不足：生产入口 `main.tscn` 只接线 3 个技能资源，`BuildLoadoutPanel` 只有固定 Build A/B 两套预设，另外 5 个已实现玩家技能无法装配。新建父 Increment `INC-CROSS-023`（玩家可自由重构 Build：8 技能池 → 容量内自选组合）与三个子项 `INC-UI-021`（自由 Build 编辑器）/ `INC-CORE-015`（主场景注入 8 技能池）/ `INC-TESTING-021`（编辑器行为与非预设组合证据）；本批只补玩家侧表达能力，不新增技能 / 敌人 / 数值。 |
+| v5.50 | 2026-09-26T13:00:11+08:00 | 完成并验收 `INC-CROSS-023`（玩家可自由重构 Build）：`INC-UI-021` 让 `BuildLoadoutPanel` 从两套固定预设扩展为 8 技能池自定义组合（未解锁禁用、容量由 Pawn 裁决、显式应用、解锁不自动装配、战斗中锁定），`INC-CORE-015` 把 5 个未接线玩家技能补进 `main.tscn` 并注入 8 技能池（A/B 预设不变），`INC-TESTING-021` 把面板套件从 9 例扩到 15 例并新增非 A/B 预设组合（护体真气 + 回春术）真实装配证据；统一门禁 `RESULT: PASS`（GdUnit4 451 cases / 0 failures、headless 10 suites / 549 assertions）。代码提交 `9b64825` / `f0b4e5c` / `988aaad`，验收记录 `d08b170` / `d10b36d` / `a63f491`。 |
 | v5.48 | 2026-09-26T12:50:34+08:00 | 用户以「本次验收通过」接受父 Increment `INC-CROSS-022`（问题秘境接入游玩主路径）与三个子项 `INC-UI-020` / `INC-CORE-014` / `INC-TESTING-020`；分增量提交 `5138a41` / `54f1521` / `4dc4886`，并补验收记录 `c1b499d` / `4f10af8` / `7dabb45`；本批不改玩法数值，后续仍需人工回答 `INC-CROSS-021` 的三问。 |
 | v5.47 | 2026-09-26T12:47:24+08:00 | 完成 `INC-CROSS-022` 的三个子 Increment：① `INC-UI-020` `DungeonPanel` 新增 `dungeon_selected` 信号 + `set_dungeon_options()` 动态选项（未开局 / 已结算可点，进行中与等待抉择锁定，单套件 9 cases / 0 failures）；② `INC-CORE-014` `main.tscn` 默认秘境改指 `problem_dungeon.tres` 并注入 `[试炼, 问题]` 选项、`main.gd` 只转发选择、`DungeonRun.start()` 保留「进行中不替换」；同步修正按 trial 硬编码的 gameplay / headless 用例（按当前运行秘境与房间声明的敌人集合断言，宗门闭环在入树前显式换回单敌人试炼秘境）；③ `INC-TESTING-020` 新增 `test/gameplay/problem_dungeon_play_path_test.gd`（真实 main 路径：首间首通奖励只解锁不装配 + 结算后可切回试炼秘境，2 cases / 0 failures）；统一门禁 `RESULT: PASS`（GdUnit4 445 cases / 0 failures、headless 10 suites / 549 assertions / 0 failing suites，exit 0）；功能与验证完成后等待用户验收再提交 |
 | v5.46 | 2026-09-26T12:35:49+08:00 | 新建父 Increment `INC-CROSS-022`（问题秘境接入游玩主路径）：`INC-CROSS-021` 验收后复核发现 `problem_dungeon.tres` 只被测试引用、`main.tscn` 默认仍是 `trial_dungeon.tres`，`INC-WORLD-008` Gate 3 的「遇到问题 → 获得技能 → 再遇到需要该技能的问题」只在数据 / 机制层成立、正常游玩不可达；拆为 `INC-UI-020`（DungeonPanel 秘境选择区，只发信号）→ `INC-CORE-014`（main.tscn 注入两份秘境、默认切到 problem、main.gd 只转发）→ `INC-TESTING-020`（游玩层可达性 + 首通奖励链 + 切换锁定证据），不新增玩法内容与数值 |
@@ -924,3 +927,28 @@
 - 验收时间：2026-09-26T12:50:34+08:00
 - Git：`develop` / 子项代码提交 `5138a41`、`54f1521`、`4dc4886`（含 `c1b499d`、`4f10af8`、`7dabb45` 验收记录）
 - 备注：本父 Increment 是 `INC-WORLD-008` 已知问题 ② 的补完，不修改问题秘境的房间内容与奖励数值；完成后 `INC-CROSS-021` 的人工轮（Build 观察三问）才具备默认可达的游玩入口。
+
+## INC-CROSS-023：玩家可自由重构 Build（8 技能池 → 容量内自选组合）
+
+- 状态：accepted
+- 创建时间：2026-09-26T12:52:10+08:00
+- 最后修改：2026-09-26T13:00:11+08:00
+- 目标：把「Skill × Enemy 验证」中最后一段玩家侧能力补齐——玩家在解锁技能后，能从 8 技能池里自选容量内组合并装配，而不是只能在 Build A（御剑斩 + 护体真气）与 Build B（御剑斩 + 定身术）两套固定预设之间二选一；让目标中「生存 / 控制 / AOE / 机动」等组合第一次成为可表达、可观察的 Build。
+- 背景：`INC-CROSS-021` 验收后，父目标要求「获得技能 → 主动修改 Build → 再次进入 → 打法改变自然发生 2~3 次」。复核发现生产入口 `game/main/main.tscn` 只接线了 3 个技能资源（御剑斩 / 护体真气 / 定身术），`BuildLoadoutPanel` 只有 `preset_a` / `preset_b` 两套固定预设；另外 5 个已实现、可通过问题秘境首通链获得的技能——踏风突进 / 范围剑气 / 血引术 / 回春术 / 破军斩——无法进入正式装配。因此人工轮最多只能完成一次 A/B 切换，无法验证「玩家自选组合形成 Build」。
+- 子 Increment：`INC-UI-021`（自由 Build 编辑器）、`INC-CORE-015`（主场景注入 8 技能池）、`INC-TESTING-021`（编辑器行为与非预设组合证据）。
+- 判定顺序：先 `INC-UI-021`（面板能表达容量内任意组合）→ 再 `INC-CORE-015`（生产入口有完整技能池）→ 最后 `INC-TESTING-021`（未解锁 / 容量 / 显式应用 / 锁定事实成立）。
+- 验收标准（父级 Gate）：
+  - Gate 1 可表达：生产入口下，玩家能用 8 技能池中任意已解锁技能组成容量内 Build，含至少一组非 A/B 预设组合。
+  - Gate 2 可裁决：容量与掌握规则仍只由 `Pawn` / `BuildValidator` 裁决；UI 不复制规则，超容量与未解锁都必须被拒绝且零副作用。
+  - Gate 3 可观察：应用后 `Pawn.get_equipped_active_skills()` 与技能栏 / HUD 读数同步变化；解锁新技能不会自动装配。
+  - Gate 4 不回归：既有 Build A/B 预设与 `build_switch_attempted` 契约保持可用，CROSS-018 / CROSS-019 / CROSS-021 既有用例不因本项放宽。
+  - Gate 5 门禁：统一 `test/run_tests.ps1 -Layer all` → `RESULT: PASS`。
+- 非范围：新增技能 / 敌人 / 房间、技能数值与平衡、装备与属性膨胀、存档迁移、正式美术、4v4 与队友系统。
+- 依赖：`INC-PAWNS-023`（8 技能池，已验收）、`INC-WORLD-007`（只解锁不装配，已验收）、`INC-CROSS-022`（问题秘境自然可达，已验收）。
+- 风险：① 自由组合会把炼气期 2 槽从一次 A/B 切换放大到 C(8,2)=28 种组合，若所有组合都能无差别通关，说明问题房间区分度不足——这是玩法结论，必须如实记录而不是调数值掩盖；② `BuildLoadoutPanel` 是 CROSS-018 / CROSS-019 验收过的既有面板，扩展必须保持旧 API 与信号契约；③ `main.tscn` 是高冲突共享场景，本批不得与其他写入者并行。
+- 检索证据：2026-09-26T12:52:10+08:00 执行 `git status --short`（干净）、`git diff --unified=0 -- agent-plan/` 与 `git diff --cached --unified=0 -- agent-plan/`（均无输出）、`git log --oneline -- agent-plan/`（HEAD `81aacee`）；`git grep -h -o -E "INC-[A-Z]+-[0-9]{3}" -- agent-plan/` 确认各主题最大编号（UI 020 / CORE 014 / TESTING 020 / CROSS 022），本批编号未占用；`git grep -n -E "player_dash_skill|player_sword_aoe_skill|player_lifesteal_skill|player_rejuvenation_skill|player_breaking_slash" -- game/main/` 无命中；`game/main/main.tscn` 只引用 3 个玩家技能资源；`game/pawns/data/skills/` 下另有 5 个技能资源未进入正式入口；`game/ui/build/build_loadout_panel.gd` 只有 `preset_a` / `preset_b` 两套固定预设。
+- 进度：2026-09-26T13:00:11+08:00 三个子 Increment 全部实现并验证通过（UI-021 面板自定义区、CORE-015 生产入口注入 8 技能池、TESTING-021 面板套件 9 → 15 例，含护体真气 + 回春术非预设组合真实装配），用户以「本次验收通过」接受父级与三个子项；代码提交 `9b64825` / `f0b4e5c` / `988aaad`，验收记录 `d08b170` / `d10b36d` / `a63f491`；本轮不新增技能 / 敌人 / 数值。
+- 用户验收：通过（用户原话「本次验收通过」；验收对象：INC-CROSS-023 三个子项）
+- 验收时间：2026-09-26T13:00:11+08:00
+- Git：`develop` / 子项代码提交 `9b64825`、`f0b4e5c`、`988aaad`（含 `d08b170`、`d10b36d`、`a63f491` 验收记录）
+- 备注：本父级只补「玩家侧 Build 表达能力」；完成后仍需要人工轮回答 `INC-CROSS-021` 的三问，才能对「Build 玩法是否成立」下最终结论。
