@@ -7,7 +7,8 @@ extends GdUnitTestSuite
 ## 与面板按钮驱动，宗门规则仍由 SectState 持有，测试不复制花费 / 产出公式。
 
 const MAIN_SCENE_PATH: String = "res://game/main/main.tscn"
-const DUNGEON_PATH: String = "res://game/world/data/dungeons/trial_dungeon.tres"
+## 宗门闭环用例显式使用单敌人试炼秘境：默认秘境是问题秘境（INC-CORE-014），多敌人房间不属于本用例范围。
+const TRIAL_DUNGEON_PATH: String = "res://game/world/data/dungeons/trial_dungeon.tres"
 
 const SECT_STATE_PATH: String = "SectState"
 const SECT_PANEL_PATH: String = "HUD/BottomLeftDock/SectPanel"
@@ -25,6 +26,9 @@ func after_test() -> void:
 func _spawn_main() -> Node2D:
     var scene: PackedScene = load(MAIN_SCENE_PATH) as PackedScene
     var main: Node2D = scene.instantiate() as Node2D
+    # 宗门闭环用例显式选择单敌人试炼秘境：默认入口已是问题秘境（INC-CORE-014），
+    # 而 DungeonRun.start() 拒绝替换进行中的秘境，因此在入树前替换 default_dungeon。
+    (main.get_node(DUNGEON_RUN_PATH) as DungeonRun).default_dungeon = load(TRIAL_DUNGEON_PATH) as DungeonDefinition
     auto_free(main)
     add_child(main)
     return main
@@ -48,10 +52,6 @@ func _dungeon_panel(main: Node2D) -> DungeonPanel:
 
 func _session(main: Node2D) -> EncounterSession:
     return main.get_node(SESSION_PATH) as EncounterSession
-
-
-func _load_dungeon() -> DungeonDefinition:
-    return load(DUNGEON_PATH) as DungeonDefinition
 
 
 func _lethal_damage(pawn: Pawn) -> float:
@@ -103,7 +103,7 @@ func test_retreat_deposits_earned_reward_once_and_panel_matches_inventory() -> v
     var run: DungeonRun = _run(main)
     var state: SectState = _state(main)
     var panel: SectPanel = _sect_panel(main)
-    var dungeon: DungeonDefinition = _load_dungeon()
+    var dungeon: DungeonDefinition = load(TRIAL_DUNGEON_PATH) as DungeonDefinition
 
     _clear_current_room(main)
     await await_idle_frame()
@@ -206,7 +206,7 @@ func test_earned_reward_upgrades_facility_and_cultivation_on_real_main_scene() -
     var run: DungeonRun = _run(main)
     var state: SectState = _state(main)
     var panel: SectPanel = _sect_panel(main)
-    var dungeon: DungeonDefinition = _load_dungeon()
+    var dungeon: DungeonDefinition = load(TRIAL_DUNGEON_PATH) as DungeonDefinition
 
     # 清空三间房，收益足够支付灵田从 1 级升到 2 级；再以「见好就收」走唯一终局入账。
     _clear_current_room(main)

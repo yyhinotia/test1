@@ -34,11 +34,14 @@
 [ext_resource type="Resource" path="res://game/pawns/data/player_sword_skill.tres" id="33_sword_skill"]
 [ext_resource type="Resource" path="res://game/pawns/data/player_guard_skill.tres" id="34_guard_skill"]
 [ext_resource type="Resource" path="res://game/pawns/data/skills/player_binding_skill.tres" id="35_binding_skill"]
+[ext_resource type="Script" uid="uid://0bmf5nm2g8ft" path="res://game/shared/resources/dungeon_definition.gd" id="36_dungeon_definition"]
+[ext_resource type="Resource" path="res://game/world/data/dungeons/problem_dungeon.tres" id="37_problem_dungeon"]
 
 [node name="Main" type="Node2D" unique_id=539579646]
 process_mode = 3
 script = ExtResource("1_yil3p")
 sect_techniques = Array[ExtResource("24_technique")]([ExtResource("25_sword_cultivation"), ExtResource("26_body_cultivation"), ExtResource("27_thunder_cultivation")])
+dungeon_options = Array[ExtResource("36_dungeon_definition")]([ExtResource("14_trial_dungeon"), ExtResource("37_problem_dungeon")])
 
 [node name="Background" type="ColorRect" parent="." unique_id=238189977]
 anchors_preset = 15
@@ -68,7 +71,7 @@ initial_encounter = ExtResource("6_encounter_trial")
 [node name="DungeonRun" type="Node" parent="."]
 script = ExtResource("12_dungeon_run")
 encounter_session = NodePath("../EncounterSession")
-default_dungeon = ExtResource("14_trial_dungeon")
+default_dungeon = ExtResource("37_problem_dungeon")
 
 [node name="SectState" type="Node" parent="."]
 script = ExtResource("15_sect_state")

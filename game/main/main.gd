@@ -5,6 +5,9 @@ const PAWN_CLICK_RADIUS: float = 30.0
 ## 宗门可参悟功法目录：由 main.tscn 注入，主场景只负责把目录交给面板并转发选择。
 @export var sect_techniques: Array[TechniqueDefinition] = []
 
+## 可选秘境目录（INC-CORE-014）：由 main.tscn 注入，主场景只负责交给面板并转发选择，不判断内容。
+@export var dungeon_options: Array[DungeonDefinition] = []
+
 ## 单位与控制器引用在换遭遇时会被整体替换，因此不能用 @onready 一次性捕获；
 ## 统一由 _refresh_pawn_references() 在 encounter_started 时刷新（INC-CORE-008）。
 var player_pawn: Pawn
@@ -41,6 +44,7 @@ func _ready() -> void:
 	_connect_sect_signals()
 	sect_panel.bind_state(sect_state)
 	sect_panel.set_learnable_techniques(sect_techniques)
+	dungeon_panel.set_dungeon_options(dungeon_options)
 	if not skill_bar.skill_requested.is_connected(_on_skill_bar_skill_requested):
 		skill_bar.skill_requested.connect(_on_skill_bar_skill_requested)
 	if not skill_bar.targeting_started.is_connected(_on_skill_targeting_started):
@@ -118,6 +122,15 @@ func _connect_dungeon_signals() -> void:
 		dungeon_run.room_cleared.connect(_on_dungeon_room_cleared)
 	if not dungeon_run.run_finished.is_connected(_on_dungeon_run_finished):
 		dungeon_run.run_finished.connect(_on_dungeon_run_finished)
+	if not dungeon_panel.dungeon_selected.is_connected(_on_dungeon_selected):
+		dungeon_panel.dungeon_selected.connect(_on_dungeon_selected)
+
+
+## 「选择秘境」：面板只表示玩家想进哪个秘境；进行中不响应（面板已锁定，这里再按事实兜底）。
+func _on_dungeon_selected(dungeon: DungeonDefinition) -> void:
+	if dungeon == null or dungeon_run.is_active():
+		return
+	dungeon_run.start(dungeon)
 
 
 ## 「继续深入」：面板只表示玩家想继续，能不能推进由 DungeonRun 判定。

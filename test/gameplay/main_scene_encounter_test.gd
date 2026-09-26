@@ -132,10 +132,12 @@ func test_main_scene_boots_into_default_encounter() -> void:
 	# 面板文案与真实对局一致，而不是写死的静态文本。
 	assert_str(panel.get_status_text()).contains(EncounterSession.get_outcome_label(EncounterSession.State.RUNNING))
 	assert_bool(panel.is_running()).is_true()
-	# 开机默认对局的敌人就是初始遭遇定义的敌人档案。
-	assert_str(String(main.get_node(ENEMY_PAWN_PATH).data.id)).is_equal(
-		String(session.get_active_encounter().enemy_profile.id)
-	)
+	# 开机默认对局的敌人必须属于该遭遇声明的成员集合（problem 房间走 enemy_squad）。
+	var active_enemy: Pawn = main.get_node(ENEMY_PAWN_PATH)
+	var active_enemy_ids: Array[String] = []
+	for member: PawnData in session.get_active_encounter().get_enemy_members():
+		active_enemy_ids.append(String(member.id))
+	assert_bool(String(active_enemy.data.id) in active_enemy_ids).is_true()
 
 
 func test_every_panel_button_maps_to_a_formal_encounter_resource() -> void:

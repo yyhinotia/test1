@@ -472,3 +472,33 @@
 - 验收时间：2026-09-26T01:48:20+08:00
 - Git：develop / `d405bbe`
 - 备注：父 Increment 为 `INC-CROSS-020`；本 Increment 只改输入路由与 HUD 订阅，不改战斗 / 技能 / 奖励规则，也不改 `Pawn` 与 `PawnController` 的 API。
+
+
+## INC-CORE-014：问题秘境接入主场景（默认入口 + 选择转发）
+
+- 状态：awaiting_acceptance
+- 创建时间：2026-09-26T12:35:49+08:00
+- 最后修改：2026-09-26T12:47:24+08:00
+- 主题：core
+- 目标：把 `problem_dungeon.tres` 从「只有测试能加载的数据」变成正常游玩（F5 / `main.tscn`）默认进入的秘境，并让玩家能从面板切回试炼秘境；`main.gd` 继续只做信号转发，不复制房间 / 收益判定。
+- 验收标准：
+  - `game/main/main.tscn` 新增 `problem_dungeon.tres` 资源引用，并把 `DungeonRun.default_dungeon` 指向 `problem_dungeon.tres`；试炼秘境继续以资源引用存在于同一场景，作为可切换选项，不再作为默认。
+  - `main.gd` 把两份秘境资源注入 `INC-UI-020` 的秘境选择区，并把选择信号转发为 `dungeon_run.start(dungeon)`；进行中不响应切换。
+  - `test/gameplay/main_scene_dungeon_test.gd` 里按 `trial_dungeon.tres` 硬编码的启动断言改成「按 `DungeonRun.default_dungeon` 的事实断言」，不得再假设默认一定是试炼秘境。
+  - 既有依赖 `main.tscn` 的 gameplay 用例（`main_scene_sect_test.gd` / `sect_loop_test.gd` / `build_replay_*`）在默认秘境变化后仍全绿；需要显式换秘境的用例改为通过面板或显式 `start()` 选择，不靠隐式默认。
+  - 统一门禁 `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` → `RESULT: PASS`。
+- 范围：`game/main/main.tscn`、`game/main/main.gd`、`test/gameplay/main_scene_dungeon_test.gd`，以及因默认秘境变化必须同步的最小测试改动。
+- 非范围：不改 `DungeonRun` 状态机、不改秘境房间 / 奖励数据、不改战斗与技能规则、不新增存档字段。
+- 依赖：`INC-UI-020`（选择区信号与锁定口径）。
+- 风险：① 默认秘境从 trial 换成 problem 会同时影响所有「启动即断言试炼」的用例，必须逐个按事实修正而不是放宽断言；② 问题秘境 12 间房的节奏与损耗在默认路径上被放大，若首间房就让玩家战败则说明可达性修复还没完成；③ 秘境选择若不锁定，会重新引入「战斗中切换 = 满状态重开」的漏洞。
+- 检索证据：2026-09-26T12:40+08:00 `git grep -n "problem_dungeon|trial_dungeon|default_dungeon" -- game/ test/ tests/`：`problem_dungeon` 仅命中数据文件与 `test/unit/dungeon_definition_test.gd` / `test/integration/problem_dungeon_run_test.gd`；`game/main/main.tscn` 只引用 `trial_dungeon`；`game/main/main.gd:53` 开机走 `dungeon_run.start_default_dungeon()`。
+- 实现说明：`main.tscn` 新增 `dungeon_definition.gd` / `problem_dungeon.tres` 两个 `ext_resource`，把 `DungeonRun.default_dungeon` 从试炼秘境改指问题秘境，并通过 `Main.dungeon_options = [试炼, 问题]` 注入面板；`main.gd` 新增 `_on_dungeon_selected()`，在 `dungeon == null` 或 `dungeon_run.is_active()` 时直接返回，否则调用 `dungeon_run.start()`；`DungeonRun.start()` 自身保留「进行中的秘境不会被静默替换」契约。
+- 变更文件：`game/main/main.gd`、`game/main/main.tscn`、`test/gameplay/main_scene_dungeon_test.gd`（改为按 `DungeonRun.default_dungeon` 与当前运行秘境的事实断言，并按房间遭遇的 `get_enemy_members()` 校验敌人）、`test/gameplay/main_scene_encounter_test.gd`、`test/gameplay/main_scene_sect_test.gd`、`test/gameplay/sect_loop_test.gd`（宗门闭环在入树前显式把 `default_dungeon` 换成单敌人试炼秘境）、`test/headless/hud_spirit_display_test.gd`（敌人生命行按实际档案断言，不再写死 180）。
+- 测试证据：`mcp__godot::validate` → `main.gd`、`main.tscn`、`main_scene_dungeon_test.gd` 全部 `valid: true`；单套件 `main_scene_dungeon_test.gd` → 6 cases / 0 errors / 0 failures；`main_scene_sect_test.gd` → 6 cases / 0 failures；`sect_loop_test.gd` → 2 cases / 0 failures；gameplay 全层 → 73 cases / 0 errors / 0 failures（324 orphan 为既有噪音）；统一门禁 `test/run_tests.ps1 -Layer all` → `RESULT: PASS`（GdUnit4 445 cases / 0 failures、headless 10 suites / 549 assertions / 0 failing suites，exit 0）。
+- 验证状态：验证通过
+- 验证时间：2026-09-26T12:47:24+08:00
+- 已知问题：① 选择入口复用 `_can_restart` 作为「本局已结束」判据，因此「等待抉择」期间不可换秘境（刻意如此，避免绕过累积损耗）；② 调试过程中发现 `DungeonRun.start()` 会拒绝替换进行中的秘境，需要显式换秘境的用例只能在入树前改 `default_dungeon` 或在结算后切换，本 Increment 已按此修正相关测试。
+- 用户验收：待验收
+- 验收时间：待验收
+- Git：待提交
+- 备注：父 Increment 为 `INC-CROSS-022`；本项是 `INC-WORLD-008` 已知问题 ②「`problem_dungeon.tres` 需要换秘境入口才能进入」的直接补完。

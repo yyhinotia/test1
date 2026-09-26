@@ -30,7 +30,9 @@ func _initialize() -> void:
 
 	main.call("_set_selected_pawn", enemy)
 	_check("灵力：" not in selected_label.text, "未配置灵力的敌人不应显示灵力行，实际 %s" % selected_label.text)
-	_check("HP：180 / 180" in selected_label.text, "敌人仍应显示自身生命行")
+	# 敌人档案由当前默认秘境决定（INC-CORE-014 起默认为问题秘境），用例只按实际数据断言生命行。
+	var enemy_hp_line: String = "HP：%d / %d" % [int(enemy.current_health), int(enemy.data.max_health)]
+	_check(enemy_hp_line in selected_label.text, "敌人仍应显示自身生命行，实际 %s" % selected_label.text)
 
 	main.call("_set_selected_pawn", null)
 	_check(selected_label.text == "未选中单位", "取消选中后应恢复未选中文本")

@@ -7,7 +7,8 @@ extends GdUnitTestSuite
 ## 真实主场景与面板按钮驱动，数值与奖励从正式资源读取，不复制宗门公式。
 
 const MAIN_SCENE_PATH: String = "res://game/main/main.tscn"
-const DUNGEON_PATH: String = "res://game/world/data/dungeons/trial_dungeon.tres"
+## 宗门闭环用例显式使用单敌人试炼秘境：默认秘境是问题秘境（INC-CORE-014），多敌人房间不属于本用例范围。
+const TRIAL_DUNGEON_PATH: String = "res://game/world/data/dungeons/trial_dungeon.tres"
 
 const SECT_STATE_PATH: String = "SectState"
 const SECT_PANEL_PATH: String = "HUD/BottomLeftDock/SectPanel"
@@ -26,6 +27,9 @@ func after_test() -> void:
 func _spawn_main() -> Node2D:
     var scene: PackedScene = load(MAIN_SCENE_PATH) as PackedScene
     var main: Node2D = scene.instantiate() as Node2D
+    # 宗门闭环用例显式选择单敌人试炼秘境：默认入口已是问题秘境（INC-CORE-014），
+    # 而 DungeonRun.start() 拒绝替换进行中的秘境，因此在入树前替换 default_dungeon。
+    (main.get_node(DUNGEON_RUN_PATH) as DungeonRun).default_dungeon = load(TRIAL_DUNGEON_PATH) as DungeonDefinition
     auto_free(main)
     add_child(main)
     return main
@@ -49,10 +53,6 @@ func _dungeon_panel(main: Node2D) -> DungeonPanel:
 
 func _session(main: Node2D) -> EncounterSession:
     return main.get_node(SESSION_PATH) as EncounterSession
-
-
-func _load_dungeon() -> DungeonDefinition:
-    return load(DUNGEON_PATH) as DungeonDefinition
 
 
 func _lethal_damage(pawn: Pawn) -> float:
@@ -114,7 +114,7 @@ func test_complete_sect_loop_makes_the_restarted_run_stronger() -> void:
     var panel: SectPanel = _sect_panel(main)
     var run: DungeonRun = _run(main)
     var session: EncounterSession = _session(main)
-    var dungeon: DungeonDefinition = _load_dungeon()
+    var dungeon: DungeonDefinition = load(TRIAL_DUNGEON_PATH) as DungeonDefinition
 
     # 连续清四间并撤退：本轮收益为 10 + 15 + 25 + 40，足够一次设施升级与一次武器强化。
     await _clear_and_advance(main, 4)
@@ -225,7 +225,7 @@ func test_run_finished_is_deposited_once_and_defeat_deposits_zero() -> void:
     var run: DungeonRun = _run(main)
     var state: SectState = _state(main)
     var dungeon_panel: DungeonPanel = _dungeon_panel(main)
-    var dungeon: DungeonDefinition = _load_dungeon()
+    var dungeon: DungeonDefinition = load(TRIAL_DUNGEON_PATH) as DungeonDefinition
 
     _clear_current_room(main)
     await await_idle_frame()

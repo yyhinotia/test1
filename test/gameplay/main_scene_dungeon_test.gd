@@ -10,7 +10,7 @@ extends GdUnitTestSuite
 ## 用例只断言关系（深度递增、收益累加、战败归零、损耗延续），不复制任何数值公式。
 
 const MAIN_SCENE_PATH: String = "res://game/main/main.tscn"
-const DUNGEON_PATH: String = "res://game/world/data/dungeons/trial_dungeon.tres"
+const PROBLEM_DUNGEON_PATH: String = "res://game/world/data/dungeons/problem_dungeon.tres"
 
 const DUNGEON_RUN_PATH: String = "DungeonRun"
 const DUNGEON_PANEL_PATH: String = "HUD/BottomLeftDock/DungeonPanel"
@@ -49,8 +49,9 @@ func _encounter_panel(main: Node2D) -> EncounterPanel:
 	return main.get_node(ENCOUNTER_PANEL_PATH) as EncounterPanel
 
 
-func _load_dungeon() -> DungeonDefinition:
-	return load(DUNGEON_PATH) as DungeonDefinition
+## 当前运行的秘境：默认入口由 main.tscn 的 DungeonRun.default_dungeon 决定，用例不写死具体秘境。
+func _active_dungeon(main: Node2D) -> DungeonDefinition:
+	return _run(main).get_active_dungeon()
 
 
 ## 玩家按键等价物：程序化按下面板按钮，测试不直接调用 DungeonRun.advance / retreat。
@@ -61,6 +62,15 @@ func _press(main: Node2D, button_name: String) -> bool:
 	button.pressed.emit()
 	return true
 
+
+## 当前敌人必须属于该房间遭遇声明的成员集合：problem 房间走 enemy_squad，旧房间走 enemy_profile。
+func _assert_enemy_matches_room(main: Node2D, room_index: int) -> void:
+	var encounter: EncounterDefinition = _active_dungeon(main).get_room(room_index).encounter
+	var enemy: Pawn = _session(main).get_enemy_pawn()
+	var ids: Array[String] = []
+	for member: PawnData in encounter.get_enemy_members():
+		ids.append(String(member.id))
+	assert_bool(String(enemy.data.id) in ids).is_true()
 
 func _lethal_damage(pawn: Pawn) -> float:
 	return pawn.data.defense + pawn.data.max_health + pawn.data.max_shield + 50.0
@@ -86,7 +96,7 @@ func test_boot_enters_definition_first_room_and_locks_single_encounter_entry() -
 	var run: DungeonRun = _run(main)
 	var panel: DungeonPanel = _panel(main)
 	var session: EncounterSession = _session(main)
-	var dungeon: DungeonDefinition = _load_dungeon()
+	var dungeon: DungeonDefinition = _active_dungeon(main)
 
 	# 开机即进入秘境第 1 间，深度 / 层数 / 收益都与正式秘境资源一致。
 	assert_int(run.get_state()).is_equal(DungeonRun.State.RUNNING)
@@ -94,10 +104,10 @@ func test_boot_enters_definition_first_room_and_locks_single_encounter_entry() -
 	assert_int(run.get_room_count()).is_equal(dungeon.get_room_count())
 	assert_int(run.get_earned_spirit_stones()).is_zero()
 	assert_bool(run.is_active()).is_true()
-	assert_str(String(session.get_enemy_pawn().data.id)).is_equal(
-		String(dungeon.get_room(0).encounter.enemy_profile.id)
-	)
-	assert_str(run.get_active_dungeon().resource_path).is_equal(DUNGEON_PATH)
+	_assert_enemy_matches_room(main, 0)
+	assert_str(dungeon.resource_path).is_equal(PROBLEM_DUNGEON_PATH)
+	# 默认秘境由 main.tscn 注入（INC-CORE-014）：玩家开机即进入问题秘境。
+	assert_str(run.default_dungeon.resource_path).is_equal(PROBLEM_DUNGEON_PATH)
 	# 面板不在用例里造数据：分层 / 收益文案来自 DungeonRun 的事实。
 	assert_str(panel.get_depth_text()).contains(str(dungeon.get_room_count()))
 	assert_str(panel.get_reward_text()).contains("0")
@@ -112,7 +122,7 @@ func test_clearing_room_awaits_decision_and_accumulates_definition_reward() -> v
 	await await_idle_frame()
 	var run: DungeonRun = _run(main)
 	var panel: DungeonPanel = _panel(main)
-	var dungeon: DungeonDefinition = _load_dungeon()
+	var dungeon: DungeonDefinition = _active_dungeon(main)
 
 	_clear_current_room(main)
 	await await_idle_frame()
@@ -140,7 +150,7 @@ func test_retreat_keeps_reward_and_creates_no_new_encounter() -> void:
 	var run: DungeonRun = _run(main)
 	var panel: DungeonPanel = _panel(main)
 	var session: EncounterSession = _session(main)
-	var dungeon: DungeonDefinition = _load_dungeon()
+	var dungeon: DungeonDefinition = _active_dungeon(main)
 
 	_clear_current_room(main)
 	await await_idle_frame()
@@ -176,7 +186,7 @@ func test_restart_starts_a_fresh_run_at_depth_one_with_zero_reward() -> void:
 	var run: DungeonRun = _run(main)
 	var panel: DungeonPanel = _panel(main)
 	var session: EncounterSession = _session(main)
-	var dungeon: DungeonDefinition = _load_dungeon()
+	var dungeon: DungeonDefinition = _active_dungeon(main)
 
 	_clear_current_room(main)
 	await await_idle_frame()
@@ -195,9 +205,7 @@ func test_restart_starts_a_fresh_run_at_depth_one_with_zero_reward() -> void:
 	# 新一局第 1 间仍是满状态起局，且敌人回到第 1 间定义的档案。
 	var player: Pawn = session.get_player_pawn()
 	assert_float(player.current_health).is_equal(player.data.max_health)
-	assert_str(String(session.get_enemy_pawn().data.id)).is_equal(
-		String(dungeon.get_room(0).encounter.enemy_profile.id)
-	)
+	_assert_enemy_matches_room(main, 0)
 
 
 func test_advancing_carries_previous_room_losses_into_next_room() -> void:
@@ -206,7 +214,7 @@ func test_advancing_carries_previous_room_losses_into_next_room() -> void:
 	var run: DungeonRun = _run(main)
 	var panel: DungeonPanel = _panel(main)
 	var session: EncounterSession = _session(main)
-	var dungeon: DungeonDefinition = _load_dungeon()
+	var dungeon: DungeonDefinition = _active_dungeon(main)
 
 	_clear_current_room(main)
 	await await_idle_frame()
@@ -228,9 +236,7 @@ func test_advancing_carries_previous_room_losses_into_next_room() -> void:
 	# 敌人换成第 2 间定义的档案，玩家单位被真实重建（不是原地满血续用）。
 	var new_player: Pawn = session.get_player_pawn()
 	assert_bool(new_player.get_instance_id() == old_player_id).is_false()
-	assert_str(String(session.get_enemy_pawn().data.id)).is_equal(
-		String(dungeon.get_room(1).encounter.enemy_profile.id)
-	)
+	_assert_enemy_matches_room(main, 1)
 	# 贪的代价：生命 / 灵力带着上一间的损耗进入下一间。
 	assert_float(new_player.current_health).is_equal(carried.x)
 	assert_float(new_player.current_spirit).is_equal(carried.y)
@@ -244,7 +250,7 @@ func test_defeat_zeroes_run_rewards_and_matches_panel_status() -> void:
 	var run: DungeonRun = _run(main)
 	var panel: DungeonPanel = _panel(main)
 	var session: EncounterSession = _session(main)
-	var dungeon: DungeonDefinition = _load_dungeon()
+	var dungeon: DungeonDefinition = _active_dungeon(main)
 
 	_clear_current_room(main)
 	await await_idle_frame()
