@@ -1,13 +1,13 @@
 # Agent Plan Index
 
-> 最后修改：2026-09-26T12:34:31+08:00
+> 最后修改：2026-09-26T12:50:34+08:00
 > 规则来源：`../AGENTS.md`
 
 ## 主题索引
 
 | 主题 | 计划文件 | 状态 | 当前 Increment | 最后修改 |
 |---|---|---|---|---|
-| UI | `ui.md` | 待验收 | `INC-UI-019` | 2026-09-26T01:48:20+08:00 |
+| UI | `ui.md` | 已验收 | `INC-UI-020` | 2026-09-26T12:50:34+08:00 |
 | 战斗 | `combat.md` | 已验收 | `INC-COMBAT-012` | 2026-09-26T11:50:07+08:00 |
 | Pawns | `pawns.md` | 已验收 | `INC-PAWNS-023` | 2026-09-26T11:50:07+08:00 |
 | 修炼 | `cultivation.md` | 已验收 | `INC-CULT-005` | 2026-09-25T20:16:30+08:00 |
@@ -16,9 +16,9 @@
 | 背包 | `inventory.md` | 已验收 | `INC-INVENTORY-001` | 2026-09-25T16:51:32+08:00 |
 | 存档 | `save.md` | 未创建 | - | - |
 | 音频 | `audio.md` | 未创建 | - | - |
-| 核心 | `core.md` | 已验收（输入路由） | `INC-CORE-013` | 2026-09-26T01:48:20+08:00 |
+| 核心 | `core.md` | 已验收 | `INC-CORE-014` | 2026-09-26T12:50:34+08:00 |
 | 工具 | `tools.md` | 已验收 | `INC-TOOLS-002` | 2026-09-25T13:54:46+08:00 |
-| 测试 | `testing.md` | 已验收 | `INC-TESTING-019` | 2026-09-26T12:30:44+08:00 |
+| 测试 | `testing.md` | 已验收 | `INC-TESTING-020` | 2026-09-26T12:50:34+08:00 |
 
 ## 跨主题父 Increment
 
@@ -45,6 +45,7 @@
 | `INC-CROSS-019` | `accepted` | `INC-COMBAT-009`、`INC-PAWNS-021`、`INC-WORLD-007`、`INC-UI-018`、`INC-TESTING-011`、`INC-TESTING-012`、`INC-TESTING-013`、`INC-TESTING-014`、`INC-TESTING-015`、`INC-TESTING-016`、`INC-TESTING-017`（已实现前置：`INC-PAWNS-020` 多单位运行时；已退役：`INC-CORE-012`） | 1v1 → 1vN Build 玩法验证（Build Gameplay Validation） | 验证通过（Gate 0 机制层 + 1v1 首通奖励、Build 切换面板与跨遭遇延续、`tests/` 场景化人工入口、Build Replay 自动化证据与 Round 1/2 客观对照、Stage 2 `1v1 / 1v2 / 1v3` 运行时终局收敛与重开清洁、测试入口自证（横幅 / 名牌 / `enemy_names` / `run_scenario.ps1`）） | 已验收 | 2026-09-26T02:09:20+08:00 |
 | `INC-CROSS-020` | `accepted` | `INC-CORE-013`、`INC-UI-019`、`INC-TESTING-018` | 左键统一操作模型：选择 / 移动 / 技能目标选择，选中敌方显示敌方信息 | 验证通过（gameplay 输入路由用例 + 统一门禁 `RESULT: PASS` + 真实窗口与 OS 级鼠标输入冒烟） | 已验收 | 2026-09-26T01:48:20+08:00 |
 | `INC-CROSS-021` | `accepted` | `INC-COMBAT-010`、`INC-COMBAT-011`、`INC-COMBAT-012`、`INC-PAWNS-022`、`INC-PAWNS-023`、`INC-WORLD-008`、`INC-TESTING-019` | Skill × Enemy Interaction 验证：技能池 / 问题型敌人 / 问题房间 | 通过（7/7 子项全部验证并验收：`INC-COMBAT-010` / `INC-PAWNS-022` / `INC-COMBAT-011` / `INC-COMBAT-012` / `INC-PAWNS-023` / `INC-WORLD-008` / `INC-TESTING-019`） | 已验收 | 2026-09-26T12:34:31+08:00 |
+| `INC-CROSS-022` | `accepted` | `INC-UI-020`、`INC-CORE-014`、`INC-TESTING-020` | 问题秘境接入游玩主路径（Build 观察闭环前置）：默认进入问题秘境、可切换回试炼秘境、首次清房奖励在游玩路径上可达 | 通过（3/3 子项验证通过：面板选择区 / 默认入口与切换转发 / 游玩层可达性与奖励链；统一门禁 `RESULT: PASS`，GdUnit4 445 cases / 0 failures + headless 549 assertions） | 已验收 | 2026-09-26T12:50:34+08:00 |
 
 ### INC-CROSS-001：第一个 Pawn MVP
 
@@ -462,6 +463,9 @@
 | `INC-PAWNS-023` | `INC-CROSS-021` | pawns | `accepted` | 玩家技能池扩到 8 个（条件爆发 + 主动回复） | 2026-09-26T11:50:07+08:00 | 验证通过（catalog 12 cases + runtime 5 cases / 0 failures；八技能价值轴互不重复、破军斩受控 3.36× 反超御剑斩 1.8× 且未受控 1.4× 更弱、回春术 55 点自疗、炼气期仍 2 槽；统一门禁 GdUnit4 429 cases / 0 failures + headless 549 assertions，`RESULT: PASS`，exit 0） | 已验收 | `develop` / `a963738` |
 | `INC-WORLD-008` | `INC-CROSS-021` | world | `accepted` | 秘境问题房间（按战斗问题组合） | 2026-09-26T11:58:09+08:00 | 验证通过（12 间问题房间；六类问题型全覆盖；前 6 间首通技能链；同一 Build 的高防 / 高爆发房间差异可复现；奖励单调；统一门禁 GdUnit4 438 cases / 0 failures + headless 549 assertions，`RESULT: PASS`，exit 0） | 已验收 | `develop` / `a7da57c` |
 | `INC-TESTING-019` | `INC-CROSS-021` | testing | `accepted` | Skill × Enemy 交互矩阵（同一 Build 面对不同问题） | 2026-09-26T12:30:44+08:00 | 验证通过（单套件 3 cases / 0 failures / 0 orphans，连续 5 次跨进程重跑一致方向；六格矩阵 5 格差异超噪声、6 格互有胜负、胜出 Build ≥2 个；数值 × 条件轴反向对照成立；统一门禁 `RESULT: PASS`，GdUnit4 441 cases / 0 failures） | 已验收 | `develop` / `ec10b0f` |
+| `INC-UI-020` | `INC-CROSS-022` | ui | `accepted` | 秘境选择区（只发信号的最小选项列表） | 2026-09-26T12:50:34+08:00 | 验证通过（validate 全通过；单套件 9 cases / 0 failures / 0 orphans；新增选择信号与锁定用例） | 已验收 | `develop` / `5138a41` |
+| `INC-CORE-014` | `INC-CROSS-022` | core | `accepted` | 问题秘境接入主场景（默认入口 + 选择转发） | 2026-09-26T12:50:34+08:00 | 验证通过（默认进入 problem_dungeon；选择转发 + 进行中拒绝；main 场景 / 宗门 / headless 相关用例全绿；统一门禁 `RESULT: PASS`） | 已验收 | `develop` / `54f1521` |
+| `INC-TESTING-020` | `INC-CROSS-022` | testing | `accepted` | 问题秘境游玩层可达性与首通奖励链证据 | 2026-09-26T12:50:34+08:00 | 验证通过（单套件 2 cases / 0 failures；真实 main 路径首间解锁奖励且不装配、结算后切回试炼秘境） | 已验收 | `develop` / `4dc4886` |
 | `INC-SECT-001` | `INC-CROSS-017` | sect | `accepted` | 宗门设施静态定义与六座设施数据 | 2026-09-25T19:38:41+08:00 | 通过 | 已验收 | `main` / `c25ffbc` |
 | `INC-SECT-002` | `INC-CROSS-017` | sect | `accepted` | SectState 运行时：库存 / 设施等级 / 升级 / 修炼 / 收获 | 2026-09-25T19:38:41+08:00 | 通过 | 已验收 | `main` / `8c65ff1` |
 | `INC-SECT-003` | `INC-CROSS-017` | sect | `accepted` | 转化设施：藏经阁参悟 / 炼器房强化 / 丹房炼丹 | 2026-09-25T19:38:41+08:00 | 通过 | 已验收 | `main` / `9c97ef9` |
@@ -632,6 +636,9 @@
 | v5.41 | 2026-09-26T11:58:09+08:00 | 用户验收通过 `INC-WORLD-008`（秘境问题房间），用户原话「本次验收通过」；代码提交 `a7da57c`，父 Increment `INC-CROSS-021` 子项进度推进到 6/7 已验收，仅剩 `INC-TESTING-019`。 |
 | v5.42 | 2026-09-26T12:01:09+08:00 | 启动 `INC-TESTING-019`（Skill × Enemy 交互矩阵）：用确定性驱动对 6 类问题型敌人记录适用 / 不适用技能的通关耗时、剩余生命、灵力消耗，并要求至少 2 组换技能差异；同时显式区分纯数值升级与价值轴变化。 |
 | v5.39 | 2026-09-26T02:25:25+08:00 | 完成 `INC-COMBAT-012`（条件伤害：`controlled_bonus_multiplier` 默认 1.0、只作用于 DAMAGE、受控时按 `effect_value × 倍率` 结算）与 `INC-PAWNS-023`（玩家技能池扩到 8 个：破军斩走条件爆发轴、回春术补首个主动回复轴，炼气期仍 2 槽 / C(8,2)=28）：`mcp__godot::validate` 全通过，单套件 unit 8 + integration 10 + catalog 12 + runtime 5 cases 均 0 failures，统一门禁 `RESULT: PASS`（GdUnit4 429 cases / 0 failures、headless 10 suites / 549 assertions），exit 0；计划已回填为 `awaiting_acceptance`，等待用户验收。 |
+| v5.48 | 2026-09-26T12:50:34+08:00 | 用户以「本次验收通过」接受父 Increment `INC-CROSS-022`（问题秘境接入游玩主路径）与三个子项 `INC-UI-020` / `INC-CORE-014` / `INC-TESTING-020`；分增量提交 `5138a41` / `54f1521` / `4dc4886`，并补验收记录 `c1b499d` / `4f10af8` / `7dabb45`；本批不改玩法数值，后续仍需人工回答 `INC-CROSS-021` 的三问。 |
+| v5.47 | 2026-09-26T12:47:24+08:00 | 完成 `INC-CROSS-022` 的三个子 Increment：① `INC-UI-020` `DungeonPanel` 新增 `dungeon_selected` 信号 + `set_dungeon_options()` 动态选项（未开局 / 已结算可点，进行中与等待抉择锁定，单套件 9 cases / 0 failures）；② `INC-CORE-014` `main.tscn` 默认秘境改指 `problem_dungeon.tres` 并注入 `[试炼, 问题]` 选项、`main.gd` 只转发选择、`DungeonRun.start()` 保留「进行中不替换」；同步修正按 trial 硬编码的 gameplay / headless 用例（按当前运行秘境与房间声明的敌人集合断言，宗门闭环在入树前显式换回单敌人试炼秘境）；③ `INC-TESTING-020` 新增 `test/gameplay/problem_dungeon_play_path_test.gd`（真实 main 路径：首间首通奖励只解锁不装配 + 结算后可切回试炼秘境，2 cases / 0 failures）；统一门禁 `RESULT: PASS`（GdUnit4 445 cases / 0 failures、headless 10 suites / 549 assertions / 0 failing suites，exit 0）；功能与验证完成后等待用户验收再提交 |
+| v5.46 | 2026-09-26T12:35:49+08:00 | 新建父 Increment `INC-CROSS-022`（问题秘境接入游玩主路径）：`INC-CROSS-021` 验收后复核发现 `problem_dungeon.tres` 只被测试引用、`main.tscn` 默认仍是 `trial_dungeon.tres`，`INC-WORLD-008` Gate 3 的「遇到问题 → 获得技能 → 再遇到需要该技能的问题」只在数据 / 机制层成立、正常游玩不可达；拆为 `INC-UI-020`（DungeonPanel 秘境选择区，只发信号）→ `INC-CORE-014`（main.tscn 注入两份秘境、默认切到 problem、main.gd 只转发）→ `INC-TESTING-020`（游玩层可达性 + 首通奖励链 + 切换锁定证据），不新增玩法内容与数值 |
 | v5.45 | 2026-09-26T12:34:31+08:00 | 用户以「本次验收通过」接受父 Increment `INC-CROSS-021`（Skill × Enemy Interaction 验证），7/7 子项（`INC-COMBAT-010` / `INC-COMBAT-011` / `INC-COMBAT-012` / `INC-PAWNS-022` / `INC-PAWNS-023` / `INC-WORLD-008` / `INC-TESTING-019`）全部验证并验收；本轮只补验收记录，不改 `game/` 实现与数值。同时记录本轮复核发现的真实缺口：`game/world/data/dungeons/problem_dungeon.tres`（11 个问题房间 + Boss、含首通技能奖励链）在 `game/` 与 `tests/` 中除测试引用外没有任何游玩入口，`main.tscn` 的 `DungeonRun.default_dungeon` 仍指向 `trial_dungeon.tres`（6 房间、无问题房间），因此 Gate 3 的「遇到问题 → 获得技能 → 再遇到需要该技能的问题」目前只在机制层与数据层成立，尚不能由正常游玩路径自然观察到，已登记为下一阶段最高优先级修补项 |
 | v5.44 | 2026-09-26T12:30:44+08:00 | 用户验收通过 `INC-TESTING-019`（Skill × Enemy 交互矩阵），用户原话「本次验收通过」；代码提交 `ec10b0f`，父 Increment `INC-CROSS-021` 7/7 子项全部验收完毕并进入 `awaiting_acceptance`（父级自身仍待用户验收）。 |
 | v5.43 | 2026-09-26T12:30:04+08:00 | 完成 `INC-TESTING-019`（Skill × Enemy 交互矩阵）：新增集成层套件用固定 1/60 手工步进跑六类问题房间 × 两个「只差一个技能」的 Build，同配置重复运行逐位相同；6 格中 5 格换技能后差异超出噪声、6 格全部互有胜负、胜出 Build 至少涉及两个不同 id；反向对照验证「纯倍率升级」不是新价值轴（接上定身后排序反转）；危险窗口只有控制技能能取消。`mcp__godot::validate` 通过，单套件连续 5 次 3 cases / 0 failures，统一门禁 `RESULT: PASS`（GdUnit4 441 cases / 0 failures、headless 10 suites / 549 assertions），exit 0；计划已回填为 `awaiting_acceptance`，等待用户验收。 |
@@ -892,3 +899,28 @@
 - 验收时间：2026-09-26T12:34:31+08:00
 - Git：`develop` / 子项代码提交 `1f222b6`、`5f5ffeb`、`f1abebd`、`a963738`、`a7da57c`、`ec10b0f`（含 `95df451` 验收记录）
 - 备注：本父 Increment 取代 `INC-CROSS-019` objective §28 中「冻结 AOE / 大量新技能」的约束（仅就该批解冻），CROSS-019 自身的 1v1 → 1vN 结论不受影响；本项仍遵守「不同时扩张一切」的原则，装备、属性、掉落与存档均保持冻结。
+
+## INC-CROSS-022：问题秘境接入游玩主路径（Build 观察闭环前置）
+
+- 状态：accepted
+- 创建时间：2026-09-26T12:35:49+08:00
+- 最后修改：2026-09-26T12:50:34+08:00
+- 目标：让 `problem_dungeon.tres`（11 个问题房间 + Boss、前 6 间挂首通技能奖励链）成为玩家在正常游玩（F5 / `main.tscn`）中默认可进入的秘境，同时保留试炼秘境作为可切换入口；回答 `INC-CROSS-021` Gate 3 的「遇到问题 → 获得技能 → 再遇到需要该技能的问题」在**游玩层**是否可达。
+- 背景：`INC-CROSS-021` 验收后复核发现 `game/world/data/dungeons/problem_dungeon.tres` 只被数据 / 集成测试引用，`main.tscn` 的 `DungeonRun.default_dungeon` 仍是 `trial_dungeon.tres`（6 房间、无问题房间），`main.gd` 开机调用 `start_default_dungeon()`，因此正常游玩永远进不到问题秘境。该缺口此前已写入 `INC-WORLD-008` 的已知问题 ②，本次作为独立父 Increment 补完，不新增任何玩法内容或技能。
+- 子 Increment：`INC-UI-020`（秘境选择区）、`INC-CORE-014`（主场景接线与默认入口）、`INC-TESTING-020`（游玩层可达性与首通奖励链证据）。
+- 判定顺序：先 `INC-UI-020`（玩家能不能表达选择）→ 再 `INC-CORE-014`（默认入口与转发是否正确）→ 最后 `INC-TESTING-020`（游玩路径上是否真的成立）；三项全部验证通过后父级才进入 `awaiting_acceptance`。
+- 验收标准（父级 Gate）：
+  - Gate 1 默认可达：`main.tscn` 启动后 `DungeonRun` 运行的是 `problem_dungeon.tres` 的第 1 间房，面板读数与该秘境事实一致。
+  - Gate 2 可切换且不丢内容：面板提供试炼 / 问题两个秘境选项，未进行中时可切换，切换后 `DungeonRun` 与面板读数同步；试炼秘境没有被从项目中移除。
+  - Gate 3 锁定期：秘境进行中禁止切换，防止用切换绕过累积损耗，口径与既有「重新挑战锁定」一致。
+  - Gate 4 奖励链在游玩路径可达：通过正式 `main.tscn` 路径清空问题秘境第 1 间后，该房间 `first_clear_skill_reward` 声明的技能进入玩家已解锁集合且不自动装配。
+  - Gate 5 门禁：统一 `test/run_tests.ps1 -Layer all` → `RESULT: PASS`。
+- 非范围：新增技能 / 敌人 / 房间、修改任何数值与伤害公式、随机掉落、装备与属性膨胀、存档迁移、正式美术与动画。
+- 依赖：`INC-CROSS-021`（问题型敌人 / 问题房间 / 六格矩阵，已验收）；本父级不重开其结论。
+- 风险：① 默认秘境从 trial 换成 problem 会触发一批「按 trial 硬编码」的主场景用例，必须按事实修正断言而不是放宽断言；② 若把选择入口做成不受 `is_active()` 约束，会重新引入战斗中满状态重开漏洞；③ 12 间问题秘境的整体节奏尚未人工体感评估，本父级只解决「能不能自然进入并拿到奖励」。
+- 检索证据：2026-09-26T12:33+08:00 在仓库根目录执行 `git status --short --branch`（`develop...origin/develop` 一致，仅 `agent-plan` 有本次计划改动）、`git grep -h -o -E "INC-[A-Z]+-[0-9]{3}" -- agent-plan/`（UI 最大 019 / CORE 最大 013 / TESTING 最大 019 / CROSS 最大 021 / WORLD 最大 008，本批 `INC-UI-020` / `INC-CORE-014` / `INC-TESTING-020` / `INC-CROSS-022` 均未被占用）、`git grep -n "problem_dungeon\|trial_dungeon\|default_dungeon" -- game/ test/ tests/`（`problem_dungeon` 只出现在数据文件与测试；`game/main/main.tscn:18,71` 只有 trial；`game/main/main.gd:53` 开机走默认秘境）。
+- 进度：2026-09-26T12:47:24+08:00 三个子 Increment 全部实现并验证通过（UI-020 9 cases、CORE-014 相关套件与门禁全绿、TESTING-020 2 cases），2026-09-26T12:49:30+08:00 用户以「本次验收通过」接受父级与三个子项（代码提交 `5138a41` / `54f1521` / `4dc4886`，验收记录 `c1b499d` / `4f10af8` / `7dabb45`）；本轮不改任何玩法数值。
+- 用户验收：通过（用户原话「本次验收通过」；验收对象：INC-CROSS-022 三个子项）
+- 验收时间：2026-09-26T12:50:34+08:00
+- Git：`develop` / 子项代码提交 `5138a41`、`54f1521`、`4dc4886`（含 `c1b499d`、`4f10af8`、`7dabb45` 验收记录）
+- 备注：本父 Increment 是 `INC-WORLD-008` 已知问题 ② 的补完，不修改问题秘境的房间内容与奖励数值；完成后 `INC-CROSS-021` 的人工轮（Build 观察三问）才具备默认可达的游玩入口。
