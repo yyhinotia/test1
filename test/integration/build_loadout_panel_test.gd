@@ -14,6 +14,11 @@ const PLAYER_DATA_PATH: String = "res://game/pawns/data/player_pawn.tres"
 const SWORD_SKILL_PATH: String = "res://game/pawns/data/player_sword_skill.tres"
 const GUARD_SKILL_PATH: String = "res://game/pawns/data/player_guard_skill.tres"
 const BINDING_SKILL_PATH: String = "res://game/pawns/data/skills/player_binding_skill.tres"
+const DASH_SKILL_PATH: String = "res://game/pawns/data/skills/player_dash_skill.tres"
+const SWORD_AOE_SKILL_PATH: String = "res://game/pawns/data/skills/player_sword_aoe_skill.tres"
+const LIFESTEAL_SKILL_PATH: String = "res://game/pawns/data/skills/player_lifesteal_skill.tres"
+const REJUVENATION_SKILL_PATH: String = "res://game/pawns/data/skills/player_rejuvenation_skill.tres"
+const BREAKING_SLASH_PATH: String = "res://game/pawns/data/skills/player_breaking_slash.tres"
 const BAR_SCENE_PATH: String = "res://game/ui/skill_bar.tscn"
 
 
@@ -41,12 +46,14 @@ func _spawn_pawn(preset: Array[ActiveSkillDefinition]) -> Pawn:
 	return pawn
 
 
-func _spawn_panel(preset_a: Array[ActiveSkillDefinition], preset_b: Array[ActiveSkillDefinition]) -> BuildLoadoutPanel:
+func _spawn_panel(preset_a: Array[ActiveSkillDefinition], preset_b: Array[ActiveSkillDefinition], pool: Array[ActiveSkillDefinition] = []) -> BuildLoadoutPanel:
 	var scene: PackedScene = load(PANEL_SCENE_PATH) as PackedScene
 	var panel: BuildLoadoutPanel = scene.instantiate() as BuildLoadoutPanel
 	# 预设在入树前赋值：按钮在 _ready() 里生成，之后只由 refresh() 改文案与可用性。
 	panel.preset_a = preset_a
 	panel.preset_b = preset_b
+	# 自定义技能池同样在入树前赋值：_ready() 里一次性生成行，运行期只由 refresh() 改可用性。
+	panel.available_skills = pool
 	auto_free(panel)
 	add_child(panel)
 	return panel
@@ -240,13 +247,27 @@ func test_non_interactive_background_lets_battlefield_clicks_through() -> void:
 	var sword: ActiveSkillDefinition = _skill(SWORD_SKILL_PATH)
 	var guard: ActiveSkillDefinition = _skill(GUARD_SKILL_PATH)
 	var binding: ActiveSkillDefinition = _skill(BINDING_SKILL_PATH)
-	var panel: BuildLoadoutPanel = _spawn_panel([sword, guard], [sword, binding])
+	var pawn: Pawn = _spawn_pawn([sword, guard])
+	var panel: BuildLoadoutPanel = _spawn_panel([sword, guard], [sword, binding], [sword, guard, binding])
+	panel.bind_pawn(pawn)
 
 	assert_int(panel.mouse_filter).is_equal(Control.MOUSE_FILTER_IGNORE)
 	assert_int((panel.get_node("Rows") as Control).mouse_filter).is_equal(Control.MOUSE_FILTER_IGNORE)
 	assert_int((panel.get_node("StatusLabel") as Control).mouse_filter).is_equal(Control.MOUSE_FILTER_IGNORE)
-	for preset_id: StringName in panel.get_preset_ids():
-		assert_int(panel.get_preset_button(preset_id).mouse_filter).is_equal(Control.MOUSE_FILTER_STOP)
+	# INC-UI-021：不可操作按钮（未解锁 / 当前 Build / 战斗中）必须让战场点击穿透，
+	# 只有真正可点的按钮才拦截鼠标，避免增高的 Build 面板挡住左键操作。
+	assert_int(panel.get_preset_button(BuildLoadoutPanel.PRESET_A_ID).mouse_filter).is_equal(Control.MOUSE_FILTER_IGNORE)
+	assert_int(panel.get_preset_button(BuildLoadoutPanel.PRESET_B_ID).mouse_filter).is_equal(Control.MOUSE_FILTER_IGNORE)
+	assert_int(panel.get_skill_button(binding).mouse_filter).is_equal(Control.MOUSE_FILTER_IGNORE)
+
+	assert_bool(pawn.learn_active_skill(binding)).is_true()
+	assert_int(panel.get_preset_button(BuildLoadoutPanel.PRESET_B_ID).mouse_filter).is_equal(Control.MOUSE_FILTER_STOP)
+	assert_int(panel.get_skill_button(binding).mouse_filter).is_equal(Control.MOUSE_FILTER_STOP)
+
+	panel.set_switch_locked(true)
+	assert_int(panel.get_preset_button(BuildLoadoutPanel.PRESET_B_ID).mouse_filter).is_equal(Control.MOUSE_FILTER_IGNORE)
+	assert_int(panel.get_skill_button(binding).mouse_filter).is_equal(Control.MOUSE_FILTER_IGNORE)
+	assert_int(panel.get_apply_button().mouse_filter).is_equal(Control.MOUSE_FILTER_IGNORE)
 
 
 ## 主场景接线：production 两套预设来自 main.tscn，开局战斗进行中即处于锁定态。
@@ -263,5 +284,153 @@ func test_main_scene_wires_production_presets_and_locks_during_combat() -> void:
 	])
 	assert_array(_skill_ids(panel.get_preset_skills(BuildLoadoutPanel.PRESET_B_ID))).contains_exactly([
 		"sword_strike", "binding_spell",
+	])
+	assert_bool(panel.is_switch_locked()).is_true()
+
+## INC-TESTING-021：自定义 Build 编辑器把完整技能池按「已解锁 / 未解锁」呈现，
+## 待选上限直接来自 Pawn 的境界容量，解锁不会自动进入待选或装配。
+func test_custom_build_lists_full_pool_and_locks_unlearned_skills() -> void:
+	var sword: ActiveSkillDefinition = _skill(SWORD_SKILL_PATH)
+	var guard: ActiveSkillDefinition = _skill(GUARD_SKILL_PATH)
+	var binding: ActiveSkillDefinition = _skill(BINDING_SKILL_PATH)
+	var dash: ActiveSkillDefinition = _skill(DASH_SKILL_PATH)
+	var aoe: ActiveSkillDefinition = _skill(SWORD_AOE_SKILL_PATH)
+	var lifesteal: ActiveSkillDefinition = _skill(LIFESTEAL_SKILL_PATH)
+	var rejuvenation: ActiveSkillDefinition = _skill(REJUVENATION_SKILL_PATH)
+	var breaking: ActiveSkillDefinition = _skill(BREAKING_SLASH_PATH)
+	var pawn: Pawn = _spawn_pawn([sword, guard])
+	var panel: BuildLoadoutPanel = _spawn_panel(
+		[sword, guard], [sword, binding],
+		[sword, guard, binding, dash, aoe, lifesteal, rejuvenation, breaking])
+	panel.bind_pawn(pawn)
+
+	assert_array(_skill_ids(panel.get_available_skills())).contains_exactly([
+		"sword_strike", "guard_true_qi", "binding_spell", "dash_step",
+		"sword_aoe", "blood_drain", "rejuvenation", "breaking_slash",
+	])
+	assert_int(panel.get_custom_capacity()).is_equal(2)
+	assert_array(_skill_ids(panel.get_pending_skills())).contains_exactly(["sword_strike", "guard_true_qi"])
+	assert_str(panel.get_skill_marker_text(sword)).is_equal("已选")
+	assert_str(panel.get_skill_marker_text(guard)).is_equal("已选")
+	assert_str(panel.get_skill_marker_text(binding)).is_equal("未解锁")
+	assert_bool(panel.get_skill_button(binding).disabled).is_true()
+	assert_bool(panel.get_skill_button(dash).disabled).is_true()
+	assert_str(panel.get_custom_hint_text()).contains("已选 2 / 2")
+
+
+## 容量满时新增点选必须被拒绝（原因可复核、待选与装配零副作用），取消一个后才允许换入新技能。
+func test_capacity_full_rejects_extra_selection_without_mutation() -> void:
+	var sword: ActiveSkillDefinition = _skill(SWORD_SKILL_PATH)
+	var guard: ActiveSkillDefinition = _skill(GUARD_SKILL_PATH)
+	var binding: ActiveSkillDefinition = _skill(BINDING_SKILL_PATH)
+	var pawn: Pawn = _spawn_pawn([sword, guard])
+	var panel: BuildLoadoutPanel = _spawn_panel([sword, guard], [sword, binding], [sword, guard, binding])
+	panel.bind_pawn(pawn)
+	assert_bool(pawn.learn_active_skill(binding)).is_true()
+
+	panel.get_skill_button(binding).pressed.emit()
+
+	assert_str(panel.get_last_reason()).is_equal(BuildLoadoutPanel.REASON_CAPACITY_FULL)
+	assert_array(_skill_ids(panel.get_pending_skills())).contains_exactly(["sword_strike", "guard_true_qi"])
+	assert_array(_skill_ids(pawn.get_equipped_active_skills())).contains_exactly(["sword_strike", "guard_true_qi"])
+	assert_bool(pawn.has_explicit_active_skill_loadout()).is_false()
+
+	panel.get_skill_button(guard).pressed.emit()
+	assert_array(_skill_ids(panel.get_pending_skills())).contains_exactly(["sword_strike"])
+	panel.get_skill_button(binding).pressed.emit()
+	assert_array(_skill_ids(panel.get_pending_skills())).contains_exactly(["sword_strike", "binding_spell"])
+	assert_bool(panel.apply_custom_loadout()).is_true()
+	assert_array(_skill_ids(pawn.get_equipped_active_skills())).contains_exactly(["sword_strike", "binding_spell"])
+	assert_bool(pawn.has_explicit_active_skill_loadout()).is_true()
+
+
+## 非 A/B 预设组合（护体真气 + 回春术）必须能通过自定义编辑器真实装配，证明 Build 表达不再被预设锁死。
+func test_custom_build_applies_non_preset_combination() -> void:
+	var sword: ActiveSkillDefinition = _skill(SWORD_SKILL_PATH)
+	var guard: ActiveSkillDefinition = _skill(GUARD_SKILL_PATH)
+	var binding: ActiveSkillDefinition = _skill(BINDING_SKILL_PATH)
+	var rejuvenation: ActiveSkillDefinition = _skill(REJUVENATION_SKILL_PATH)
+	var pawn: Pawn = _spawn_pawn([sword, guard])
+	var panel: BuildLoadoutPanel = _spawn_panel([sword, guard], [sword, binding], [sword, guard, binding, rejuvenation])
+	panel.bind_pawn(pawn)
+	assert_bool(pawn.learn_active_skill(rejuvenation)).is_true()
+	var results: Array = []
+	panel.custom_loadout_applied.connect(func(_p: Pawn, skills: Array[ActiveSkillDefinition], success: bool, reason: String) -> void:
+		results.append({"ids": _skill_ids(skills), "success": success, "reason": reason})
+	)
+
+	# 取消御剑斩，换入回春术：待选 = [护体真气, 回春术]，既不是 Build A 也不是 Build B。
+	panel.get_skill_button(sword).pressed.emit()
+	panel.get_skill_button(rejuvenation).pressed.emit()
+	assert_array(_skill_ids(panel.get_pending_skills())).contains_exactly(["guard_true_qi", "rejuvenation"])
+
+	assert_bool(panel.apply_custom_loadout()).is_true()
+
+	assert_array(_skill_ids(pawn.get_equipped_active_skills())).contains_exactly(["guard_true_qi", "rejuvenation"])
+	assert_bool(pawn.has_explicit_active_skill_loadout()).is_true()
+	assert_str(String(panel.get_active_preset_id())).is_equal("")
+	assert_int(results.size()).is_equal(1)
+	assert_bool(results[0].get("success", false)).is_true()
+	assert_str(results[0].get("reason", "?")).is_equal(BuildLoadoutPanel.REASON_NONE)
+	assert_array(results[0].get("ids", []) as Array).contains_exactly(["guard_true_qi", "rejuvenation"])
+
+
+## 解锁新技能只让对应行变成可选：不自动进入待选、不自动装配（沿用 INC-WORLD-007 口径）。
+func test_unlocking_skill_does_not_auto_select_or_equip() -> void:
+	var sword: ActiveSkillDefinition = _skill(SWORD_SKILL_PATH)
+	var guard: ActiveSkillDefinition = _skill(GUARD_SKILL_PATH)
+	var binding: ActiveSkillDefinition = _skill(BINDING_SKILL_PATH)
+	var pawn: Pawn = _spawn_pawn([sword, guard])
+	var panel: BuildLoadoutPanel = _spawn_panel([sword, guard], [sword, binding], [sword, guard, binding])
+	panel.bind_pawn(pawn)
+
+	assert_bool(pawn.learn_active_skill(binding)).is_true()
+
+	assert_str(panel.get_skill_marker_text(binding)).is_equal("可选")
+	assert_bool(panel.get_skill_button(binding).disabled).is_false()
+	assert_array(_skill_ids(panel.get_pending_skills())).contains_exactly(["sword_strike", "guard_true_qi"])
+	assert_array(_skill_ids(pawn.get_equipped_active_skills())).contains_exactly(["sword_strike", "guard_true_qi"])
+	assert_bool(pawn.has_explicit_active_skill_loadout()).is_false()
+
+
+## 战斗中锁定：自定义点选与应用都必须零副作用；解除锁定后同一路径立即可用。
+func test_switch_lock_blocks_custom_selection_and_apply() -> void:
+	var sword: ActiveSkillDefinition = _skill(SWORD_SKILL_PATH)
+	var guard: ActiveSkillDefinition = _skill(GUARD_SKILL_PATH)
+	var binding: ActiveSkillDefinition = _skill(BINDING_SKILL_PATH)
+	var pawn: Pawn = _spawn_pawn([sword, guard])
+	var panel: BuildLoadoutPanel = _spawn_panel([sword, guard], [sword, binding], [sword, guard, binding])
+	panel.bind_pawn(pawn)
+	assert_bool(pawn.learn_active_skill(binding)).is_true()
+
+	panel.set_switch_locked(true)
+	panel.get_skill_button(guard).pressed.emit()
+	assert_str(panel.get_last_reason()).is_equal(BuildLoadoutPanel.REASON_SWITCH_LOCKED)
+	assert_array(_skill_ids(panel.get_pending_skills())).contains_exactly(["sword_strike", "guard_true_qi"])
+	assert_bool(panel.apply_custom_loadout()).is_false()
+	assert_str(panel.get_last_reason()).is_equal(BuildLoadoutPanel.REASON_SWITCH_LOCKED)
+	assert_array(_skill_ids(pawn.get_equipped_active_skills())).contains_exactly(["sword_strike", "guard_true_qi"])
+	assert_bool(panel.get_apply_button().disabled).is_true()
+
+	panel.set_switch_locked(false)
+	panel.get_skill_button(guard).pressed.emit()
+	panel.get_skill_button(binding).pressed.emit()
+	assert_bool(panel.apply_custom_loadout()).is_true()
+	assert_array(_skill_ids(pawn.get_equipped_active_skills())).contains_exactly(["sword_strike", "binding_spell"])
+
+
+## 生产入口（INC-CORE-015）：main.tscn 必须把 8 个玩家技能全部接进自定义技能池，
+## 不能只接 A/B 预设用到的 3 个技能。
+func test_main_scene_wires_full_eight_skill_pool() -> void:
+	var main: Node2D = (load(MAIN_SCENE_PATH) as PackedScene).instantiate() as Node2D
+	auto_free(main)
+	add_child(main)
+	await await_idle_frame()
+	var panel: BuildLoadoutPanel = main.get_node_or_null("HUD/BuildLoadoutPanel") as BuildLoadoutPanel
+
+	assert_object(panel).is_not_null()
+	assert_array(_skill_ids(panel.get_available_skills())).contains_exactly([
+		"sword_strike", "guard_true_qi", "binding_spell", "dash_step",
+		"sword_aoe", "blood_drain", "rejuvenation", "breaking_slash",
 	])
 	assert_bool(panel.is_switch_locked()).is_true()

@@ -738,3 +738,32 @@
 - 验收时间：2026-09-26T12:49:30+08:00
 - Git：`develop` / `4dc4886`
 - 备注：父 Increment 为 `INC-CROSS-022`；本项只产出游玩层可达性证据，玩家是否因此自然重构 Build 仍需人工轮与 `INC-CROSS-021` 的三问回答。
+## INC-TESTING-021：自定义 Build 编辑器行为证据（非预设组合可装配）
+
+- 状态：awaiting_acceptance
+- 创建时间：2026-09-26T12:52:10+08:00
+- 最后修改：2026-09-26T12:58:44+08:00
+- 主题：testing
+- 父 Increment：`INC-CROSS-023`
+- 目标：用自动化证据证明「未解锁不可选、容量由 Pawn 裁决、显式应用才装配、解锁不自动装配、战斗中锁定」这几条自由 Build 编辑器契约成立，并至少给出一组非 A/B 预设组合被真实装配的证据。
+- 验收标准：
+  - 未解锁技能行禁用；已解锁技能行可点选；达到容量后再点未选技能被拒绝（`capacity_full`）且待选集合不变。
+  - 点击「应用」后 `Pawn.get_equipped_active_skills()` 与待选集合一致；至少一组非预设组合（例如护体真气 + 回春术，或范围剑气 + 踏风突进）被真实装配，证明不是 A/B 预设复制。
+  - 新解锁技能只让该行变可点，不进入待选、不改变当前装配。
+  - `set_switch_locked(true)` 时点选与应用都不产生装配变化；解除后恢复。
+  - 统一门禁 `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` → `RESULT: PASS`；新增 / 扩展套件 `0 failures`。
+- 范围：`test/integration/build_loadout_panel_test.gd`、必要的 `test/gameplay/` 用例。
+- 非范围：人工体验结论、数值平衡、重跑 `INC-TESTING-019` 的六格矩阵、改任何玩法数值。
+- 依赖：`INC-UI-021`、`INC-CORE-015`。
+- 风险：① 面板行是动态生成，测试必须用稳定查询 API 或稳定节点名，不得依赖节点顺序；② 「已掌握」与「已装配」必须分别断言，防止把解锁误判为装配；③ gameplay 层实例化 `main.tscn` 会继承既有 orphan 债务，优先在 integration 层取证。
+- 检索证据：2026-09-26T12:52:10+08:00 `Get-ChildItem test -Recurse -Filter '*.gd' | Select-String 'BuildLoadoutPanel|build_switch_attempted|preset_a|set_active_skill_loadout'` 确认既有覆盖集中在 `test/integration/build_loadout_panel_test.gd`、`test/gameplay/build_replay_loop_test.gd`、`test/unit/pawn_active_skill_loadout_test.gd` 与 `test/tools/capture_build_loadout_panel_evidence.gd`；这些用例只覆盖 A/B 预设与 Pawn 层容量，没有覆盖「从技能池自选组合并应用」。
+- 实现说明：`test/integration/build_loadout_panel_test.gd` 从 9 例扩到 15 例，新增 6 例覆盖自由 Build 契约：`test_custom_build_lists_full_pool_and_locks_unlearned_skills`（8 行技能池 + 未解锁禁用）、`test_capacity_full_rejects_extra_selection_without_mutation`（容量满拒绝 `capacity_full` 且待选 / 装配均不变）、`test_custom_build_applies_non_preset_combination`（护体真气 + 回春术这组非 A/B 预设组合经「应用」后真实写回 `Pawn.get_equipped_active_skills()`）、`test_unlocking_skill_does_not_auto_select_or_equip`（解锁只让行变可点）、`test_switch_lock_blocks_custom_selection_and_apply`（锁定时选择与应用均无效）、`test_main_scene_wires_full_eight_skill_pool`（生产入口 8 技能池）；另在 `test_non_interactive_background_lets_battlefield_clicks_through` 补不可操作按钮穿透断言。
+- 变更文件：`test/integration/build_loadout_panel_test.gd`（267 → 约 480 行）。
+- 测试证据：`mcp__godot::validate` → `valid: true`；单套件 `test/integration/build_loadout_panel_test.gd` → `15 test cases | 0 errors | 0 failures | 0 orphans`；`reports/gdunit/integration/report_131/results.xml` 中 `build_loadout_panel_test tests=15 failures=0 errors=0`；统一门禁 `test/run_tests.ps1 -Layer all` → `RESULT: PASS`（GdUnit4 451 cases / 0 failures，较本批前的 445 增 6 例；headless 10 suites / 549 assertions / 0 failing suites，exit 0）。
+- 验证状态：验证通过
+- 验证时间：2026-09-26T12:58:44+08:00
+- 已知问题：① 用例只覆盖 integration 层面板契约，「玩家拿到技能后是否愿意换 Build」仍属人工轮；② 非预设组合只取容量内一组（护体真气 + 回春术），未穷举 C(8,2)=28 种组合；③ gameplay 层实例化 `main.tscn` 的 orphan 债务沿用既有说明，本次 integration 层 0 orphans。
+- 用户验收：待验收
+- 验收时间：待验收
+- Git：待提交
+- 备注：父 Increment 为 `INC-CROSS-023`；本项只证明编辑器行为真实成立，不能代替「玩家是否自然重构 Build」的人工结论。
