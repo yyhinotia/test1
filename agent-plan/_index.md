@@ -1,6 +1,6 @@
 # Agent Plan Index
 
-> 最后修改：2026-09-26T12:30:04+08:00
+> 最后修改：2026-09-26T12:30:44+08:00
 > 规则来源：`../AGENTS.md`
 
 ## 主题索引
@@ -18,7 +18,7 @@
 | 音频 | `audio.md` | 未创建 | - | - |
 | 核心 | `core.md` | 已验收（输入路由） | `INC-CORE-013` | 2026-09-26T01:48:20+08:00 |
 | 工具 | `tools.md` | 已验收 | `INC-TOOLS-002` | 2026-09-25T13:54:46+08:00 |
-| 测试 | `testing.md` | 待验收 | `INC-TESTING-019` | 2026-09-26T12:30:04+08:00 |
+| 测试 | `testing.md` | 已验收 | `INC-TESTING-019` | 2026-09-26T12:30:44+08:00 |
 
 ## 跨主题父 Increment
 
@@ -44,7 +44,7 @@
 | `INC-CROSS-018` | `in_progress` | `INC-CULT-005`、`INC-PAWNS-019`、`INC-WORLD-006`、`INC-UI-017`、`INC-CORE-011`、`INC-TESTING-010` | 突破 → Build 重构：突破执行、运行时境界覆盖、跨遭遇延续、玩家入口与再战证据 | 进行中（4/6 子项已验收） | 待验收 | 2026-09-25T20:39:32+08:00 |
 | `INC-CROSS-019` | `accepted` | `INC-COMBAT-009`、`INC-PAWNS-021`、`INC-WORLD-007`、`INC-UI-018`、`INC-TESTING-011`、`INC-TESTING-012`、`INC-TESTING-013`、`INC-TESTING-014`、`INC-TESTING-015`、`INC-TESTING-016`、`INC-TESTING-017`（已实现前置：`INC-PAWNS-020` 多单位运行时；已退役：`INC-CORE-012`） | 1v1 → 1vN Build 玩法验证（Build Gameplay Validation） | 验证通过（Gate 0 机制层 + 1v1 首通奖励、Build 切换面板与跨遭遇延续、`tests/` 场景化人工入口、Build Replay 自动化证据与 Round 1/2 客观对照、Stage 2 `1v1 / 1v2 / 1v3` 运行时终局收敛与重开清洁、测试入口自证（横幅 / 名牌 / `enemy_names` / `run_scenario.ps1`）） | 已验收 | 2026-09-26T02:09:20+08:00 |
 | `INC-CROSS-020` | `accepted` | `INC-CORE-013`、`INC-UI-019`、`INC-TESTING-018` | 左键统一操作模型：选择 / 移动 / 技能目标选择，选中敌方显示敌方信息 | 验证通过（gameplay 输入路由用例 + 统一门禁 `RESULT: PASS` + 真实窗口与 OS 级鼠标输入冒烟） | 已验收 | 2026-09-26T01:48:20+08:00 |
-| `INC-CROSS-021` | `awaiting_acceptance` | `INC-COMBAT-010`、`INC-COMBAT-011`、`INC-COMBAT-012`、`INC-PAWNS-022`、`INC-PAWNS-023`、`INC-WORLD-008`、`INC-TESTING-019` | Skill × Enemy Interaction 验证：技能池 / 问题型敌人 / 问题房间 | 通过（7/7 子项验证通过：`INC-COMBAT-010` / `INC-PAWNS-022` / `INC-COMBAT-011` / `INC-COMBAT-012` / `INC-PAWNS-023` / `INC-WORLD-008` 已验收，`INC-TESTING-019` 待验收） | 待验收 | 2026-09-26T12:30:04+08:00 |
+| `INC-CROSS-021` | `awaiting_acceptance` | `INC-COMBAT-010`、`INC-COMBAT-011`、`INC-COMBAT-012`、`INC-PAWNS-022`、`INC-PAWNS-023`、`INC-WORLD-008`、`INC-TESTING-019` | Skill × Enemy Interaction 验证：技能池 / 问题型敌人 / 问题房间 | 通过（7/7 子项全部验证并验收：`INC-COMBAT-010` / `INC-PAWNS-022` / `INC-COMBAT-011` / `INC-COMBAT-012` / `INC-PAWNS-023` / `INC-WORLD-008` / `INC-TESTING-019`） | 待验收（父级） | 2026-09-26T12:30:44+08:00 |
 
 ### INC-CROSS-001：第一个 Pawn MVP
 
@@ -461,7 +461,7 @@
 | `INC-PAWNS-022` | `INC-CROSS-021` | pawns | `accepted` | 玩家技能池扩到六类价值轴（保持 2 槽） | 2026-09-26T02:01:11+08:00 | 验证通过（unit 10 cases / 0 failures，六技能 id / effect_type 唯一且覆盖六类价值轴；统一门禁 GdUnit4 415 cases / 0 failures + headless 549 assertions，`RESULT: PASS`，exit 0） | 已验收 | `develop` / `0f20ed2` |
 | `INC-PAWNS-023` | `INC-CROSS-021` | pawns | `accepted` | 玩家技能池扩到 8 个（条件爆发 + 主动回复） | 2026-09-26T11:50:07+08:00 | 验证通过（catalog 12 cases + runtime 5 cases / 0 failures；八技能价值轴互不重复、破军斩受控 3.36× 反超御剑斩 1.8× 且未受控 1.4× 更弱、回春术 55 点自疗、炼气期仍 2 槽；统一门禁 GdUnit4 429 cases / 0 failures + headless 549 assertions，`RESULT: PASS`，exit 0） | 已验收 | `develop` / `a963738` |
 | `INC-WORLD-008` | `INC-CROSS-021` | world | `accepted` | 秘境问题房间（按战斗问题组合） | 2026-09-26T11:58:09+08:00 | 验证通过（12 间问题房间；六类问题型全覆盖；前 6 间首通技能链；同一 Build 的高防 / 高爆发房间差异可复现；奖励单调；统一门禁 GdUnit4 438 cases / 0 failures + headless 549 assertions，`RESULT: PASS`，exit 0） | 已验收 | `develop` / `a7da57c` |
-| `INC-TESTING-019` | `INC-CROSS-021` | testing | `awaiting_acceptance` | Skill × Enemy 交互矩阵（同一 Build 面对不同问题） | 2026-09-26T12:30:04+08:00 | 验证通过（单套件 3 cases / 0 failures / 0 orphans，连续 5 次跨进程重跑一致方向；六格矩阵 5 格差异超噪声、6 格互有胜负、胜出 Build ≥2 个；数值 × 条件轴反向对照成立；统一门禁 `RESULT: PASS`，GdUnit4 441 cases / 0 failures） | 待验收 | 待提交 |
+| `INC-TESTING-019` | `INC-CROSS-021` | testing | `accepted` | Skill × Enemy 交互矩阵（同一 Build 面对不同问题） | 2026-09-26T12:30:44+08:00 | 验证通过（单套件 3 cases / 0 failures / 0 orphans，连续 5 次跨进程重跑一致方向；六格矩阵 5 格差异超噪声、6 格互有胜负、胜出 Build ≥2 个；数值 × 条件轴反向对照成立；统一门禁 `RESULT: PASS`，GdUnit4 441 cases / 0 failures） | 已验收 | `develop` / `ec10b0f` |
 | `INC-SECT-001` | `INC-CROSS-017` | sect | `accepted` | 宗门设施静态定义与六座设施数据 | 2026-09-25T19:38:41+08:00 | 通过 | 已验收 | `main` / `c25ffbc` |
 | `INC-SECT-002` | `INC-CROSS-017` | sect | `accepted` | SectState 运行时：库存 / 设施等级 / 升级 / 修炼 / 收获 | 2026-09-25T19:38:41+08:00 | 通过 | 已验收 | `main` / `8c65ff1` |
 | `INC-SECT-003` | `INC-CROSS-017` | sect | `accepted` | 转化设施：藏经阁参悟 / 炼器房强化 / 丹房炼丹 | 2026-09-25T19:38:41+08:00 | 通过 | 已验收 | `main` / `9c97ef9` |
@@ -632,6 +632,7 @@
 | v5.41 | 2026-09-26T11:58:09+08:00 | 用户验收通过 `INC-WORLD-008`（秘境问题房间），用户原话「本次验收通过」；代码提交 `a7da57c`，父 Increment `INC-CROSS-021` 子项进度推进到 6/7 已验收，仅剩 `INC-TESTING-019`。 |
 | v5.42 | 2026-09-26T12:01:09+08:00 | 启动 `INC-TESTING-019`（Skill × Enemy 交互矩阵）：用确定性驱动对 6 类问题型敌人记录适用 / 不适用技能的通关耗时、剩余生命、灵力消耗，并要求至少 2 组换技能差异；同时显式区分纯数值升级与价值轴变化。 |
 | v5.39 | 2026-09-26T02:25:25+08:00 | 完成 `INC-COMBAT-012`（条件伤害：`controlled_bonus_multiplier` 默认 1.0、只作用于 DAMAGE、受控时按 `effect_value × 倍率` 结算）与 `INC-PAWNS-023`（玩家技能池扩到 8 个：破军斩走条件爆发轴、回春术补首个主动回复轴，炼气期仍 2 槽 / C(8,2)=28）：`mcp__godot::validate` 全通过，单套件 unit 8 + integration 10 + catalog 12 + runtime 5 cases 均 0 failures，统一门禁 `RESULT: PASS`（GdUnit4 429 cases / 0 failures、headless 10 suites / 549 assertions），exit 0；计划已回填为 `awaiting_acceptance`，等待用户验收。 |
+| v5.44 | 2026-09-26T12:30:44+08:00 | 用户验收通过 `INC-TESTING-019`（Skill × Enemy 交互矩阵），用户原话「本次验收通过」；代码提交 `ec10b0f`，父 Increment `INC-CROSS-021` 7/7 子项全部验收完毕并进入 `awaiting_acceptance`（父级自身仍待用户验收）。 |
 | v5.43 | 2026-09-26T12:30:04+08:00 | 完成 `INC-TESTING-019`（Skill × Enemy 交互矩阵）：新增集成层套件用固定 1/60 手工步进跑六类问题房间 × 两个「只差一个技能」的 Build，同配置重复运行逐位相同；6 格中 5 格换技能后差异超出噪声、6 格全部互有胜负、胜出 Build 至少涉及两个不同 id；反向对照验证「纯倍率升级」不是新价值轴（接上定身后排序反转）；危险窗口只有控制技能能取消。`mcp__godot::validate` 通过，单套件连续 5 次 3 cases / 0 failures，统一门禁 `RESULT: PASS`（GdUnit4 441 cases / 0 failures、headless 10 suites / 549 assertions），exit 0；计划已回填为 `awaiting_acceptance`，等待用户验收。 |
 | v5.38 | 2026-09-26T02:24:14+08:00 | 用户验收通过 `INC-COMBAT-011`（敌人技能特征差异化 / 问题型敌人），用户原话「本次验收通过」；本批只补验收记录，不改玩法数值与 `game/` 实现；父 Increment `INC-CROSS-021` 子项进度推进到 3/7 已验收，剩余 `INC-COMBAT-012` / `INC-PAWNS-023`（已立项待开发）、`INC-WORLD-008` / `INC-TESTING-019`。 |
 | v5.37 | 2026-09-26T02:19:07+08:00 | 按用户指令「接下来增加技能incre开发测试」新建两个父级子 Increment：`INC-COMBAT-012`（**条件伤害**——DAMAGE 技能对处于控制状态的目标按 `controlled_bonus_multiplier` 额外倍率结算，让「先控后打」成为数据表达的连招，默认 1.0 保证既有技能零影响）与 `INC-PAWNS-023`（**玩家技能池扩到 8 个**——破军斩走新引入的条件爆发轴、回春术用既有 HEAL 类型补上首个「主动回复」轴，炼气期仍 2 槽 / C(8,2)=28 组合）；开发顺序 COMBAT-012 → PAWNS-023。 |
