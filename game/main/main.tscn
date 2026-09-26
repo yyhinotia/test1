@@ -34,6 +34,11 @@
 [ext_resource type="Resource" path="res://game/pawns/data/player_sword_skill.tres" id="33_sword_skill"]
 [ext_resource type="Resource" path="res://game/pawns/data/player_guard_skill.tres" id="34_guard_skill"]
 [ext_resource type="Resource" path="res://game/pawns/data/skills/player_binding_skill.tres" id="35_binding_skill"]
+[ext_resource type="Resource" path="res://game/pawns/data/skills/player_dash_skill.tres" id="38_dash_skill"]
+[ext_resource type="Resource" path="res://game/pawns/data/skills/player_sword_aoe_skill.tres" id="39_sword_aoe_skill"]
+[ext_resource type="Resource" path="res://game/pawns/data/skills/player_lifesteal_skill.tres" id="40_lifesteal_skill"]
+[ext_resource type="Resource" path="res://game/pawns/data/skills/player_rejuvenation_skill.tres" id="41_rejuvenation_skill"]
+[ext_resource type="Resource" path="res://game/pawns/data/skills/player_breaking_slash.tres" id="42_breaking_slash"]
 [ext_resource type="Script" uid="uid://0bmf5nm2g8ft" path="res://game/shared/resources/dungeon_definition.gd" id="36_dungeon_definition"]
 [ext_resource type="Resource" path="res://game/world/data/dungeons/problem_dungeon.tres" id="37_problem_dungeon"]
 
@@ -179,6 +184,7 @@ grow_horizontal = 0
 grow_vertical = 0
 preset_a = Array[ExtResource("32_active_skill")]([ExtResource("33_sword_skill"), ExtResource("34_guard_skill")])
 preset_b = Array[ExtResource("32_active_skill")]([ExtResource("33_sword_skill"), ExtResource("35_binding_skill")])
+available_skills = Array[ExtResource("32_active_skill")]([ExtResource("33_sword_skill"), ExtResource("34_guard_skill"), ExtResource("35_binding_skill"), ExtResource("38_dash_skill"), ExtResource("39_sword_aoe_skill"), ExtResource("40_lifesteal_skill"), ExtResource("41_rejuvenation_skill"), ExtResource("42_breaking_slash")])
 
 [node name="PauseOverlay" type="Control" parent="HUD" unique_id=535022588]
 visible = false

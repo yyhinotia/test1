@@ -502,3 +502,31 @@
 - 验收时间：2026-09-26T12:49:30+08:00
 - Git：`develop` / `54f1521`
 - 备注：父 Increment 为 `INC-CROSS-022`；本项是 `INC-WORLD-008` 已知问题 ②「`problem_dungeon.tres` 需要换秘境入口才能进入」的直接补完。
+## INC-CORE-015：主场景注入 8 技能池到自定义 Build 编辑器
+
+- 状态：awaiting_acceptance
+- 创建时间：2026-09-26T12:52:10+08:00
+- 最后修改：2026-09-26T12:58:44+08:00
+- 主题：core
+- 父 Increment：`INC-CROSS-023`
+- 目标：把项目里已经存在的 8 个玩家主动技能资源全部接进 `main.tscn` 的 `BuildLoadoutPanel.available_skills`，让自由组合在生产入口有真实可选池；`main.gd` 继续只做接线，不做规则判定。
+- 验收标准：
+  - `main.tscn` 为另外 5 个玩家技能（踏风突进 / 范围剑气 / 血引术 / 回春术 / 破军斩）补齐 `ext_resource`，并把 8 个技能注入 `BuildLoadoutPanel.available_skills`；注入顺序稳定、无重复 id。
+  - `preset_a` / `preset_b` 保持原值，既有 Build A/B 行为不变。
+  - `main.gd` 不新增任何容量 / 掌握 / 互斥判断；未绑定 Pawn 时注入技能池不报错、不触发装配。
+  - 统一门禁 `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` → `RESULT: PASS`。
+- 范围：`game/main/main.tscn`、`game/main/main.gd`（仅在必须时）。
+- 非范围：改 `Pawn` / `BuildValidator` / 技能数值、改秘境与奖励、改 `BuildLoadoutPanel` 脚本（由 `INC-UI-021` 负责）。
+- 依赖：`INC-UI-021`（`available_skills` 契约落地）。
+- 风险：① `main.tscn` 是高冲突共享场景，修改期间不得与其他写入者并行；② 只补 resource 引用，不得改动既有 UID、节点路径与信号连接；③ 8 个技能资源分散在 `game/pawns/data/` 与 `game/pawns/data/skills/`，必须逐个确认类型是 `ActiveSkillDefinition`。
+- 检索证据：2026-09-26T12:52:10+08:00 执行 `git grep -n -E "player_dash_skill|player_sword_aoe_skill|player_lifesteal_skill|player_rejuvenation_skill|player_breaking_slash" -- game/main/` 无命中；`Select-String game/main/main.tscn 'player_.*skill'` 只命中御剑斩 / 护体真气 / 定身术 3 条；`Get-ChildItem game/pawns/data/skills/*.tres` 确认另有 5 个玩家技能资源存在但未接入正式入口。
+- 实现说明：`game/main/main.tscn` 为另外 5 个玩家技能补齐 `ext_resource`（`38_dash_skill` 踏风突进 / `39_sword_aoe_skill` 范围剑气 / `40_lifesteal_skill` 血引术 / `41_rejuvenation_skill` 回春术 / `42_breaking_slash` 破军斩），并按「御剑斩 → 护体真气 → 定身术 → 踏风突进 → 范围剑气 → 血引术 → 回春术 → 破军斩」的顺序把 8 个技能注入 `BuildLoadoutPanel.available_skills`；`preset_a` / `preset_b` 保持原值不变，`main.gd` 未新增任何容量 / 掌握 / 互斥判断（规则仍只在 Pawn 侧）。
+- 变更文件：`game/main/main.tscn`（只新增 5 条 `ext_resource` 与 1 条 `available_skills` 属性，未改动既有 UID / 节点路径 / 信号连接）。
+- 测试证据：`mcp__godot::validate` → `main.tscn` `valid: true`；`test/integration/build_loadout_panel_test.gd > test_main_scene_wires_full_eight_skill_pool`（记在 `INC-TESTING-021`）断言生产入口注入 8 个技能、无重复 id、A/B 预设保持原值；统一门禁 `test/run_tests.ps1 -Layer all` → `RESULT: PASS`（GdUnit4 451 cases / 0 failures、headless 10 suites / 549 assertions / 0 failing suites，exit 0）；真实窗口启动 `main.tscn` 后 8 个技能行全部渲染。
+- 验证状态：验证通过
+- 验证时间：2026-09-26T12:58:44+08:00
+- 已知问题：① 技能池顺序是资源注入顺序，未按获取时间 / 元素排序，后续若要换排序需改场景属性；② 面板显示 8 行后整体高度增加，布局问题见 `INC-UI-021`。
+- 用户验收：待验收
+- 验收时间：待验收
+- Git：待提交
+- 备注：父 Increment 为 `INC-CROSS-023`；本项不改变任何技能行为，只把已存在资源接进生产入口。
