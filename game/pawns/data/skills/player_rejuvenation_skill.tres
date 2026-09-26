@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ActiveSkillDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://d4crksxfpy623" path="res://game/shared/resources/active_skill_definition.gd" id="1_skill"]
+
+[resource]
+script = ExtResource("1_skill")
+id = &"rejuvenation"
+display_name = "回春术"
+description = "运功回复自身生命；代价是八项技能中最高的灵力与冷却，适合长线消耗而非应急。"
+spirit_cost = 45.0
+cooldown = 12.0
+cast_range = 0.0
+damage_multiplier = 0.0
+target_type = 0
+effect_type = 1
+effect_value = 55.0
+effect_duration = 0.0

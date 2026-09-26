@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ActiveSkillDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://d4crksxfpy623" path="res://game/shared/resources/active_skill_definition.gd" id="1_skill"]
+
+[resource]
+script = ExtResource("1_skill")
+id = &"breaking_slash"
+display_name = "破军斩"
+description = "倾尽全力的一击：目标被定身或眩晕时才斩得出真正威力，对行动自如的敌人反而弱于御剑斩。"
+spirit_cost = 35.0
+cooldown = 5.0
+cast_range = 110.0
+damage_multiplier = 0.0
+target_type = 2
+effect_type = 0
+effect_value = 1.4
+effect_duration = 0.0
+aoe_radius = 0.0
+lifesteal_ratio = 0.0
+controlled_bonus_multiplier = 2.4

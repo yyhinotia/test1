@@ -149,3 +149,33 @@ func test_pawn_info_panel_follows_runtime_loadout() -> void:
 
 	# 信息卡与技能栏必须读同一份运行时装配结果，而不是继续读 PawnData.active_skills。
 	assert_array(_snapshot_skill_names(panel)).contains_exactly(["sword_strike", "binding"])
+
+
+## 技能池扩容（INC-PAWNS-023）：新技能可学习、可装配，但境界容量仍把装配卡在 2 槽。
+func test_pool_skills_can_be_learned_and_equipped_within_two_slots() -> void:
+	var breaking_slash: ActiveSkillDefinition = load(
+		"res://game/pawns/data/skills/player_breaking_slash.tres"
+	) as ActiveSkillDefinition
+	var rejuvenation: ActiveSkillDefinition = load(
+		"res://game/pawns/data/skills/player_rejuvenation_skill.tres"
+	) as ActiveSkillDefinition
+	var player: Pawn = _spawn_pawn(PLAYER_PAWN_SCENE_PATH)
+	await await_idle_frame()
+
+	# 技能池从 6 扩到 8 不改变境界容量：炼气期仍是 2 槽。
+	assert_int(player.get_active_skill_capacity()).is_equal(2)
+	assert_bool(player.learn_active_skill(breaking_slash)).is_true()
+	assert_bool(player.learn_active_skill(rejuvenation)).is_true()
+	var loadout: Array[ActiveSkillDefinition] = [breaking_slash, rejuvenation]
+	assert_bool(player.set_active_skill_loadout(loadout)).is_true()
+	assert_bool(player.is_active_skill_enabled(breaking_slash)).is_true()
+	assert_bool(player.is_active_skill_enabled(rejuvenation)).is_true()
+
+	# 超过容量的装配必须整体失败，并保持调用前的装配完全不变。
+	var overflow: ActiveSkillDefinition = _make_skill(&"overflow_probe")
+	assert_bool(player.learn_active_skill(overflow)).is_true()
+	var overflowing: Array[ActiveSkillDefinition] = [breaking_slash, rejuvenation, overflow]
+	assert_bool(player.set_active_skill_loadout(overflowing)).is_false()
+	assert_bool(player.is_active_skill_enabled(breaking_slash)).is_true()
+	assert_bool(player.is_active_skill_enabled(rejuvenation)).is_true()
+	assert_bool(player.is_active_skill_enabled(overflow)).is_false()
