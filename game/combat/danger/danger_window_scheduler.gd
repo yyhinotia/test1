@@ -12,6 +12,9 @@ signal danger_window_cancelled_by_stun(caster: Pawn, skill: ActiveSkillDefinitio
 ## 在效果真正结算前发出：EncounterSession 先记录 skill_cast 与 hit/blocked，再让伤害触发死亡，
 ## 这样「命中事件 → 单位死亡」的顺序不会因为 Pawn.died 的同步发射而颠倒。
 signal dangerous_skill_released(caster: Pawn, skill: ActiveSkillDefinition, target: Pawn, blocked: bool)
+## 追加效果落地（INC-COMBAT-013）：在主效果结算之后发出，供 EncounterSession 记录事件。
+## 位置在 `dangerous_skill_released` 之后是刻意的：伤害先结算，硬直后结算，不出现「已死亡仍被硬直」。
+signal dangerous_skill_followup_applied(caster: Pawn, skill: ActiveSkillDefinition, payload: ActiveSkillDefinition, target: Pawn)
 
 var _caster: Pawn
 var _target: Pawn
@@ -121,6 +124,20 @@ func _release() -> void:
 	dangerous_skill_released.emit(caster, skill, target, blocked)
 	if target != null and is_instance_valid(target) and target.is_alive():
 		SkillEffectResolver.apply_effect(caster, skill, target)
+		_apply_followup(caster, skill, target)
+
+
+## 追加效果（INC-COMBAT-013）：主效果结算完成后，若危险技能配置了追加效果且目标仍存活，再结算第二段。
+## 只有释放路径会调用它——窗口被控制打断时走 `_cancel_by_stun()`，因此「打断」会连同追加效果一起取消。
+## 追加效果不消耗灵力、不进冷却，也不经过 `Pawn.cast_skill()`：它不是一个可以被 AI 选择的技能。
+func _apply_followup(caster: Pawn, skill: ActiveSkillDefinition, target: Pawn) -> void:
+	if skill == null or not skill.has_followup_skill():
+		return
+	if target == null or not is_instance_valid(target) or not target.is_alive():
+		return
+	var payload: ActiveSkillDefinition = skill.get_followup_skill()
+	SkillEffectResolver.apply_effect(caster, payload, target)
+	dangerous_skill_followup_applied.emit(caster, skill, payload, target)
 
 
 ## 释放前按现有结算公式预判：防御后的伤害能否被当前护盾完整吸收。

@@ -1,6 +1,7 @@
 [gd_resource type="Resource" script_class="ActiveSkillDefinition" format=3]
 
 [ext_resource type="Script" uid="uid://d4crksxfpy623" path="res://game/shared/resources/active_skill_definition.gd" id="1_skill"]
+[ext_resource type="Resource" path="res://game/pawns/data/skills/enemy_charge_hardstop.tres" id="2_followup"]
 
 [resource]
 script = ExtResource("1_skill")
@@ -15,3 +16,4 @@ target_type = 2
 effect_type = 0
 effect_value = 2.2
 effect_duration = 0.0
+followup_skill = ExtResource("2_followup")

@@ -46,6 +46,11 @@ enum SkillEffectType {
 ## 条件伤害倍率：DAMAGE 技能在目标处于控制状态（定身 / 眩晕）时叠加的额外倍率（INC-COMBAT-012）。
 ## 默认 1.0 表示没有条件加成；归一化不会低于 1.0，避免「条件」反而削弱伤害。
 @export_range(0.0, 100.0, 0.01, "or_greater") var controlled_bonus_multiplier: float = 1.0
+## 追加效果（INC-COMBAT-013）：主效果结算完成后按同一套效果词汇再结算一段，
+## 只用于描述「无法用护盾买断」的代价（例：聚煞一击落地后的硬直）。
+## 默认 null 表示没有追加效果，此时技能行为与 `INC-COMBAT-009` 完全一致。
+## 追加效果不是独立技能：它不进 `PawnData.active_skills`，不走灵力与冷却，也不由 AI 主动施放。
+@export var followup_skill: ActiveSkillDefinition
 
 func is_configured() -> bool:
 	return not String(id).strip_edges().is_empty()
@@ -90,6 +95,15 @@ func get_normalized_controlled_bonus_multiplier() -> float:
 ## 条件加成是否真实存在：只在倍率严格大于 1 时为真，供结算与测试区分「无条件技能」。
 func has_controlled_bonus() -> bool:
 	return get_normalized_controlled_bonus_multiplier() > 1.0
+
+
+## 追加效果是否真实存在：id 为空的资源按未配置处理，避免半配置数据产生空结算。
+func has_followup_skill() -> bool:
+	return followup_skill != null and followup_skill.is_configured()
+
+
+func get_followup_skill() -> ActiveSkillDefinition:
+	return followup_skill if has_followup_skill() else null
 
 
 func is_self_targeted() -> bool:

@@ -477,3 +477,51 @@
 - 验收时间：2026-09-26T11:50:07+08:00
 - Git：`develop` / `f1abebd`
 - 备注：父 Increment 为 `INC-CROSS-021`；本项只提供「条件伤害」的表达能力，实际使用它的技能与数值由 `INC-PAWNS-023` 承担。
+
+## INC-COMBAT-013：危险技能的追加效果（护盾挡不住的「硬吃代价」）
+
+- 状态：in_progress
+- 创建时间：2026-09-26T13:22:01+08:00
+- 最后修改：2026-09-26T13:45:10+08:00
+- 主题：combat
+- 父 Increment：`INC-CROSS-025`
+- 目标：让「危险窗口」不再是一道只用护盾就能买断的数值题：危险技能落地时按配置追加第二段效果（本项配置为硬直），使「站桩硬吃」付出「失去行动」的代价，从而让打断（定身）成为这一层真正的答案。追加效果只作用于配置了它的危险技能，未配置的敌人在行为上与 `INC-COMBAT-009` 完全一致。
+- 验收标准：
+  - `ActiveSkillDefinition` 新增可选字段 `followup_skill`（默认 `null`）与 `has_followup_skill()` / `get_followup_skill()`；不配置时既有行为逐位不变。
+  - `EncounterSession._on_dangerous_skill_released()` 在记录本次危险技能的 `skill_cast` + `skill_hit` / `skill_blocked` **之后**，若该技能配置了追加效果且目标仍存活，按既有 `SkillEffectResolver.apply_effect()` 结算第二段；追加效果为 STUN 时额外记录 `skill_stunned`（actor = 施法者，target = 目标，skill_id = 追加效果 id）。
+  - 顺序不变式：主效果先结算、追加效果后结算；窗口被 `skill_cancelled` 取消时不结算追加效果（一条 `skill_cancelled` 都不该带出 `skill_stunned`）。
+  - 数据：`enemy_charge_bolt.tres` 接上新增的 `enemy_charge_hardstop.tres`（`effect_type = STUN`、`effect_duration = 1.6`、零灵力零冷却；它不是 `PawnData.active_skills`，因此 AI 不会把它当普通技能施放）；`enemy_boss_cleave.tres` 保持不配置，Boss 的「可被护盾吸收」口径不变。
+  - 不回归：`INC-COMBAT-009` 的既有用例（窗口周期 / 无控制承伤 / 有控制打断零伤害 / 事件顺序 / 跨局隔离）与 `INC-TESTING-019` 的既有 3 个用例继续通过。
+  - 统一门禁 `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all` → `RESULT: PASS`。
+- 语义变更（已记录，非回归）：`INC-COMBAT-009` 验收标准 ②「玩家在没有控制手段时必须能感知到该窗口无法干预：危险技能不会被阻止，只能承受（可被护盾 / 护体吸收损失）」在**聚煞术士**身上被收紧——伤害仍可被护盾吸收，但落地后追加的硬直不可被护盾抵消。Boss 与其它未配置追加效果的敌人保持原口径；本项不改任何伤害、护盾、灵力与冷却数值。
+- 范围：`game/shared/resources/active_skill_definition.gd`、`game/world/encounter_session.gd`、`game/pawns/data/skills/enemy_charge_bolt.tres`、`game/pawns/data/skills/enemy_charge_hardstop.tres`（新增）、相关 unit / integration 测试。
+- 非范围：改常规伤害 / 护盾 / 灵力 / 冷却数值、改 Boss 与其它敌人的危险窗口节奏、新增玩家技能或敌人、改 AI 目标选择、Buff / Debuff 容器与堆叠、持续伤害、抗性、Boss 分阶段。
+- 依赖：`INC-COMBAT-009`（危险窗口与 CombatEvent，已验收）、`INC-COMBAT-012`（受控目标条件伤害，已验收）、`INC-CROSS-021`（问题型敌人，已验收）。
+- 风险：① 追加效果若插到主效果之前结算，会产出「已死亡仍被硬直」这类伪事件；② 追加效果必须可选，否则 Boss 与既有 1v1 / 1v2 / 1v3 用例的「护盾可完全吸收」口径会一起变；③ 硬直时长是对「打断价值」的定价，必须落在「明显更差但仍可通关」的区间，不能把没有带定身术的玩家挡在门外；④ 若只是调高伤害而不改问题，就退化成数值调整——本项只增加效果类型，不动倍率。
+- 检索证据：2026-09-26T13:22:01+08:00 执行 `git status --short`（干净）、`git diff --unified=0 -- agent-plan/` 与 `git diff --cached --unified=0 -- agent-plan/`（均无输出）、`git log --oneline -5 -- agent-plan/`（HEAD `1273981`）；`git grep -h -o -E "INC-[A-Z]+-[0-9]{3}" -- agent-plan/` 确认 COMBAT 最大编号 012、TESTING 022、CROSS 024，本批 013 / 023 / 025 均未被占用；`git grep -n "followup\|follow_up" -- game/ test/ tests/` 无命中，确认这是新增职责；读 `game/combat/danger/danger_window_scheduler.gd` 确认释放路径只有一个出口 `dangerous_skill_released`、取消路径不发释放信号，因此追加效果必须挂在释放侧；`test/integration/skill_enemy_interaction_matrix_test.gd` 的实测基线（见 `INC-TESTING-023` 检索证据）显示 `problem_room_03_charge` 当前由 `sword+guard` 胜出，与该房间自述「定身打断是这一层的主要问题」相反。
+- 实现说明：危险技能现在可以配置一段「追加效果」，并按「主效果 → 追加效果」的顺序结算。
+  - `ActiveSkillDefinition` 新增可选字段 `followup_skill`（默认 `null`）与 `has_followup_skill()` / `get_followup_skill()`；id 为空或全空白按「未配置」处理，未配置的技能行为逐位不变。
+  - `DangerWindowScheduler._release()` 在主效果 `SkillEffectResolver.apply_effect()` 之后调用 `_apply_followup()`，并发出新信号 `dangerous_skill_followup_applied`。追加效果只在释放路径结算：窗口被控制打断走 `_cancel_by_stun()`，不经过该分支；目标在主效果后已死亡则跳过，不出现「已死亡仍被硬直」。
+  - `EncounterSession` 接线该信号：仅当追加效果是 STUN 时补记一条 `skill_stunned`（actor = 施法者、target = 目标、skill_id = 追加效果自己的 id）。它与主效果的 `skill_cast` + `skill_hit` / `skill_blocked` 落在同一份 `CombatEventLog` 里，因此「护盾挡下伤害」与「仍然被硬直」可以同时被复核。
+  - 数据：新增 `enemy_charge_hardstop.tres`（`effect_type = STUN`、`effect_duration = 1.6`、零灵力零冷却），由 `enemy_charge_bolt.tres` 的 `followup_skill` 引用；它不是 `PawnData.active_skills`，AI 不会把它当普通技能施放。`enemy_boss_cleave.tres` 不配置，Boss「可被护盾吸收」的口径不变。
+  - 调度参数修订：`enemy_charge_adept.tres` 的 `danger_window_interval` 7.0 → 2.5、`danger_window_duration` 2.0 → 1.2，理由与实测见上一条「范围内修订」。
+- 变更文件：
+  - `game/shared/resources/active_skill_definition.gd`：`followup_skill` 字段与两个查询方法。
+  - `game/combat/danger/danger_window_scheduler.gd`：追加效果信号与 `_apply_followup()`。
+  - `game/world/encounter_session.gd`：接线追加效果信号并记录 `skill_stunned`。
+  - `game/pawns/data/skills/enemy_charge_hardstop.tres`（新增）、`game/pawns/data/skills/enemy_charge_bolt.tres`：追加效果数据与其引用。
+  - `game/pawns/data/enemies/enemy_charge_adept.tres`：危险窗口调度参数（见「范围内修订」）。
+  - `test/unit/active_skill_definition_test.gd`（+1 用例，共 9）、`test/unit/enemy_threat_profile_test.gd`（+1 用例，共 7）。
+- 测试证据：2026-09-26T13:45:10+08:00
+  - `& <godot> --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://test/unit/active_skill_definition_test.gd -rd res://reports/gdunit/unit5 --ignoreHeadlessMode` → `9 test cases | 0 errors | 0 failures`。
+  - `& <godot> --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://test/unit/enemy_threat_profile_test.gd -rd res://reports/gdunit/unit4 --ignoreHeadlessMode` → `7 test cases | 0 errors | 0 failures`（含「聚煞术士的危险技能带硬直追加 / Boss 不带」）。
+  - `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer unit -ReportDir reports/gdunit/probe_unit` → `GdUnit4 : 180 cases, 0 failures`、`RESULT: PASS`。
+  - `pwsh -File test/run_tests.ps1 -Godot <godot> -Layer all -ReportDir reports/gdunit/probe_all3` → `GdUnit4 : 464 cases, 0 failures`、`headless : 10 suites, 549 assertions, 0 failing suites`、`RESULT: PASS`（收尾前连续两次全量通过）。
+  - 机制事实（`-Layer integration`，207 cases / 0 failures）：定身打断路径 `cancelled=true`、`followup_stunned_events=0`、`player_stunned=false`；有盾硬吃路径 `blocked=true`、`followup_stunned_events=1`、`followup_skill_id="charge_hardstop"`、`player_stun_seconds=1.5833`；无盾硬吃路径 `hit=true` 且同样进入 1.5833s 硬直。Boss 未配置追加效果，`danger_window_combat_event_test.gd` 不回归。
+- 验证状态：验证通过
+- 验证时间：2026-09-26T13:45:10+08:00
+- 已知问题：① 调度参数属于本项的范围内修订（见上）：原计划把窗口周期列为非范围，但实测证明「只加追加效果」时房间的问题无法兑现，故按实测调整；Boss 与其它敌人未改。② 释放仍要求施法者活到窗口结束——若某个 Build 在 3.72s 前把聚煞术士打死，这一层就绕过了问题（改动前 4.47s 击杀正是这条路径）；本项不引入「除打断以外的免死机制」，是否关闭该绕行路线由后续 Increment 决定。③ 硬直时长 1.6s 是对「打断价值」的定价，本项只证明「护盾买不断」，未用数值对照证明该取值最优。④ room 05「高防高血」仍打平、缺少破防轴，父级风险①未解决。
+- 用户验收：未验收
+- 验收时间：
+- Git：未提交
+- 备注：父 Increment 为 `INC-CROSS-025`；本项只把「危险窗口」从数值题改回问题题，让玩家有理由为了某一层换 Build，而不是把所有房间都交给同一种护盾打法。

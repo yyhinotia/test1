@@ -1,6 +1,6 @@
 # Agent Plan Index
 
-> 最后修改：2026-09-26T13:17:02+08:00
+> 最后修改：2026-09-26T13:45:10+08:00
 > 规则来源：`../AGENTS.md`
 
 ## 主题索引
@@ -8,7 +8,7 @@
 | 主题 | 计划文件 | 状态 | 当前 Increment | 最后修改 |
 |---|---|---|---|---|
 | UI | `ui.md` | 已验收 | `INC-UI-022` | 2026-09-26T13:17:02+08:00 |
-| 战斗 | `combat.md` | 已验收 | `INC-COMBAT-012` | 2026-09-26T11:50:07+08:00 |
+| 战斗 | `combat.md` | 进行中 | `INC-COMBAT-013` | 2026-09-26T13:22:01+08:00 |
 | Pawns | `pawns.md` | 已验收 | `INC-PAWNS-023` | 2026-09-26T11:50:07+08:00 |
 | 修炼 | `cultivation.md` | 已验收 | `INC-CULT-005` | 2026-09-25T20:16:30+08:00 |
 | 宗门 | `sect.md` | 已验收 | `INC-SECT-003` | 2026-09-25T19:38:41+08:00 |
@@ -18,7 +18,7 @@
 | 音频 | `audio.md` | 未创建 | - | - |
 | 核心 | `core.md` | 已验收 | `INC-CORE-015` | 2026-09-26T13:00:11+08:00 |
 | 工具 | `tools.md` | 已验收 | `INC-TOOLS-002` | 2026-09-25T13:54:46+08:00 |
-| 测试 | `testing.md` | 已验收 | `INC-TESTING-022` | 2026-09-26T13:17:02+08:00 |
+| 测试 | `testing.md` | 进行中 | `INC-TESTING-023` | 2026-09-26T13:22:01+08:00 |
 
 ## 跨主题父 Increment
 
@@ -48,6 +48,7 @@
 | `INC-CROSS-022` | `accepted` | `INC-UI-020`、`INC-CORE-014`、`INC-TESTING-020` | 问题秘境接入游玩主路径（Build 观察闭环前置）：默认进入问题秘境、可切换回试炼秘境、首次清房奖励在游玩路径上可达 | 通过（3/3 子项验证通过：面板选择区 / 默认入口与切换转发 / 游玩层可达性与奖励链；统一门禁 `RESULT: PASS`，GdUnit4 445 cases / 0 failures + headless 549 assertions） | 已验收 | 2026-09-26T12:50:34+08:00 |
 | `INC-CROSS-023` | `accepted` | `INC-UI-021`、`INC-CORE-015`、`INC-TESTING-021` | 玩家可自由重构 Build（8 技能池 → 容量内自选组合） | 通过（3/3 子项验证并验收：自由 Build 编辑器 / 主场景注入 8 技能池 / 编辑器行为与非预设组合证据；统一门禁 `RESULT: PASS`，GdUnit4 451 cases / 0 failures + headless 549 assertions） | 已验收 | 2026-09-26T13:00:11+08:00 |
 | `INC-CROSS-024` | `accepted` | `INC-WORLD-009`、`INC-UI-022`、`INC-TESTING-022` | 问题秘境 Build 观察闭环（解锁可见 + 只读取证入口） | 通过（3/3 子项验证并验收：首通奖励只读广播 / 秘境面板解锁提示行 / 问题秘境人工轮入口与只读进度取证；统一门禁 `RESULT: PASS`，GdUnit4 460 cases / 0 failures + headless 549 assertions） | 已验收 | 2026-09-26T13:17:02+08:00 |
+| `INC-CROSS-025` | `in_progress` | `INC-COMBAT-013`、`INC-TESTING-023` | 危险窗口的真代价（问题房间重新区分技能）：room 03 的答案从「护体真气硬吃」变回「定身打断」 | 进行中（2 个子项已立项，尚未验证） | 未验收 | 2026-09-26T13:22:01+08:00 |
 
 ### INC-CROSS-001：第一个 Pawn MVP
 
@@ -471,6 +472,8 @@
 | `INC-WORLD-009` | `INC-CROSS-024` | world | `accepted` | 首通奖励发放广播（只读信号） | 2026-09-26T13:17:02+08:00 | 验证通过（integration +3 cases：首次解锁广播 newly_learned=true 且不装配 / 重复通关 false / 无奖励遭遇零广播；统一门禁 `RESULT: PASS`） | 已验收 | `develop` / `dbad67a` |
 | `INC-UI-022` | `INC-CROSS-024` | ui | `accepted` | 首通解锁提示行（只读可见性） | 2026-09-26T13:17:02+08:00 | 验证通过（integration +2、gameplay +提示断言：空文案隐藏 / 不拦鼠标 / 不改按钮 / 进层清空；真实窗口读回解锁文案；统一门禁 `RESULT: PASS`） | 已验收 | `develop` / `328949f` |
 | `INC-TESTING-022` | `INC-CROSS-024` | testing | `accepted` | 问题秘境人工轮入口与只读进度取证 | 2026-09-26T13:17:02+08:00 | 验证通过（gameplay 4 cases：入口即问题秘境且面板可见 / 清层落盘 / 自定义 Build 变更落盘 / 未开启记录不写文件；统一门禁 `RESULT: PASS`） | 已验收 | `develop` / `1956300` |
+| `INC-COMBAT-013` | `INC-CROSS-025` | combat | `in_progress` | 危险技能的追加效果（护盾挡不住的硬吃代价） | 2026-09-26T13:22:01+08:00 | 未验证 | 未验收 | 未提交 |
+| `INC-TESTING-023` | `INC-CROSS-025` | testing | `in_progress` | 危险窗口追加效果证据与问题房间重新定价 | 2026-09-26T13:22:01+08:00 | 未验证 | 未验收 | 未提交 |
 | `INC-SECT-001` | `INC-CROSS-017` | sect | `accepted` | 宗门设施静态定义与六座设施数据 | 2026-09-25T19:38:41+08:00 | 通过 | 已验收 | `main` / `c25ffbc` |
 | `INC-SECT-002` | `INC-CROSS-017` | sect | `accepted` | SectState 运行时：库存 / 设施等级 / 升级 / 修炼 / 收获 | 2026-09-25T19:38:41+08:00 | 通过 | 已验收 | `main` / `8c65ff1` |
 | `INC-SECT-003` | `INC-CROSS-017` | sect | `accepted` | 转化设施：藏经阁参悟 / 炼器房强化 / 丹房炼丹 | 2026-09-25T19:38:41+08:00 | 通过 | 已验收 | `main` / `9c97ef9` |
@@ -645,6 +648,7 @@
 | v5.50 | 2026-09-26T13:00:11+08:00 | 完成并验收 `INC-CROSS-023`（玩家可自由重构 Build）：`INC-UI-021` 让 `BuildLoadoutPanel` 从两套固定预设扩展为 8 技能池自定义组合（未解锁禁用、容量由 Pawn 裁决、显式应用、解锁不自动装配、战斗中锁定），`INC-CORE-015` 把 5 个未接线玩家技能补进 `main.tscn` 并注入 8 技能池（A/B 预设不变），`INC-TESTING-021` 把面板套件从 9 例扩到 15 例并新增非 A/B 预设组合（护体真气 + 回春术）真实装配证据；统一门禁 `RESULT: PASS`（GdUnit4 451 cases / 0 failures、headless 10 suites / 549 assertions）。代码提交 `9b64825` / `f0b4e5c` / `988aaad`，验收记录 `d08b170` / `d10b36d` / `a63f491`。 |
 | v5.51 | 2026-09-26T13:03:24+08:00 | 复核 `INC-CROSS-023` 落地后发现人工轮闭环仍缺两个可观察条件：① 首通奖励当前在 `_grant_first_clear_reward()` 里静默 `learn_active_skill()`，UI 与取证层都拿不到「刚刚解锁了什么」；② `tests/scenario_entry.gd:83` 无条件关闭默认秘境，既有 6 个入口都跑单场遭遇，问题秘境没有可取证的人工入口。据此新建父 Increment `INC-CROSS-024`（问题秘境 Build 观察闭环）与三个子项 `INC-WORLD-009`（首通奖励只读广播）/ `INC-UI-022`（秘境面板解锁提示行）/ `INC-TESTING-022`（问题秘境人工入口 + 逐层与 Build 变更落盘）；本批只补验证装置与可见性，不新增技能 / 敌人 / 房间，不改任何数值。 |
 | v5.52 | 2026-09-26T13:17:02+08:00 | 完成并验收 `INC-CROSS-024`（问题秘境 Build 观察闭环）：`INC-WORLD-009` 让首通奖励变成可订阅的只读信号（`newly_learned` 直接取 `learn_active_skill()` 的返回值，不新增发放账本、不自动装配），`INC-UI-022` 在秘境面板新增 `UnlockLabel` 提示行（空文案隐藏、不拦鼠标、不改按钮可点状态、进层清空），`INC-TESTING-022` 新增 `tests/scenario_problem_dungeon.tscn` 人工轮入口与逐层 / Build 变更落盘记录（三个开关默认关闭，既有 6 个入口语义不变）；统一门禁 `RESULT: PASS`（GdUnit4 460 cases / 0 failures = unit 178 + integration 205 + gameplay 77、headless 10 suites / 549 assertions），exit 0。代码提交 `dbad67a` / `328949f` / `1956300`，验收记录 `ba87419` / `a0ac0d4` / `695d90c`。本批只补可见性与取证装置，不解决「护体真气在 6 格中 4 格胜出」这类房间区分度问题。 |
+| v5.53 | 2026-09-26T13:22:01+08:00 | 复核 `INC-TESTING-019` 六格矩阵实测基线后发现 `problem_room_03_charge` 与房间自述相反（「定身打断是这一层的主要问题」，但同格 `sword+guard` 更优），说明危险窗口仍是一道护盾就能买断的数值题。新建父 Increment `INC-CROSS-025`（危险窗口的真代价：问题房间重新区分技能）与两个子项 `INC-COMBAT-013`（危险技能可选追加效果：未被打断时落地追加硬直）/ `INC-TESTING-023`（硬吃有代价 + 打断重新成为更优的客观证据）；本批不新增技能 / 敌人 / 房间，不改任何伤害 / 护盾 / 灵力 / 冷却 / 窗口周期数值。 |
 | v5.48 | 2026-09-26T12:50:34+08:00 | 用户以「本次验收通过」接受父 Increment `INC-CROSS-022`（问题秘境接入游玩主路径）与三个子项 `INC-UI-020` / `INC-CORE-014` / `INC-TESTING-020`；分增量提交 `5138a41` / `54f1521` / `4dc4886`，并补验收记录 `c1b499d` / `4f10af8` / `7dabb45`；本批不改玩法数值，后续仍需人工回答 `INC-CROSS-021` 的三问。 |
 | v5.47 | 2026-09-26T12:47:24+08:00 | 完成 `INC-CROSS-022` 的三个子 Increment：① `INC-UI-020` `DungeonPanel` 新增 `dungeon_selected` 信号 + `set_dungeon_options()` 动态选项（未开局 / 已结算可点，进行中与等待抉择锁定，单套件 9 cases / 0 failures）；② `INC-CORE-014` `main.tscn` 默认秘境改指 `problem_dungeon.tres` 并注入 `[试炼, 问题]` 选项、`main.gd` 只转发选择、`DungeonRun.start()` 保留「进行中不替换」；同步修正按 trial 硬编码的 gameplay / headless 用例（按当前运行秘境与房间声明的敌人集合断言，宗门闭环在入树前显式换回单敌人试炼秘境）；③ `INC-TESTING-020` 新增 `test/gameplay/problem_dungeon_play_path_test.gd`（真实 main 路径：首间首通奖励只解锁不装配 + 结算后可切回试炼秘境，2 cases / 0 failures）；统一门禁 `RESULT: PASS`（GdUnit4 445 cases / 0 failures、headless 10 suites / 549 assertions / 0 failing suites，exit 0）；功能与验证完成后等待用户验收再提交 |
 | v5.46 | 2026-09-26T12:35:49+08:00 | 新建父 Increment `INC-CROSS-022`（问题秘境接入游玩主路径）：`INC-CROSS-021` 验收后复核发现 `problem_dungeon.tres` 只被测试引用、`main.tscn` 默认仍是 `trial_dungeon.tres`，`INC-WORLD-008` Gate 3 的「遇到问题 → 获得技能 → 再遇到需要该技能的问题」只在数据 / 机制层成立、正常游玩不可达；拆为 `INC-UI-020`（DungeonPanel 秘境选择区，只发信号）→ `INC-CORE-014`（main.tscn 注入两份秘境、默认切到 problem、main.gd 只转发）→ `INC-TESTING-020`（游玩层可达性 + 首通奖励链 + 切换锁定证据），不新增玩法内容与数值 |
@@ -984,3 +988,28 @@
 - 验收时间：2026-09-26T13:17:02+08:00
 - Git：`develop` / 子项代码提交 `dbad67a`、`328949f`、`1956300`（含 `ba87419`、`a0ac0d4`、`695d90c` 验收记录）
 - 备注：本父级完成后，`INC-CROSS-021` 的人工轮才具备「可见 + 可取证」的执行条件；Build 玩法是否成立仍由人工轮三问与客观证据共同裁定。
+
+## INC-CROSS-025：危险窗口的真代价（问题房间重新区分技能）
+
+- 状态：in_progress
+- 创建时间：2026-09-26T13:22:01+08:00
+- 最后修改：2026-09-26T13:22:01+08:00
+- 目标：把「危险窗口」从一道可以用护盾买断的数值题改回一道必须换解法的战斗问题。`problem_room_03_charge` 自述的主要问题是「在危险窗口前定身打断」，但六格矩阵实测显示 `sword+guard` 反而更优，说明这一层没有真的惩罚「站桩硬吃」。本批让危险技能可以携带追加效果（本项为硬直），使不打断要付出失去行动的代价，并给出「打断型 Build 从更差变成更好」的可复核证据。
+- 背景：`INC-TESTING-019` 的六格矩阵给出基线 room 01 → guard、room 02 → dash、room 03 → **guard**、room 04 → aoe、room 05 → 打平（未超噪声）、room 06 → guard；其中 room 03 与自述相反，是把「Build 玩法」拖回「技能数值系统」的直接证据。该风险已在 `INC-CROSS-024` 的父级风险 ① 中如实记录为「本批不解决」，本批是针对它的第一个具体动作。
+- 子 Increment：`INC-COMBAT-013`（危险技能追加效果）、`INC-TESTING-023`（追加效果证据与问题房间重新定价）。
+- 判定顺序：先 `INC-COMBAT-013`（机制可配置、未配置时行为逐位不变）→ 再 `INC-TESTING-023`（硬吃有代价、打断成为更优）；两项都验证通过后父级才进入 `awaiting_acceptance`。
+- 验收标准（父级 Gate）：
+  - Gate 1 可配置：追加效果是可选字段；未配置的危险技能（Boss）行为与 `INC-COMBAT-009` 一致，既有用例不回归。
+  - Gate 2 顺序正确：主效果 → 追加效果；被取消的窗口不产生 `skill_stunned`，也不出现「已死亡仍被硬直」。
+  - Gate 3 重新定价：`problem_room_03_charge` 的答案由 guard 变为 binding，且差异超出既有噪声带；同时给出「不打断仍可通关」的负面对照。
+  - Gate 4 数值边界（2026-09-26T13:45:10+08:00 修订）：本批不修改任何伤害 / 护盾 / 灵力 / 冷却数值；危险窗口调度参数只在聚煞术士一人身上按实测修订（`danger_window_interval` 7.0 → 2.5、`danger_window_duration` 2.0 → 1.2），Boss 与其它敌人的窗口参数不变。修订原因与实测见 `INC-COMBAT-013` 的「范围内修订」与 `INC-TESTING-023` 的改动前基线。
+  - Gate 5 门禁：统一 `test/run_tests.ps1 -Layer all` → `RESULT: PASS`。
+- 非范围：新增玩家技能 / 敌人 / 房间、数值平衡调整、装备与属性系统、Boss 分阶段、AI 协同、4v4 与队友系统。
+- 依赖：`INC-COMBAT-009`（危险窗口，已验收）、`INC-TESTING-019`（六格矩阵，已验收）、`INC-CROSS-021`（问题型敌人，已验收）、`INC-CROSS-024`（可见性与取证装置，已验收）。
+- 风险：① 本批只解决 room 03 这一格「与自己自述相反」的问题；room 05 的「打平」与「高防单位缺少破防轴」仍未解决，必须如实记录，不能因为一格变绿就宣称 Build 已成立；② 硬直是对打断价值的定价，若过重会把没有带定身术的玩家挡在门外，必须同时给出可通关证据；③ 危险窗口是 `INC-CROSS-019` 已验证过的链路，新增字段必须默认关闭，以免污染既有 1v1 / 1v2 / 1v3 用例。
+- 检索证据：2026-09-26T13:22:01+08:00 见两个子 Increment 的检索证据。
+- 进度：2026-09-26T13:22:01+08:00 建立父级与两个子 Increment，开始 `INC-COMBAT-013`；本批不新增技能 / 敌人 / 房间，只增加效果类型。
+- 用户验收：未验收
+- 验收时间：
+- Git：未提交
+- 备注：本父级的成功标准不是「房间更难」，而是「同一层对『带打断』与『不带打断』给出不同结论」，并且该结论在固定步进的自动化对照下可复现。

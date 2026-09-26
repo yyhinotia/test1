@@ -457,6 +457,7 @@ func _setup_combat_events() -> void:
 			scheduler.danger_window_opened.connect(_on_danger_window_opened)
 			scheduler.danger_window_cancelled_by_stun.connect(_on_danger_window_cancelled_by_stun)
 			scheduler.dangerous_skill_released.connect(_on_dangerous_skill_released)
+			scheduler.dangerous_skill_followup_applied.connect(_on_dangerous_skill_followup_applied)
 			_danger_schedulers.append(scheduler)
 		if enemy.data.can_summon():
 			var summon_scheduler: SummonScheduler = SummonScheduler.new(enemy, enemy.data.summon_minion)
@@ -570,6 +571,23 @@ func _on_dangerous_skill_released(
 	_combat_event_log.record(CombatEvent.SKILL_CAST, actor_id, target_id, skill_id)
 	var impact_event: StringName = CombatEvent.SKILL_BLOCKED if blocked else CombatEvent.SKILL_HIT
 	_combat_event_log.record(impact_event, actor_id, target_id, skill_id)
+
+
+## 追加效果落地（INC-COMBAT-013）：主效果的 skill_cast 与 hit/blocked 已经记录在前一个处理器里，
+## 这里只补记真正改变行动能力的硬直，并带上追加效果自己的 skill_id（例：charge_hardstop），
+## 使「护盾挡下伤害」与「仍然被硬直」在同一份事件日志里可以同时被复核。
+## 只有释放路径会发出该信号：窗口被 `skill_cancelled` 取消时既无命中事件，也不会有 skill_stunned。
+func _on_dangerous_skill_followup_applied(
+		caster: Pawn,
+		_skill: ActiveSkillDefinition,
+		payload: ActiveSkillDefinition,
+		target: Pawn
+	) -> void:
+	if payload == null or payload.effect_type != ActiveSkillDefinition.SkillEffectType.STUN:
+		return
+	_combat_event_log.record(
+		CombatEvent.SKILL_STUNNED, _unit_id(caster), _unit_id(target), payload.id
+	)
 
 
 ## 终局判定：只在 RUNNING 状态结算一次，之后重复死亡信号一律忽略。

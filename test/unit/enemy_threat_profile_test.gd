@@ -10,6 +10,7 @@ const BLOOD_BLADE_PATH: String = "res://game/pawns/data/enemies/enemy_blood_blad
 const MELEE_RAIDER_PATH: String = "res://game/pawns/data/enemies/enemy_melee_raider.tres"
 const ARCHER_PATH: String = "res://game/pawns/data/enemies/enemy_spirit_archer.tres"
 const BOSS_PATH: String = "res://game/pawns/data/enemies/enemy_build_test_boss.tres"
+const CHARGE_ADEPT_PATH: String = "res://game/pawns/data/enemies/enemy_charge_adept.tres"
 const SUMMONER_PATH: String = "res://game/pawns/data/enemies/enemy_summoner.tres"
 const SUMMON_MINION_PATH: String = "res://game/pawns/data/enemies/enemy_summon_minion.tres"
 
@@ -139,3 +140,25 @@ func test_non_problem_profiles_return_none_axis() -> void:
 	assert_str(String(baseline.get_skill_value_axis())).is_equal("none")
 	assert_str(String(minion.get_skill_value_axis())).is_equal("none")
 	assert_str(baseline.get_problem_tag_label()).is_equal("")
+
+
+## 危险技能的追加代价（INC-COMBAT-013）：聚煞术士的聚煞一击带「护盾挡不住」的追加硬直；
+## Boss 的镇狱裂岳斩保持不配置，Boss 战「可被护盾吸收」的口径不因本项改变。
+func test_charge_adept_dangerous_skill_carries_stun_followup() -> void:
+	var adept: PawnData = _load_profile(CHARGE_ADEPT_PATH)
+	assert_bool(adept.problem_tag == PawnData.ProblemTag.CHARGE_INTERRUPT).is_true()
+	assert_object(adept.dangerous_skill).is_not_null()
+	assert_bool(adept.dangerous_skill.has_followup_skill()).is_true()
+
+	var payload: ActiveSkillDefinition = adept.dangerous_skill.get_followup_skill()
+	assert_str(String(payload.id)).is_equal("charge_hardstop")
+	assert_int(payload.effect_type).is_equal(ActiveSkillDefinition.SkillEffectType.STUN)
+	assert_float(payload.get_normalized_effect_duration()).is_equal_approx(1.6, 0.001)
+	# 追加效果不是一个可以被主动施放的技能：它不进灵力与冷却账本，也不出现在档案的技能列表里。
+	assert_float(payload.get_normalized_spirit_cost()).is_zero()
+	assert_float(payload.get_normalized_cooldown()).is_zero()
+	assert_bool(adept.get_active_skills().has(payload)).is_false()
+
+	var boss: PawnData = _load_profile(BOSS_PATH)
+	assert_object(boss.dangerous_skill).is_not_null()
+	assert_bool(boss.dangerous_skill.has_followup_skill()).is_false()

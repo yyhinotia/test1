@@ -138,3 +138,26 @@ func test_new_effect_types_are_appended_after_stun() -> void:
 	assert_int(ActiveSkillDefinition.SkillEffectType.DASH).is_equal(4)
 	assert_int(ActiveSkillDefinition.SkillEffectType.AOE_DAMAGE).is_equal(5)
 	assert_int(ActiveSkillDefinition.SkillEffectType.LIFESTEAL).is_equal(6)
+
+
+## 追加效果（INC-COMBAT-013）：默认没有追加效果；只有 id 配好的资源才算数，半配置不得产生空结算。
+func test_followup_skill_is_optional_and_ignores_unconfigured_resource() -> void:
+	var skill: ActiveSkillDefinition = ActiveSkillDefinition.new()
+	assert_bool(skill.has_followup_skill()).is_false()
+	assert_object(skill.get_followup_skill()).is_null()
+
+	var payload: ActiveSkillDefinition = ActiveSkillDefinition.new()
+	skill.followup_skill = payload
+	assert_bool(skill.has_followup_skill()).is_true()
+	assert_object(skill.get_followup_skill()).is_same(payload)
+
+	# 半配置：资源在、id 为空 / 全空格，按「没有追加效果」处理。
+	payload.id = &""
+	assert_bool(skill.has_followup_skill()).is_false()
+	assert_object(skill.get_followup_skill()).is_null()
+	payload.id = &"   "
+	assert_bool(skill.has_followup_skill()).is_false()
+
+	payload.id = &"charge_hardstop"
+	assert_bool(skill.has_followup_skill()).is_true()
+	assert_object(skill.get_followup_skill()).is_same(payload)
